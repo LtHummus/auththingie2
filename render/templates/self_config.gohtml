@@ -1,0 +1,43 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie2 Admin Page{{end}}
+
+{{define "content"}}
+    <h1>AuthThingie Edit User</h1>
+
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li>Edit Profile</li>
+            </ul>
+        </nav>
+
+    <div>
+        <h2>Editing Yourself (<strong>{{ .User.Username }}</strong>)</h2>
+
+        {{ if .Error }}
+            <div>
+                <p class="notice">
+                    Error: {{ .Error }}
+                </p>
+            </div>
+        {{ end }}
+
+        <h3>TOTP Status</h3>
+        <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}' id="totp_setup_container">
+            {{ template "totp_status_fragment.gohtml" . }}
+        </div>
+        {{ if .EnablePasskeys }}
+            <h3>Passkeys</h3>
+            <div>
+                <a href="/webauthn/manage">Manage Your Passkeys</a>
+            </div>
+        {{ end }}
+        <h3>Password</h3>
+        <div>
+            <a href="/edit_self/password">Change your Password</a>
+        </div>
+
+    </div>
+
+{{end}}

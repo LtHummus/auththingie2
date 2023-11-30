@@ -1,0 +1,35 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}Login Page{{ end }}
+
+{{ define "content" }}
+<div id="login-container">
+        <div>
+            <hgroup>
+                <h1>Login</h1>
+                <h2>Sign in to AuthThingie to Continue</h2>
+            </hgroup>
+                {{ if .Error }}
+                    <p class="error-box">
+                        {{ .Error }}
+                    </p>
+                {{ end }}
+                <form action="/login" method="post">
+                    {{ .CSRFField }}
+                    <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
+                        <input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />
+                        <input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>
+                        <button type="submit" class="contrast">Login</button>
+                </form>
+                {{ if .EnablePasskeys }}
+                    <div id="authn_login_error" class="error-box no-error"></div>
+                    <button onclick="handleDiscoverLogin({{ .CSRFToken }})" id="passkey-login-button">
+                        <img src="/static/images/fido-passkey-white.svg" alt="Passkey Logo" class="passkey-logo" />
+                        Login with Passkey
+                    </button>
+                {{ end }}
+        </div>
+    <script src="static/js/webauthn.js"></script>
+</div>
+
+{{end}}

@@ -1,0 +1,13 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}{{ .ErrorTitle }}{{end}}
+{{define "content"}}
+    <article class="grid">
+        <h1>{{ .ErrorHeader }}</h1>
+        <p>
+            {{ .Error }}
+        </p>
+    </article>
+
+
+{{end}}

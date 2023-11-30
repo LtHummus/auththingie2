@@ -1,0 +1,7 @@
+            <tr>
+                <td>{{ .ID }}</td>
+                <td>{{ .LastUsed }}</td>
+                <td><input name="name" value="{{ .FriendlyName }}" /></td>
+                <td><button hx-put="/webauthn/keys/{{ .ID }}" hx-include="closest tr">Save</button></td>
+                <td><button hx-get="/webauthn/keys/{{ .ID }}">Cancel</button></td>
+            </tr>

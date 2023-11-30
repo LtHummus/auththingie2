@@ -1,0 +1,84 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie2 Admin Page{{end}}
+
+{{define "content"}}
+        <h1>AuthThingie Admin</h1>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li>Admin Control Panel</li>
+            </ul>
+        </nav>
+
+        <div id="users-section">
+        <h2>Users</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Username</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Users }}
+                    <tr>
+                        <td>{{ .Username }}</td>
+                        <td><a href="/admin/users/{{ .Id }}">Edit User</a></td>
+                    </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        <a href="/admin/users/create">Create a New User</a>
+        </div>
+            <div id="rules-section">
+                <h2>Rules</h2>
+                <figure>
+                    <table id="admin-rule-table">
+                        <thead>
+                            <tr class="table-header">
+                                <th scope="col">Rule Name</th>
+                                <th scope="col">Source Address</th>
+                                <th scope="col">Protocol Pattern</th>
+                                <th scope="col">Host Pattern</th>
+                                <th scope="col">Path Pattern</th>
+                                <th scope="col">Timeout</th>
+                                <th scope="col">Roles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ range .Rules }}
+                                <tr>
+                                    <td>{{ .Name }}</td>
+                                    <td>{{ .Source }}</td>
+                                    <td>{{ .Protocol }}</td>
+                                    <td>{{ .Host }}</td>
+                                    <td>{{ .Path }}</td>
+                                    <td>{{ .Timeout }}</td>
+                                    <td>
+                                        {{ if .IsPublic }}
+                                            <span class="badge public-badge">Public</span>
+                                        {{ else if .AdminOnly }}
+                                            <span class="badge admin-badge">Admin</span>
+                                        {{ else }}
+                                            {{ range .Roles }}
+                                                <span class="badge role-badge">{{ . }}</span>
+                                            {{ end }}
+                                        {{ end }}
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </figure>
+            </div>
+            <div>
+                <h3>Test Rule</h3>
+                <form hx-get="/admin/ruletest" hx-target="#test-result" hx-swap="innerHTML">
+                    <div><label for="test-source-field">Source IP (blank for wider internet)</label><input type="text" name="source" id="test-source-field" /></div>
+                    <div><label for="test-url-field">URL</label><input type="url" inputmode="url" name="url" id="test-url-field" /></div>
+                    <button type="submit">Test</button>
+                </form>
+                <div id="test-result"></div>
+            </div>
+{{end}}

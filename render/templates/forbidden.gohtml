@@ -1,0 +1,12 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}Access Denied{{end}}
+
+{{define "content"}}
+    <div id="forbidden-container">
+        <article class="grid">
+            <h1>Access Denied</h1>
+            <p>You are not allowed access to that page. You are currently logged in as <strong>{{ .Username }}</strong></p>
+        </article>
+    </div>
+{{end}}

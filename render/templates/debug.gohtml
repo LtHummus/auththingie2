@@ -1,0 +1,35 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}Debug{{end}}
+
+{{define "content"}}
+    <div>
+        <h1>AuthThingie 2 Debug</h1>
+        <div>
+            <h2>Request Information</h2>
+            {{ .RequestTemplate }}
+        </div>
+        <div>
+            <h2>Build Information</h2>
+            {{ .BuildTemplate }}
+        </div>
+        <div>
+            <h2>Configuration Information</h2>
+            {{ .ConfigTemplate }}
+        </div>
+        <div>
+            <h2>Runtime System Configuration</h2>
+            {{ .VarsTemplate }}
+        </div>
+        <div>
+            <h2>Environment Variables</h2>
+            {{ .EnvVarTemplate }}
+        </div>
+        <div>
+            <h2>Build Dependencies</h2>
+            {{ .DependencyTemplate }}
+        </div>
+
+    </div>
+
+{{end}}

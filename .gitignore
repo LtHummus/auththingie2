@@ -1,0 +1,9 @@
+*.iml
+.idea
+test.db
+auththingie2.yaml
+auththingie2.yaml.old
+.auththingie2_salt
+tls/*
+.DS_Store
+at2.db

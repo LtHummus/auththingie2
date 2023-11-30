@@ -1,0 +1,125 @@
+.right-justify {
+    text-align: right;
+}
+
+.passkey-logo {
+    height: 16px;
+    padding-right: 5px;
+}
+
+
+.error-box {
+    text-align: center;
+    padding: 20px;
+    background-color: #a30a14;
+    color: white;
+    margin-bottom: 15px;
+    border-radius: 10px;
+}
+
+.no-error {
+    display: none;
+}
+
+th {
+    font-weight: bold;
+}
+
+.badge {
+    padding: 4px 8px 2px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.role-badge {
+    background-color: rgb(128, 128, 128);
+    color: white;
+}
+
+.public-badge {
+    background-color: #254517;
+    color: white;
+}
+
+.admin-badge {
+    background-color: #d14633;
+    color: white;
+}
+
+
+
+@media(prefers-color-scheme: dark) {
+    .admin-badge {
+        background-color: #841b1b;
+    }
+
+    .public-badge {
+        background-color: #448428;
+        color: white;
+    }
+}
+
+#admin-rule-table {
+    table-layout: auto;
+}
+
+.danger-button {
+    background-color: #c62828 !important;
+}
+
+.modifiable-badge {
+    padding-right: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.modify-badge-button {
+    padding: 4px 8px 2px;
+    text-align: center;
+    border-radius: 0 5px 5px 0;
+}
+
+.delete-badge-button {
+    background-color: #c65858;
+}
+
+.delete-badge-button:hover {
+    background-color: #c60000;
+}
+
+.add-badge-button {
+    background-color: #43a047;
+}
+
+.add-badge-button:hover {
+    background-color: #2e7d32;
+}
+
+
+
+.add-button {
+    background-color: #254517;
+}
+
+@media(prefers-color-scheme: dark) {
+    .add-button {
+        background-color: #448428;
+        color: white;
+    }
+}
+
+#custom-path-fields {
+    display: none;
+}
+
+#ftue-or {
+    text-align: center;
+    padding-bottom: 10px;
+}
+
+#ftue-choose-destiny {
+}
+
+#ftue-destiny-buttons-container {
+    align-items: center;
+}

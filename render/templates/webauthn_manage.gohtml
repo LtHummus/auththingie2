@@ -1,0 +1,21 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}Passkeys Management{{ end }}
+{{ define "content" }}
+            <h1>Passkeys Management</h1>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/edit_self">Edit Profile</a></li>
+                <li>Passkeys Management</li>
+            </ul>
+        </nav>
+        <div>
+            {{ template "authn_key_list.gohtml" . }}
+
+            <div id="enroll_error" class="error-box no-error"></div>
+            <button id="passkey-enroll-button" onclick="beginRegistration('{{ .CSRFToken }}')">Enroll New Key</button>
+        </div>
+
+    <script src="/static/js/webauthn.js"></script>
+{{ end }}

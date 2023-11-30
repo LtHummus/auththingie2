@@ -1,0 +1,28 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+{{define "content"}}
+    <div id="ftue-1-container">
+        <article>
+            <h1>AuthThingie 2 Setup</h1>
+            <p>
+                Now that you have a config file and a database, we need to set up some users. If you have a previously working
+                AuthThingie 1 installation, we can import your rules and your users from the config file you used. If you don't
+                have a previous installation (or you want to start from scratch), you can do that as well.
+            </p>
+            <p id="ftue-choose-destiny">
+                Choose your destiny...
+            </p>
+            <div id="ftue-destiny-buttons-container">
+                <div>
+                    <a href="/ftue/scratch">Start from Scratch</a>
+                </div>
+                <div id="ftue-import-button-container">
+                    <a href="/ftue/import">Import a config file from AuthThingie 1</a>
+                </div>
+            </div>
+
+        </article>
+    </div>
+{{end}}

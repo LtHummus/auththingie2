@@ -1,0 +1,47 @@
+
+    {{ $userId := .User.Id }}
+
+    {{ if .Error }}
+        <p class="notice">
+            {{ .Error }}
+        </p>
+    {{ end }}
+    <div>
+        <div>
+            <h3>Roles on User</h3>
+        </div>
+        <div>
+            {{ range $r := .User.Roles }}
+                <span class="badge role-badge modifiable-badge">
+                {{ $r }}
+            </span>
+                <span class="modify-badge-button delete-badge-button" hx-delete="/admin/users/{{ $userId }}/tags/{{ $r }}" hx-confirm="Delete role {{ $r }} from this user?" hx-target="#tag-edit-table">
+                &#x2715;
+            </span>
+
+            {{ end }}
+        </div>
+
+    </div>
+    <div>
+        <div>        <h3>Missing Roles</h3></div>
+        <div>
+            {{ range $r := .MissingRoles }}
+                <span class="badge role-badge modifiable-badge">
+                {{ $r }}
+            </span>
+                <span class="modify-badge-button add-badge-button" hx-patch="/admin/users/{{ $userId }}/tags" hx-vals='{"new-tag":"{{ $r }}"}' hx-target="#tag-edit-table">
+                &#xFF0B;
+            </span>
+            {{ end }}
+        </div>
+    </div>
+    <div>
+        <h3>Add New Role</h3>
+        <form>
+            <div class="grid">
+                <label for="new-tag-input"><input type="text" name="new-tag" id="new-tag-input" placeholder="New Role" /></label>
+                <button hx-patch="/admin/users/{{ $userId }}/tags" hx-include="#new-tag-input" hx-target="#tag-edit-table">Add Role</button>
+            </div>
+        </form>
+    </div>

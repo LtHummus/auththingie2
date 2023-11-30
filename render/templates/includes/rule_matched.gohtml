@@ -1,0 +1,17 @@
+{{ if .Error }}
+    Error in testing rule: {{ .Error }}
+{{ else if .Rule }}
+    Matched rule <strong>{{ .Rule.Name }}</strong>.
+        {{ if .Rule.Public }}
+            This rule gives <span class="badge public-badge">Public Access</span>
+        {{ else if not .Rule.PermittedRoles }}
+            This rule gives <span class="badge admin-badge">Admin Only Access</span>
+        {{ else }}
+            This rule gives access to the following roles:
+                {{ range .Rule.PermittedRoles }}
+                    <span class="badge role-badge">{{ . }}</span>
+                {{ end }}
+        {{ end }}
+{{ else }}
+    Did not match a rule. This results in <span class="badge admin-badge">Admin Only Access</span>
+{{ end }}

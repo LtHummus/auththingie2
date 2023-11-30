@@ -1,0 +1,86 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}Confirm Import{{end}}
+
+{{define "content"}}
+        <hgroup>
+            <h1>AuthThingie Import</h1>
+            <h2>Confirm Users and Rules</h2>
+        </hgroup>
+        <div>
+            <div>
+                <h3>Users</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Username</th>
+                            <th scope="col">Password</th>
+                            <th scope="col">Roles</th>
+                            <th scope="col">TOTP Enabled</th>
+                            <th scope="col">Is Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range $p := .Users }}
+                            <tr>
+                                <td>{{ $p.Username }}</td>
+                                <td>[Password Hashed]</td>
+                                <td>
+                                    {{ range $r := $p.Roles }}
+                                        {{ $r }},
+                                    {{ end}}
+                                </td>
+                                <td>{{ if $p.TOTPEnabled }} Yes {{ else }} No {{ end }}</td>
+                                <td>{{ if $p.Admin }} Yes {{ else }} No {{ end }}</td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <!-- TODO: factor this out in to a fragment -->
+                <h3>Rules</h3>
+                <table>
+                    <thead>
+                    <tr class="table-header">
+                        <th scope="col">Rule Name</th>
+                        <th scope="col">Source Address</th>
+                        <th scope="col">Protocol Pattern</th>
+                        <th scope="col">Host Pattern</th>
+                        <th scope="col">Path Pattern</th>
+                        <th scope="col">Roles</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{ range .Rules }}
+                        <tr>
+                            <td>{{ .Name }}</td>
+                            <td>{{ .Source }}</td>
+                            <td>{{ .Protocol }}</td>
+                            <td>{{ .Host }}</td>
+                            <td>{{ .Path }}</td>
+                            <td>
+                                {{ if .IsPublic }}
+                                    PUBLIC
+                                {{ else if .AdminOnly }}
+                                    ADMIN ONLY
+                                {{ else }}
+                                    {{ range .Roles }}
+                                        {{ . }}
+                                    {{ end }}
+                                {{ end }}
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <form action="/ftue/import/confirm" method="post">
+                    {{ .CSRFField }}
+                    <input type="hidden" name="import_key" value="{{ .ImportKey }}" />
+                    <button type="submit" class="contrast">Looks Good! Import!</button>
+                </form>
+            </div>
+        </div>
+{{end}}

@@ -1,0 +1,19 @@
+<h3>Keys</h3>
+<figure>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Key ID</th>
+            <th>Last Used</th>
+            <th>Key Name</th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody hx-target="closest tr" hx-swap="outerHTML" hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+        {{ range .Keys }}
+            {{ template "authn_key_row.gohtml" . }}
+        {{ end }}
+    </tbody>
+</table>
+</figure>

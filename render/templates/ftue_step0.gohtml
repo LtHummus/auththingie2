@@ -1,0 +1,95 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+{{define "content"}}
+    <div id="ftue-0-container">
+        <article>
+            <h1>Welcome to AuthThingie 2 Setup</h1>
+            <p>
+                This workflow will help you configure your server. To get up and running, we need to set up some basic configuration options. I've tried to import as much as I could from any config that existed, but in the case I didn't find anything, you'll need to put some values in.
+            </p>
+            <p>
+                And enjoy the process! You'll be up and running soon!
+            </p>
+            {{ if .Errors }}
+                <article>
+                    <h3>Setup Errors</h3>
+                    <ul>
+                        {{ range .Errors }}
+                            <li>{{ . }}</li>
+                        {{ end }}
+                    </ul>
+
+                </article>
+            {{ end }}
+            <form action="/ftue/step0" method="post">
+                {{ .CSRFField }}
+                <h4>General Configuration</h4>
+                <div>
+                    <label for="port-field">Port to listen on:</label>
+                    <input type="text" name="port" id="port-field" required aria-label="Server Port" value="{{ .Port }}" />
+                </div>
+                <div>
+                    <h5>Configuration Path</h5>
+                    <p>
+                        Here, we need to set the configuration file path. This will be the location that we store the config file and the database file. If you are running
+                        in a docker container, I recommend picking <code>/config</code>. Whatever you pick, it is HIGHLY RECOMMENDED that it is a mounted volume so it will
+                        persist after container restarts (if you keep seeing this screen while running in Docker, that's probably your problem). I've tried to detect the current
+                        environment and put a sane default. Of course, if you are brave (and know what you're doing), you can specify a fully custom path.
+                    </p>
+                    <fieldset>
+                        <label for="slash-config-radio">
+                            <input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig" {{ if .DefaultSlashConfig }} checked {{ end }} onclick="showCustomFields()" />
+                            <code>/config</code> (This is a good choice if you're using Docker)
+                        </label>
+                        <label for="cwd-radio">
+                            <input type="radio" id="cwd-radio" name="config_file_preset" value="pwd" {{ if .DefaultPWD }} checked {{ end }} onclick="showCustomFields()"  />
+                            <code>{{ .PWD }}</code> This is the current working directory. This is good if you're running outside of docker.
+                        </label>
+                        <label for="custom-radio">
+                            <input type="radio" id="custom-radio" name="config_file_preset" value="custom" onclick="showCustomFields()"  />
+                            Custom paths. Only pick this if you absolutely know what you are doing.
+                        </label>
+                        <div id="custom-path-fields">
+                            <div>
+                                <label for="config-file-path">Config File Path (including name)</label>
+                                <input type="text" name="config_path" id="config-file-path" />
+                            </div>
+                            <div>
+                                <label for="db-file-path">Database file (including name)</label>
+                                <input type="text" name="db_path" id="db-file-path" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+                <h4>Domain Configuration</h4>
+                <p>
+                    AuthThingie needs to know a couple things about how it's being served to the outside work. We need this information so we can set cookies and routing information correctly.
+                    For the <strong>Server Domain</strong> entry, you should put the apex domain that this is hosted on. For example, if you have <code>foo.example.com</code> and <code>bar.example.com</code>,
+                    you should put <strong>example.com</strong> in that field.
+                </p>
+                <p>
+                    For the <strong>Auth Domain</strong> field, you should put in the domain that AuthThingie is hosted. I've tried to fill this in for you. If AuthThingie is accessible at <code>auth.example.com</code>,
+                    then you should put in <strong>auth.example.com</strong>
+                </p>
+                <div>
+                    <label for="domain-field">Server Domain</label>
+                    <input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="{{ .ServerDomain }}" />
+                </div>
+                <div>
+                    <label for="auth-url-field">Auth Domain</label>
+                    <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" />
+                </div>
+                <div>
+                    <!-- TODO -->
+                    <input type="submit" value="Continue..." />
+                </div>
+
+            </form>
+
+        </article>
+    </div>
+
+    <script src="/static/js/ftue.js"></script>
+{{end}}

@@ -1,0 +1,14 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}Restarting...{{ end }}
+
+{{ define "content" }}
+    <div>
+        We're restarting. We'll attempt to reload in like 10 seconds. Or <a href="/">click here</a> if you're tired of waiting.
+    </div>
+    <script>
+        const timer = setTimeout(function () {
+            window.location = "/"
+        }, 10000);
+    </script>
+{{ end }}

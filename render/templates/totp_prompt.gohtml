@@ -1,0 +1,26 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}TOTP{{ end }}
+
+{{ define "content" }}
+    <div id="enrollment-container">
+        <article class="grid">
+            <hgroup>
+                <h1>TOTP Verification</h1>
+            </hgroup>
+                {{ if .Error }}
+                    <p class="notice">
+                        Error: {{ .Error }}
+                    </p>
+                {{ end }}
+                <form action="/totp" method="post">
+                    {{ .CSRFField }}
+                    <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
+                    <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
+                    <button type="submit" class="contrast">Continue</button>
+                </form>
+        </article>
+
+    </div>
+
+{{end}}

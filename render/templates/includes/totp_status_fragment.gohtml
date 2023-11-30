@@ -1,0 +1,5 @@
+{{ if .User.TOTPEnabled }}
+    You have TOTP enabled. You can disable it by clicking <a class="link-like" hx-target="#totp_setup_container" hx-swap="innerHTML" hx-post="/disable_totp" hx-confirm="Are you sure you want to disable TOTP?">here</a>.
+{{else}}
+    You do not currently have TOTP enabled. If you wish to enable it, you can go <a href="/enable_totp">here</a>.
+{{ end }}

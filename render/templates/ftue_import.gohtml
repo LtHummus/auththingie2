@@ -1,0 +1,37 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+{{define "content"}}
+    <div id="ftue-scratch">
+        <article>
+            <h1>Welcome to AuthThingie 2 Setup</h1>
+            <p>
+                This will import as much as we can from the AuthThingie 1 config file. You can either upload the config file yourself or you can
+                paste the context in the text area below.
+            </p>
+            <div>
+                <form action="/ftue/import" method="post">
+                    {{ .CSRFField }}
+                    <div>
+                        <div>
+                            <input type="file" name="config_file" id="config-file-field" aria-label="Config File" placeholder="Config File" />
+                        </div>
+                        <div id="ftue-or">
+                            - or -
+                        </div>
+                        <div>
+                            <label>
+                                Config file contents:
+                                <textarea name="config_file_text"></textarea>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="contrast">Import</button>
+                </form>
+            </div>
+
+        </article>
+    </div>
+{{end}}

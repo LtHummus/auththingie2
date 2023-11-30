@@ -1,0 +1,43 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+{{define "content"}}
+    <div id="ftue-restart-container" xmlns="http://www.w3.org/1999/html">
+        <article>
+            <h1>Restart Needed</h1>
+            <p>
+                Ok, you should be all ready to go now! The last thing
+                to do is to restart AuthThingie 2 to pick up your new changes.
+            </p>
+            {{ if .IsDocker }}
+                <p>
+                    You're in a docker container, so when you click the big button below, we'll
+                    just exit the process and hopefully the docker daemon will restart us for us.
+                    (This will work only if you have set a restart policy in your docker compose or
+                    whatever)
+                </p>
+            {{ else }}
+                <p>
+                    You are running as a standalone executable. We're just gonna try and restart ourselves
+                    and hope for the best. You can also just click on the shutdown button to stop ourselves
+                    without restarting. The choice is yours. (Obviously if you go that route, AuthThingie won't
+                    work until you start it up again, but this is helpful if you need to set some environment
+                    variables between now and then or whatever).
+                </p>
+            {{ end }}
+
+            <form action="/ftue/restart" method="post">
+                {{ .CSRFField }}
+
+                {{ if .ShowRestart }}
+                    <input type="submit" name="restart-button" value="Restart" />
+                {{ end }}
+
+                <input type="submit" name="shutdown-button" value="Shutdown" />
+
+            </form>
+
+        </article>
+    </div>
+{{end}}

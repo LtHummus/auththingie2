@@ -1,0 +1,19 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}Config Errors!{{end}}
+
+{{define "content"}}
+        <div>
+            <h1>Config Errors Found</h1>
+            <ul>
+                {{ range .ErrorsFound }}
+                    <li>{{ . }}</li>
+                {{ end }}
+            </ul>
+        </div>
+    <div>
+        There may be more information in the logs!
+    </div>
+
+
+{{end}}

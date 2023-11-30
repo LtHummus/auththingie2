@@ -1,0 +1,31 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2{{end}}
+
+{{define "content"}}
+        <h1>Welcome to AuthThingie!</h1>
+        <div id="main">
+            {{if .User }}
+                <div id="logged-in">
+                    <div id="intro">
+                        You are logged in as <strong>{{.User.Username}}</strong>. You can <a href="/logout">log out if you wish</a>.
+                    </div>
+                    <div>
+                        You logged in at {{ .LoginTime }} (<i>{{ .DurationTime }}</i>)
+                    </div>
+                        <nav>
+                            <ul>
+                                <li>
+                                    <a href="/edit_self">Edit Profile</a>
+                                </li>
+                                {{ if .User.Admin }}
+                                    <li><a href="/admin">Admin Control Panel</a></li>
+                                {{ end }}
+                            </ul>
+                        </nav>
+                </div>
+            {{else}}
+                You are currently logged out. You can <a href="/login">log in here</a>.
+            {{end}}
+        </div>
+{{end}}

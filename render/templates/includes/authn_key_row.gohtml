@@ -1,0 +1,7 @@
+<tr>
+    <td>{{ .ID }}</td>
+    <td>{{ .LastUsed }}</td>
+    <td>{{ .FriendlyName }}</td>
+    <td><button hx-get="/webauthn/keys/{{ .ID }}/edit">Edit Friendly Name</button></td>
+    <td><button hx-delete="/webauthn/keys/{{ .ID }}" hx-confirm="Are you sure?" class="contrast">Delete Key</button></td>
+</tr>

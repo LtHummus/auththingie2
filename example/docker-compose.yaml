@@ -1,0 +1,35 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik_config:/etc/traefik
+
+  auth:
+    container_name: auth
+    image: lthummus/auththingie2
+    volumes:
+      - ./config:/config
+    environment:
+      - ENVIRONMENT=test
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.auth.loadbalancer.server.port=9000
+      - traefik.http.routers.auth.rule=Host(`auth.example.com`)
+      - traefik.http.routers.auth.entrypoints=web
+
+  sample:
+    container_name: sample
+    image: lthummus/samplesite
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.sample.loadbalancer.server.port=8000
+      - traefik.http.routers.sample.middlewares=auththingie2@file
+      - traefik.http.routers.sample.rule=Host(`test.example.com`)
+      - traefik.http.routers.sample.entrypoints=web

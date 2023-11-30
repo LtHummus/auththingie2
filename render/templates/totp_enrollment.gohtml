@@ -1,0 +1,40 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}TOTP Enrollment{{ end }}
+
+{{ define "content" }}
+        <h1>TOTP Enrollment</h1>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/edit_self">Edit Profile</a></li>
+                <li>TOTP Enrollment</li>
+            </ul>
+        </nav>
+            {{ if .Error }}
+                <p class="notice">
+                    Error: {{ .Error }}
+                </p>
+            {{ end }}
+        <form action="/enable_totp" method="post">
+
+        <div class="grid">
+            {{ .CSRFField }}
+                    <div>
+                        <img src="{{ .QRCodeDataURL }}" alt="QR Code for TOTP Enrollment" />
+                    </div>
+                    <div>
+                        <p>Scan the QR code to set up your Google Authenticator (or whatever) app. Then enter a code in to the box to continue</p>
+                        <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
+                    </div>
+
+            </div>
+            <div id="submit-button-container">
+                <input type="submit" value="Enable" />
+            </div>
+        </form>
+
+        <a href="/edit_self">Or go back without enabling</a>
+
+
+{{end}}

@@ -1,0 +1,30 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+{{define "content"}}
+    <div id="ftue-scratch">
+        <article>
+            <h1>Welcome to AuthThingie 2 Setup</h1>
+            <p>
+                This will set up AuthThingie 2 from scratch. All we need right now is the username and password of the admin user. This user
+                will be able to create and manage users.
+            </p>
+            <div>
+                <div id="ftue-scratch-error">
+                    {{ if .Error }}
+                        ERROR: {{ .Error }}
+                    {{ end }}
+                </div>
+                <form action="/ftue/scratch" method="post">
+                    {{ .CSRFField }}
+                    <input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />
+                    <input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>
+                    <input type="password" name="password2" id="password2-field" required placeholder="Password (again)" aria-label="Password (again)"/>
+                    <button type="submit" class="contrast">Create Admin User</button>
+                </form>
+            </div>
+
+        </article>
+    </div>
+{{end}}

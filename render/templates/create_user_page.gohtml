@@ -1,0 +1,33 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie2 Admin Page{{end}}
+
+{{define "content"}}
+    <h1>Create A New User</h1>
+
+    <nav aria-label="breadcrumb">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/admin">Admin Control Panel</a></li>
+            <li>Create A User</li>
+        </ul>
+    </nav>
+    <div>
+        {{ if .Error }}
+            <div class="error-box">
+                {{ .Error }}
+            </div>
+        {{ end }}
+        <form action="/admin/users/create" method="post">
+            {{ .CSRFField }}
+            <label for="username">Username</label> <input type="text" id="username" name="username" required/>
+            <div class="grid">
+                <label for="pw1">Password <input type="password" name="pw1" id="pw1" required/></label>
+                <label for="pw2">Password (confirm) <input type="password" name="pw2" id="pw2" required/></label>
+            </div>
+
+            <input type="submit" value="Create User" />
+        </form>
+    </div>
+
+{{end}}
