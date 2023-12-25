@@ -323,7 +323,7 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 	k, err := e.Database.FindKeyById(r.Context(), kID)
 	if err != nil {
 		log.Warn().Err(err).Str("key_id", kID).Msg("could not find key id")
-		http.Error(w, "could not get key id", http.StatusInternalServerError)
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not find key with id %s", kID), "modify-error")
 		return
 	}
 
@@ -333,7 +333,7 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 		err = e.Database.DeleteKey(r.Context(), kID)
 		if err != nil {
 			log.Error().Err(err).Str("key_id", kID).Msg("could not delete key")
-			http.Error(w, "could not delete key", http.StatusInternalServerError)
+			render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not delete key: %s", err.Error()), "modify-error")
 			return
 		}
 	} else if r.Method == http.MethodPut {
@@ -346,7 +346,7 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 		err = e.Database.UpdateKeyName(r.Context(), kID, nn)
 		if err != nil {
 			log.Error().Err(err).Str("key_id", kID).Str("new_name", newName).Msg("could not update key")
-			http.Error(w, "could not update key", http.StatusInternalServerError)
+			render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not modify key: %s", err.Error()), "modify-error")
 			return
 		}
 

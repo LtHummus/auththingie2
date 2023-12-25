@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -106,6 +107,29 @@ func RenderFullPageError(w http.ResponseWriter, title, header, error string) {
 		ErrorHeader: header,
 		Error:       error,
 	})
+}
+
+func RenderHTMXCompatibleError(w http.ResponseWriter, r *http.Request, msg string, idName string) {
+	if r.Header.Get("HX-Request") != "true" {
+		// not HTMX request, return normal error
+		http.Error(w, msg, http.StatusUnprocessableEntity)
+		return
+	}
+
+	strippedIDName := strings.TrimPrefix(idName, "#")
+
+	w.Header().Set("HX-Retarget", "#"+idName)
+	w.Header().Set("HX-Reswap", "outerHTML")
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusUnprocessableEntity)
+
+	params := map[string]string{
+		"Message": msg,
+		"IdName":  strippedIDName,
+	}
+
+	Render(w, "htmx_error.gohtml", params)
 }
 
 func Render(w http.ResponseWriter, name string, data any) {

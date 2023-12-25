@@ -352,7 +352,14 @@ func (s *SQLite) UpdateKeyName(ctx context.Context, keyID string, name *string) 
 }
 
 func (s *SQLite) DeleteKey(ctx context.Context, keyID string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM webauthn_keys WHERE id = $1", keyID)
+	res, err := s.db.ExecContext(ctx, "DELETE FROM webauthn_keys WHERE id = $1", keyID)
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("sqlite: DeleteKey: key not found: %s", keyID)
+	}
 	return err
 }
 

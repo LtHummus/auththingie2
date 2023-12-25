@@ -91,7 +91,7 @@ type editUserParams struct {
 
 func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Request) {
 	if loggedIn := session.GetUserFromRequest(r); loggedIn == nil || !loggedIn.Admin {
-		http.Error(w, "you must be an admin to do this", http.StatusForbidden)
+		render.RenderHTMXCompatibleError(w, r, "You must be logged in as admin to do this", "tag-error")
 		return
 	}
 
@@ -99,29 +99,24 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userId).Msg("could not get user from database")
-		http.Error(w, "could not get user from database", http.StatusInternalServerError)
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not get user from database: %s", err.Error()), "tag-error")
+		return
+	}
+	if u == nil {
+		log.Error().Str("user_id", userId).Msg("user not found in database")
+		render.RenderHTMXCompatibleError(w, r, "User not found in database", "tag-error")
 		return
 	}
 
 	tagName := r.FormValue("new-tag")
 	if strings.TrimSpace(tagName) == "" {
-		render.Render(w, "tagtableinternal.gohtml", &editUserParams{
-			Error:        "Tag can not be blank",
-			User:         u,
-			MissingRoles: e.buildMissingRoles(u),
-			CSRFField:    csrf.TemplateField(r),
-		})
+		render.RenderHTMXCompatibleError(w, r, "Tag can not be blank", "tag-error")
 		return
 	}
 
 	for _, curr := range u.Roles {
 		if curr == tagName {
-			render.Render(w, "tagtableinternal.gohtml", &editUserParams{
-				Error:        "Tag already exists on user",
-				User:         u,
-				MissingRoles: e.buildMissingRoles(u),
-				CSRFField:    csrf.TemplateField(r),
-			})
+			render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Tag `%s` already exists on user", tagName), "tag-error")
 			return
 		}
 	}
@@ -130,12 +125,7 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 	err = e.Database.SaveUser(r.Context(), u)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", u.Id).Strs("new_roles", u.Roles).Msg("could not update user roles")
-		render.Render(w, "tagtableinternal.gohtml", &editUserParams{
-			Error:        "Could not update user roles",
-			User:         u,
-			MissingRoles: e.buildMissingRoles(u),
-			CSRFField:    csrf.TemplateField(r),
-		})
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not update user in database: %s", err.Error()), "tag-error")
 		return
 	}
 
@@ -149,7 +139,7 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 
 func (e *Env) HandleUserTagDelete(w http.ResponseWriter, r *http.Request) {
 	if logged := session.GetUserFromRequest(r); logged == nil || !logged.Admin {
-		http.Error(w, "you must be an admin to do this", http.StatusForbidden)
+		render.RenderHTMXCompatibleError(w, r, "You must be logged in as admin to do this", "tag-error")
 		return
 	}
 
@@ -159,8 +149,13 @@ func (e *Env) HandleUserTagDelete(w http.ResponseWriter, r *http.Request) {
 
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
-		log.Error().Err(err).Str("user_id", userId).Msg("could not get user")
-		http.Error(w, "could not get user", http.StatusInternalServerError)
+		log.Error().Err(err).Str("user_id", userId).Msg("could not get user from database")
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not get user from database: %s", err.Error()), "tag-error")
+		return
+	}
+	if u == nil {
+		log.Error().Str("user_id", userId).Msg("user not found in database")
+		render.RenderHTMXCompatibleError(w, r, "User not found in database", "tag-error")
 		return
 	}
 
@@ -174,7 +169,7 @@ func (e *Env) HandleUserTagDelete(w http.ResponseWriter, r *http.Request) {
 	err = e.Database.SaveUser(r.Context(), u)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", u.Id).Strs("new_roles", newRoles).Msg("could not update user roles")
-		http.Error(w, "could not update user roles", http.StatusInternalServerError)
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not update user in database: %s", err.Error()), "tag-error")
 		return
 	}
 

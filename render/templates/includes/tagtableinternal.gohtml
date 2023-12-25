@@ -1,39 +1,39 @@
 
     {{ $userId := .User.Id }}
 
-    {{ if .Error }}
-        <p class="notice">
-            {{ .Error }}
-        </p>
-    {{ end }}
-    <div>
+    <div id="tag-error" class="error-box {{ if not .Error }}no-error{{end}}">{{.Error}}</div>
+    <div class="grid">
         <div>
-            <h3>Roles on User</h3>
+            <div>
+                <h3>Roles on User</h3>
+            </div>
+            <div>
+                {{ range $r := .User.Roles }}
+                    <span class="badge role-badge modifiable-badge">
+                    {{ $r }}
+                </span>
+                    <span class="modify-badge-button delete-badge-button" hx-on:click="clearTagError()" hx-delete="/admin/users/{{ $userId }}/tags/{{ $r }}" hx-confirm="Delete role {{ $r }} from this user?" hx-target="#tag-edit-table">
+                    &#x2715;
+                </span>
+
+                {{ end }}
+            </div>
+
         </div>
         <div>
-            {{ range $r := .User.Roles }}
-                <span class="badge role-badge modifiable-badge">
-                {{ $r }}
-            </span>
-                <span class="modify-badge-button delete-badge-button" hx-delete="/admin/users/{{ $userId }}/tags/{{ $r }}" hx-confirm="Delete role {{ $r }} from this user?" hx-target="#tag-edit-table">
-                &#x2715;
-            </span>
-
-            {{ end }}
-        </div>
-
-    </div>
-    <div>
-        <div>        <h3>Missing Roles</h3></div>
-        <div>
-            {{ range $r := .MissingRoles }}
-                <span class="badge role-badge modifiable-badge">
-                {{ $r }}
-            </span>
-                <span class="modify-badge-button add-badge-button" hx-patch="/admin/users/{{ $userId }}/tags" hx-vals='{"new-tag":"{{ $r }}"}' hx-target="#tag-edit-table">
-                &#xFF0B;
-            </span>
-            {{ end }}
+            <div>
+                <h3>Missing Roles</h3>
+            </div>
+            <div>
+                {{ range $r := .MissingRoles }}
+                    <span class="badge role-badge modifiable-badge">
+                    {{ $r }}
+                </span>
+                    <span class="modify-badge-button add-badge-button" hx-on:click="clearTagError()" hx-patch="/admin/users/{{ $userId }}/tags" hx-vals='{"new-tag":"{{ $r }}"}' hx-target="#tag-edit-table">
+                    &#xFF0B;
+                </span>
+                {{ end }}
+            </div>
         </div>
     </div>
     <div>
@@ -41,7 +41,7 @@
         <form>
             <div class="grid">
                 <label for="new-tag-input"><input type="text" name="new-tag" id="new-tag-input" placeholder="New Role" /></label>
-                <button hx-patch="/admin/users/{{ $userId }}/tags" hx-include="#new-tag-input" hx-target="#tag-edit-table">Add Role</button>
+                <button hx-patch="/admin/users/{{ $userId }}/tags" hx-on:click="clearTagError()" hx-include="#new-tag-input" hx-target="#tag-edit-table">Add Role</button>
             </div>
         </form>
     </div>

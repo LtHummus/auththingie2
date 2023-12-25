@@ -22,21 +22,33 @@
                 </p>
             </div>
         {{ end }}
-
-        <h3>TOTP Status</h3>
-        <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}' id="totp_setup_container">
-            {{ template "totp_status_fragment.gohtml" . }}
-        </div>
-        {{ if .EnablePasskeys }}
-            <h3>Passkeys</h3>
+        <div class="grid">
             <div>
-                <a href="/webauthn/manage">Manage Your Passkeys</a>
+                <h3>TOTP Status</h3>
+                <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}' id="totp_setup_container">
+                    {{ template "totp_status_fragment.gohtml" . }}
+                </div>
             </div>
-        {{ end }}
-        <h3>Password</h3>
-        <div>
-            <a href="/edit_self/password">Change your Password</a>
+            {{ if .EnablePasskeys }}
+            <div>
+                    <h3>Passkeys</h3>
+                    <div>
+                        <a href="/webauthn/manage">Manage Your Passkeys</a>
+                    </div>
+            </div>
+            {{ end }}
+            <div>
+                <h3>Password</h3>
+                <div>
+                    <a href="/edit_self/password">Change your Password</a>
+                </div>
+            </div>
+
         </div>
+
+
+
+
 
     </div>
 
