@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/csrf"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
@@ -64,6 +65,19 @@ func RunFTUEServer(step Step) {
 		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
 	})
 
+	m.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+		requestHost := r.Header.Get("X-Forwarded-Host")
+		allowHost := os.Getenv("FTUE_ALLOW_HOST")
+
+		if allowHost == requestHost {
+			log.Debug().Str("ftue_allow_host", allowHost).Str("xfh", requestHost).Msg("allowing during FTUE")
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			log.Debug().Str("ftue_allow_host", allowHost).Str("xfh", requestHost).Msg("blocking during FTUE")
+			http.Error(w, "blocked during auththingie2 setup", http.StatusForbidden)
+		}
+	})
+
 	// TODO: remove CSRF exemption here
 	m.HandleFunc("/ftue/path", HandlePathComplete)
 
@@ -79,17 +93,23 @@ func RunFTUEServer(step Step) {
 
 	m.HandleFunc("/ftue/restart", HandleRestartPage).Methods(http.MethodGet)
 	m.HandleFunc("/ftue/restart", HandleRestartPost).Methods(http.MethodPost)
-	
+
 	m.PathPrefix("/static/").Handler(render.StaticFSHandler())
 
 	port := DefaultPort
+
+	h := skip(csrfMiddleware(m))
+	if os.Getenv("FTUE_REQUEST_LOGGER") == "true" {
+		log.Warn().Msg("initializing request logging")
+		h = handlers.LoggingHandler(os.Stdout, h)
+	}
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("0.0.0.0:%d", port),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 		IdleTimeout:  15 * time.Second,
-		Handler:      skip(csrfMiddleware(m)),
+		Handler:      h,
 	}
 
 	log.Info().Int("port", port).Msg("starting FTUE server")
