@@ -25,6 +25,7 @@ func init() {
 		}
 	}
 
+	// TODO: fix up health check logging
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 	log.Info().
 		Str("arch", runtime.GOARCH).
