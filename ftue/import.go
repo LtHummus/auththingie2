@@ -35,6 +35,8 @@ func (fe *ftueEnv) handleFileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: handle file uploads here
+
 	configText := r.FormValue("config_file_text")
 	if configText == "" {
 		http.Error(w, "no contents", http.StatusBadRequest)

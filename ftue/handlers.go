@@ -18,7 +18,7 @@ import (
 
 var importCache *ttlcache.Cache[string, *importer.Results]
 var initCache = sync.OnceFunc(func() {
-	importCache = ttlcache.New[string, *importer.Results](ttlcache.WithTTL[string, *importer.Results](24 * time.Hour))
+	importCache = ttlcache.New[string, *importer.Results](ttlcache.WithTTL[string, *importer.Results](72 * time.Hour))
 })
 
 type ftueEnv struct {
