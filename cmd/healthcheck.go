@@ -68,7 +68,7 @@ var healthCheckCmd = &cobra.Command{
 			return err
 		}
 
-		if res.StatusCode != http.StatusOK || res.StatusCode != http.StatusFound {
+		if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusFound {
 			log.Error().Str("host", hostToCheck).Str("status", res.Status).Msg("bad status from server")
 			return fmt.Errorf("auththingie2: healthcheck: bad status from server: %s", res.Status)
 		}
