@@ -102,9 +102,11 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("username", user.Username).Bool("is_admin", user.Admin).Strs("groups", user.Roles).Msg("detected logged in user")
 
 	sess := session.GetSessionFromRequest(r)
-	if rule != nil && rule.Timeout != nil && source == session.UserSourceSession && time.Since(sess.LoginTime) < *rule.Timeout {
+	if rule != nil && rule.Timeout != nil && source == session.UserSourceSession && time.Since(sess.LoginTime) > *rule.Timeout {
 		// user has logged in, but not since the timeout, so prompt for relogin
+		log.Warn().Str("user_id", sess.UserID).Time("login_time", sess.LoginTime).Dur("rule_timeout", *rule.Timeout).Msg("need to reauthenticate")
 		redirectToLogin(w, r, ri)
+		return
 	}
 
 	// next, check to see if the user is admin (implicitly allowed everything) or is in the group that allows

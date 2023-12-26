@@ -49,6 +49,7 @@ func (s *Session) Expired() bool {
 }
 
 func (s *Session) PlaceUserInSession(u *user.User) {
+	log.Debug().Str("username", u.Username).Msg("placing in session")
 	s.UserID = u.Id
 	s.Expires = time.Now().Add(24 * time.Hour)
 	s.LoginTime = time.Now()
