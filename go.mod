@@ -4,14 +4,14 @@ go 1.21
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-webauthn/webauthn v0.9.4
-	github.com/golang-migrate/migrate/v4 v4.16.2
+	github.com/go-webauthn/webauthn v0.10.0
+	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/google/uuid v1.5.0
 	github.com/gorilla/csrf v1.7.2
-	github.com/gorilla/handlers v1.4.2
+	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/securecookie v1.1.2
-	github.com/gurkankaymak/hocon v1.2.18
+	github.com/gurkankaymak/hocon v1.2.19
 	github.com/hyperjumptech/jiffy v1.0.0
 	github.com/jedib0t/go-pretty/v6 v6.4.9
 	github.com/jellydator/ttlcache/v3 v3.1.1
@@ -21,9 +21,9 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -31,8 +31,9 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20200124162019-2d7f727a00b7 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
-	github.com/go-webauthn/x v0.1.5 // indirect
+	github.com/go-webauthn/x v0.1.6 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
