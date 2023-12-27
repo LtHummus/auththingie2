@@ -13,11 +13,15 @@ type lock struct {
 	lock *atomic.Uint32
 }
 
-func (l *lock) AttemptUnlock() bool {
+func (l *lock) AttemptLock() bool {
 	swapped := l.lock.CompareAndSwap(unlocked, locked)
 	return swapped
 }
 
 func (l *lock) Lock() {
+	l.lock.Store(locked)
+}
+
+func (l *lock) Unlock() {
 	l.lock.Store(unlocked)
 }

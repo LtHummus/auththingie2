@@ -110,6 +110,10 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 		log.Warn().Err(err).Str("username", username).Msg("could not query for user")
 		return nil, UserSourceInvalidUser
 	}
+	if dbu == nil {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+		return nil, UserSourceInvalidUser
+	}
 
 	err = dbu.CheckPassword(pass)
 	if err != nil {
@@ -208,6 +212,10 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		}
 
+		if sess != nil && sess.Expired() {
+			sess = nil
+		}
+
 		if sess != nil && sess.UserID != "" && !sess.Expired() {
 			// if the user is allegedly logged in, try and get them from the db
 			u, err = m.db.GetUserByGuid(r.Context(), sess.UserID)
@@ -222,14 +230,14 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if u != nil {
 		pwdTime := time.Unix(u.PasswordTimestamp, 0)
-		if pwdTime.After(sess.CreationTime) {
+		if pwdTime.After(sess.LoginTime) {
 			// user has changed password after this session was created, reset everything
 			u = nil
 			sess = nil
 		}
 	}
 
-	if sess == nil {
+	if sess == nil || u == nil {
 		// no session found
 		newSession, err := NewDefaultSession()
 		if err != nil {
@@ -264,11 +272,12 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ArbitraryAttachSession is used to arbitrarily attach a session's expected information to a given request...this should
 // only really be used for testing because we don't have a god way to simulate the sessions middleware and some
 // of our handlers might rely on it
-func ArbitraryAttachSession(sess Session, r *http.Request, u *user.User) *http.Request {
+func ArbitraryAttachSession(sess Session, r *http.Request, u *user.User, sc *securecookie.SecureCookie) *http.Request {
 	info := &sessionData{
 		id:      sess.SessionID,
 		session: sess,
 		user:    u,
+		sc:      sc,
 	}
 
 	newCtx := context.WithValue(r.Context(), sessionContextKey, info)

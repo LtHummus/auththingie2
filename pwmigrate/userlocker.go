@@ -23,11 +23,11 @@ var (
 func attemptLockUser(id string) bool {
 	item := lockCache.Get(id)
 
-	return item.Value().AttemptUnlock()
+	return item.Value().AttemptLock()
 }
 
 func unlockUser(id string) {
 	item := lockCache.Get(id)
 
-	item.Value().Lock()
+	item.Value().Unlock()
 }

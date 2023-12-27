@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	session2 "github.com/lthummus/auththingie2/middlewares/session"
+	"github.com/lthummus/auththingie2/render"
 	rules2 "github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
 
@@ -77,7 +79,48 @@ func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequ
 	})
 
 	// so much copying :(
-	return session2.ArbitraryAttachSession(*sess, r, user)
+	return session2.ArbitraryAttachSession(*sess, r, user, nil)
+}
+
+func TestEnv_HandleNotAllowed(t *testing.T) {
+	render.Init()
+
+	t.Run("not logged in", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		_, e := buildTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+
+		e.HandleNotAllowed(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		resp.Body.Close()
+
+		assert.Contains(t, string(body), "<strong>&lt;not logged in&gt;</strong>")
+	})
+
+	t.Run("with logged in user", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		_, e := buildTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Username: "test-user"})
+
+		e.HandleNotAllowed(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		resp.Body.Close()
+
+		assert.Contains(t, string(body), "test-user")
+	})
+
 }
 
 func TestEnv_HandleCheckRequest(t *testing.T) {

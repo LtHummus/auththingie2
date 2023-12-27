@@ -68,6 +68,10 @@ func GenerateFromPassword(password string) (string, error) {
 }
 
 func NeedsMigration(encodedHash string) bool {
+	if viper.GetBool("security.disable_migrate_on_login") {
+		return false
+	}
+
 	if !strings.HasPrefix(encodedHash, "$argon2id$") {
 		return true
 	}
