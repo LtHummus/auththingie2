@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/ainit"
 	"github.com/lthummus/auththingie2/config"
 )
 
@@ -30,6 +31,7 @@ var healthCheckCmd = &cobra.Command{
 	Long: "checks the health of a running auththingie2 instance. This is best used as a " +
 		"defined healthcheck inside a docker container",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ainit.InitLogger(false)
 		if !useConfig && host == "" {
 			return fmt.Errorf("auththingie2: healthcheck: one of useconfig host must be specified")
 		}

@@ -54,7 +54,6 @@ type sessionData struct {
 
 func init() {
 	gob.Register(Session{})
-	log.Debug().Msg("registered session decoder")
 }
 
 func NewMiddleware(next http.Handler, db db.DB) *Middleware {
