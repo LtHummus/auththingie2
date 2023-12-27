@@ -42,7 +42,7 @@ var importEvalCmd = &cobra.Command{
 	Use:   "evalimport",
 	Short: "Read an AuthThingie 1 config file to see what will get imported",
 	Run: func(cmd *cobra.Command, args []string) {
-		bytes, err := os.ReadFile(at1FilePath)
+		bytes, err := os.ReadFile(at1FilePath) // #nosec G304 -- file to parse, known to be untrusted
 		if err != nil {
 			log.Fatal().Err(err).Str("file", at1FilePath).Msg("could not read file")
 		}

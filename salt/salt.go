@@ -85,7 +85,7 @@ func createSalt(path string) {
 }
 
 func readSalt(path string) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- has to be read from variable, since this is configurable
 	if err != nil {
 		log.Warn().Err(err).Str("salt_path", path).Msg("could not read salt, generating new one")
 		createSalt(path)

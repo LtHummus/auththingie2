@@ -13,7 +13,7 @@ import (
 func TestWrite(path string) error {
 	testFile := filepath.Join(filepath.Dir(path), ".writetest")
 	log.Debug().Str("path", testFile).Msg("testing write")
-	err := os.WriteFile(testFile, []byte{}, 0644)
+	err := os.WriteFile(testFile, []byte{}, 0600)
 	if err != nil {
 		log.Warn().Err(err).Str("path", testFile).Msg("could not write file")
 		return err

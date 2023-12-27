@@ -80,7 +80,10 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		log.Error().Caller(0).Err(err).Msg("could not write webauthn registration data to response")
+	}
 }
 
 func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +125,10 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"failed":false}`))
+	_, err = w.Write([]byte(`{"failed":false}`))
+	if err != nil {
+		log.Error().Caller(0).Err(err).Msg("could not write webauthn registration result to response")
+	}
 }
 
 func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +172,10 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		log.Error().Caller(0).Err(err).Msg("could not write webauthn login challenge to response")
+	}
 }
 
 func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
@@ -235,7 +244,10 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"failed":false}`))
+	_, err = w.Write([]byte(`{"failed":false}`))
+	if err != nil {
+		log.Error().Caller(0).Err(err).Msg("could not write webauthn login finish to response")
+	}
 }
 
 type keyInfo struct {

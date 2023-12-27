@@ -61,5 +61,8 @@ func HandlePathComplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(respBytes)
+	_, err = w.Write(respBytes)
+	if err != nil {
+		log.Error().Caller(0).Err(err).Msg("could not write path completion data to response")
+	}
 }

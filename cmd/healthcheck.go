@@ -71,7 +71,7 @@ var healthCheckCmd = &cobra.Command{
 			log.Warn().Msg("ignoring bad HTTPS certificates from server")
 			c.Transport = &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: true, // #nosec G402 -- doing this at user's option
 				},
 			}
 		}

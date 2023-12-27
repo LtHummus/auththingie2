@@ -102,12 +102,12 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	})
 
 	render.Render(w, "debug.gohtml", &debugPageInfo{
-		DependencyTemplate: template.HTML(depTable.RenderHTML()),
-		VarsTemplate:       template.HTML(data.RenderHTML()),
-		BuildTemplate:      template.HTML(buildTable.RenderHTML()),
-		ConfigTemplate:     template.HTML(configTable.RenderHTML()),
-		EnvVarTemplate:     template.HTML(envTable.RenderHTML()),
-		RequestTemplate:    template.HTML(requestTable.RenderHTML()),
+		DependencyTemplate: template.HTML(depTable.RenderHTML()),     // #nosec G203 -- table library handles escaping for us
+		VarsTemplate:       template.HTML(data.RenderHTML()),         // #nosec G203
+		BuildTemplate:      template.HTML(buildTable.RenderHTML()),   // #nosec G203
+		ConfigTemplate:     template.HTML(configTable.RenderHTML()),  // #nosec G203
+		EnvVarTemplate:     template.HTML(envTable.RenderHTML()),     // #nosec G203
+		RequestTemplate:    template.HTML(requestTable.RenderHTML()), // #nosec G203
 	})
 
 }

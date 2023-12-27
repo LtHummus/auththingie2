@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/db"
 	"github.com/lthummus/auththingie2/rules"
@@ -31,5 +32,8 @@ func writeJSONError(w http.ResponseWriter, msg string, errorCode string, statusC
 	bytes, _ := json.Marshal(resp)
 
 	w.WriteHeader(statusCode)
-	w.Write(bytes)
+	_, err := w.Write(bytes)
+	if err != nil {
+		log.Error().Err(err).Caller(1).Msg("could not write JSON error to response")
+	}
 }

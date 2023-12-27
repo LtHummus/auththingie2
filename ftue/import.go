@@ -95,10 +95,10 @@ func (fe *ftueEnv) HandleImportConfirm(w http.ResponseWriter, r *http.Request) {
 
 	data := importData.Value()
 
-	for _, currUser := range data.Users {
-		err := fe.database.CreateUser(r.Context(), &currUser)
+	for i := range data.Users {
+		err := fe.database.CreateUser(r.Context(), &data.Users[i])
 		if err != nil {
-			log.Error().Err(err).Str("username", currUser.Username).Msg("could not create user")
+			log.Error().Err(err).Str("username", data.Users[i].Username).Msg("could not create user")
 			http.Error(w, "could not create user", http.StatusInternalServerError)
 			return
 		}

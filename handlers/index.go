@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hyperjumptech/jiffy"
-	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
@@ -24,19 +23,6 @@ const (
 )
 
 func (e *Env) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	needsSetup, err := e.Database.NeedsSetup(r.Context())
-	if err != nil {
-		log.Error().Err(err).Msg("could not check setup status")
-		http.Error(w, "could not check setup status", http.StatusInternalServerError)
-		return
-	}
-
-	if needsSetup {
-		log.Info().Msg("AuthThingie2 has not been setup. Forwarding to setup...")
-		http.Redirect(w, r, "/ftue", http.StatusFound)
-		return
-	}
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "not found", http.StatusNotFound)
 		return

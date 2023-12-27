@@ -18,5 +18,5 @@ func innerRestart() {
 	args := os.Args
 	env := os.Environ()
 
-	err = syscall.Exec(self, args, env)
+	err = syscall.Exec(self, args, env) // #nosec G204 -- variables are not user controlled
 }

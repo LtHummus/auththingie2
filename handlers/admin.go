@@ -14,17 +14,17 @@ import (
 
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
-	rules2 "github.com/lthummus/auththingie2/rules"
+	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
 )
 
 type adminParams struct {
 	Users []*user.AdminListUser
-	Rules []*rules2.DisplayableRule
+	Rules []*rules.DisplayableRule
 }
 
 type ruleTestParams struct {
-	Rule  *rules2.Rule
+	Rule  *rules.Rule
 	Error string
 }
 
@@ -66,7 +66,7 @@ func (e *Env) HandleTestRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ri := &rules2.RequestInfo{
+	ri := &rules.RequestInfo{
 		Method:     http.MethodGet,
 		Protocol:   parsedURL.Scheme,
 		Host:       parsedURL.Host,
@@ -274,9 +274,9 @@ func (e *Env) HandleAdminPage(w http.ResponseWriter, r *http.Request) {
 
 	rawRules := e.Analyzer.Rules()
 
-	allRules := make([]*rules2.DisplayableRule, len(rawRules))
+	allRules := make([]*rules.DisplayableRule, len(rawRules))
 	for i := range rawRules {
-		allRules[i] = rules2.RuleToDisplayableRule(rawRules[i])
+		allRules[i] = rules.RuleToDisplayableRule(rawRules[i])
 	}
 
 	render.Render(w, "admin.gohtml", adminParams{
