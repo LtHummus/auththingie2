@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,12 +18,14 @@ var (
 	host           string
 	useConfig      bool
 	timeoutSeconds int
+	ignoreBadTLS   bool
 )
 
 func init() {
 	healthCheckCmd.Flags().StringVar(&host, "host", "", "host to check")
 	healthCheckCmd.Flags().BoolVarP(&useConfig, "useconfig", "c", false, "read values from config file")
 	healthCheckCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 3, "timeout (in seconds)")
+	healthCheckCmd.Flags().BoolVar(&ignoreBadTLS, "ignore-bad-tls", false, "ignore bad certificates for HTTPS")
 }
 
 var healthCheckCmd = &cobra.Command{
@@ -49,6 +52,10 @@ var healthCheckCmd = &cobra.Command{
 				scheme = "https"
 			}
 
+			if viper.GetBool("healthcheck.tls.ignore_bad_tls") {
+				ignoreBadTLS = true
+			}
+
 			hostToCheck = fmt.Sprintf("%s://localhost:%d", scheme, viper.GetInt("server.port"))
 		} else {
 			hostToCheck = host
@@ -58,6 +65,15 @@ var healthCheckCmd = &cobra.Command{
 
 		c := http.Client{
 			Timeout: time.Duration(timeoutSeconds) * time.Second,
+		}
+
+		if ignoreBadTLS {
+			log.Warn().Msg("ignoring bad HTTPS certificates from server")
+			c.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			}
 		}
 
 		req, err := http.NewRequest(http.MethodGet, hostToCheck, nil)
