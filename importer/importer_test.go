@@ -9,7 +9,7 @@ import (
 func TestBasic(t *testing.T) {
 	t.Run("simple config", func(t *testing.T) {
 		input := `auththingie {
-	domain: example.com
+domain: "example.com"
 authSiteUrl: "https://auth.example.com"
 
 users: [

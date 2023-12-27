@@ -16,6 +16,8 @@ RUN xx-apk add musl-dev gcc
 
 COPY . .
 
+RUN go test ./...
+
 ENV CGO_ENABLED=1
 RUN xx-go build -ldflags "-linkmode 'external' -extldflags '-static'" -o ./auththingie2 . && \
     xx-verify --static ./auththingie2
