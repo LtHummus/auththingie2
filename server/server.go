@@ -112,8 +112,7 @@ func RunServer() {
 	muxer.HandleFunc("/login", e.HandleLoginPage)
 	muxer.HandleFunc("/logout", e.HandleLogout)
 
-	muxer.HandleFunc("/", e.HandleIndex)
-	muxer.HandleFunc("/indexinfo", e.HandleBulkIndex)
+	muxer.HandleFunc("/", e.HandleIndex).Methods(http.MethodGet)
 
 	muxer.HandleFunc("/totp", e.HandleTOTPValidation)
 	muxer.HandleFunc("/enable_totp", e.HandleTOTPSetup)
@@ -128,7 +127,7 @@ func RunServer() {
 	muxer.HandleFunc("/admin/users/{userId}/tags", e.HandleUserPatchTagsModification).Methods(http.MethodPatch)
 	muxer.HandleFunc("/admin/users/{userId}/tags/{tag}", e.HandleUserTagDelete).Methods(http.MethodDelete)
 	muxer.HandleFunc("/admin/ruletest", e.HandleTestRule).Methods(http.MethodGet)
-	muxer.HandleFunc("/admin", e.HandleAdminPage)
+	muxer.HandleFunc("/admin", e.HandleAdminPage).Methods(http.MethodGet)
 
 	muxer.HandleFunc("/edit_self", e.HandleSelfConfigGet).Methods(http.MethodGet)
 	muxer.HandleFunc("/edit_self/password", e.HandleSelfConfigPasswordGet).Methods(http.MethodGet)

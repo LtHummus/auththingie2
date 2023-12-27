@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	session2 "github.com/lthummus/auththingie2/middlewares/session"
 	rules2 "github.com/lthummus/auththingie2/rules"
@@ -21,6 +22,14 @@ import (
 )
 
 const sourceIPHeader = "X-Forwarded-For"
+
+type testRequestOption = func(sess *session2.Session)
+
+func withLoginTime(time time.Time) testRequestOption {
+	return func(sess *session2.Session) {
+		sess.LoginTime = time
+	}
+}
 
 func buildTestEnv(t *testing.T) (*mocks.Analyzer, *Env) {
 	a := mocks.NewAnalyzer(t)
@@ -46,7 +55,7 @@ func buildUserCookie(t *testing.T, e *Env, user *user.User) *session2.Session {
 	return &sess
 }
 
-func buildTestRequest(t *testing.T, e *Env, user *user.User) *http.Request {
+func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequestOption) *http.Request {
 	h := http.Header{}
 	h.Add(httpMethodHeader, "GET")
 	h.Add(protocolHeader, "https")
@@ -57,6 +66,10 @@ func buildTestRequest(t *testing.T, e *Env, user *user.User) *http.Request {
 	r.Header = h
 
 	sess := buildUserCookie(t, e, user)
+
+	for _, curr := range options {
+		curr(sess)
+	}
 
 	r.AddCookie(&http.Cookie{
 		Name:  session2.SessionCookieName,
@@ -186,6 +199,44 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		})
 
 		a.On("MatchesRule", mock.Anything).Return(nil)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusFound, resp.StatusCode)
+	})
+
+	t.Run("works with duration (still in time)", func(t *testing.T) {
+		a, e := buildTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Minute)))
+
+		timeout := 5 * time.Minute
+
+		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{
+			PermittedRoles: []string{"a"},
+			Timeout:        &timeout,
+		})
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("works with duration (needs to reauth)", func(t *testing.T) {
+		a, e := buildTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Hour)))
+
+		timeout := 5 * time.Minute
+
+		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{
+			PermittedRoles: []string{"a"},
+			Timeout:        &timeout,
+		})
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)

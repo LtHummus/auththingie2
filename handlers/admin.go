@@ -254,11 +254,6 @@ func (e *Env) HandleEditUserSubmission(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Env) HandleAdminPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "not found", http.StatusNotFound)
-		return
-	}
-
 	u := session.GetUserFromRequest(r)
 	if u == nil || !u.Admin {
 		http.Error(w, "you cannot access this page", http.StatusForbidden)

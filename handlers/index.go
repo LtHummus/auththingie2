@@ -23,11 +23,6 @@ const (
 )
 
 func (e *Env) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "not found", http.StatusNotFound)
-		return
-	}
-
 	u := session.GetUserFromRequest(r)
 	s := session.GetSessionFromRequest(r)
 
@@ -47,24 +42,5 @@ func (e *Env) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		User:         u,
 		LoginTime:    timeString,
 		DurationTime: durationString,
-	})
-}
-
-func (e *Env) HandleBulkIndex(w http.ResponseWriter, r *http.Request) {
-	u := session.GetUserFromRequest(r)
-	if u == nil {
-		e.renderLoggedOutIndex(w, r)
-	} else {
-		e.renderLoggedInIndex(w, r, u)
-	}
-}
-
-func (e *Env) renderLoggedOutIndex(w http.ResponseWriter, r *http.Request) {
-	render.Render(w, "index.loggedout.gohtml", nil)
-}
-
-func (e *Env) renderLoggedInIndex(w http.ResponseWriter, r *http.Request, u *user.User) {
-	render.Render(w, "index.loggedin.gohtml", map[string]string{
-		"Username": u.Username,
 	})
 }
