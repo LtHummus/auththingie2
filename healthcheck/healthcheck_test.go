@@ -39,7 +39,7 @@ func generateTestCA() (*testCA, error) {
 		},
 		SerialNumber:          big.NewInt(1),
 		NotBefore:             time.Now().Add(-1 * time.Minute),
-		NotAfter:              time.Now().Add(1 * time.Minute),
+		NotAfter:              time.Now().Add(10 * time.Minute),
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
@@ -137,15 +137,6 @@ func (sk *serverKeys) generateServerTLSConfig() *tls.Config {
 }
 
 func TestCheckHealth(t *testing.T) {
-	ca, err := generateTestCA()
-	require.NoError(t, err)
-	localhostCert, err := ca.generateCertificates("localhost")
-	require.NoError(t, err)
-
-	client.Transport = &http.Transport{
-		TLSClientConfig: ca.generateClientTLSConfig(),
-	}
-
 	t.Run("basic case (200)", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/", r.URL.Path)
@@ -169,15 +160,73 @@ func TestCheckHealth(t *testing.T) {
 	})
 
 	t.Run("base case (200) w/ TLS", func(t *testing.T) {
-		t.Skip("fix HTTPS stuff")
+		ca, err := generateTestCA()
+		require.NoError(t, err)
+		localhostCert, err := ca.generateCertificates("localhost")
+		require.NoError(t, err)
+
+		called := false
+
 		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			called = true
 			w.WriteHeader(http.StatusOK)
 		}))
-		srv.Config.TLSConfig = localhostCert.generateServerTLSConfig()
+		srv.TLS = localhostCert.generateServerTLSConfig()
+		srv.StartTLS()
+		defer srv.Close()
+
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: ca.generateClientTLSConfig(),
+			},
+		}
+
+		t.Cleanup(func() {
+			client = &http.Client{}
+		})
+
+		err = CheckHealth(srv.URL, 5*time.Second, false)
+		assert.NoError(t, err)
+
+		assert.True(t, called)
+	})
+
+	t.Run("fail test if bad cert and we haven't told to ignore", func(t *testing.T) {
+		called := false
+		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			called = true
+			w.WriteHeader(http.StatusOK)
+		}))
 		srv.StartTLS()
 		defer srv.Close()
 
 		err := CheckHealth(srv.URL, 5*time.Second, false)
+		assert.Error(t, err)
+		assert.False(t, called)
+	})
+
+	t.Run("ignore bad cert if we need to", func(t *testing.T) {
+		called := false
+		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			called = true
+			w.WriteHeader(http.StatusOK)
+		}))
+		srv.StartTLS()
+		defer srv.Close()
+
+		err := CheckHealth(srv.URL, 5*time.Second, true)
 		assert.NoError(t, err)
+		assert.True(t, called)
+	})
+
+	t.Run("handle timeout", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(3 * time.Second)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer srv.Close()
+
+		err := CheckHealth(srv.URL, 1*time.Second, false)
+		assert.Error(t, err)
 	})
 }
