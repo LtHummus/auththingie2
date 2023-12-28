@@ -138,6 +138,7 @@ func Render(w http.ResponseWriter, name string, data any) {
 	templ := templates[name]
 	if templ == nil {
 		log.Error().Str("name", name).Msg("could not find template")
+		return
 	}
 
 	buf := bufpool.Get()
