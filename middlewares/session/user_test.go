@@ -493,4 +493,33 @@ func TestMiddleware_ServeHTTP(t *testing.T) {
 		})
 		assertHandlerWasCalled(t, resp)
 	})
+
+	t.Run("don't reissue sessions if users are nil", func(t *testing.T) {
+		sc, _, m := generateTestMiddleware(t)
+
+		encodedSession, err := sc.Encode(SessionCookieName, Session{
+			SessionID: strings.Trim(uuid.New().String(), "-"),
+			UserID:    "",
+			Expires:   time.Now().Add(1 * time.Hour),
+			CustomData: map[string]any{
+				"foo": "bar",
+			},
+		})
+		require.NoError(t, err)
+
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.AddCookie(&http.Cookie{
+			Name:  SessionCookieName,
+			Value: encodedSession,
+		})
+
+		w := httptest.NewRecorder()
+
+		m.ServeHTTP(w, r)
+
+		resp := w.Result()
+
+		assert.Empty(t, resp.Cookies())
+		assertHandlerWasCalled(t, resp)
+	})
 }

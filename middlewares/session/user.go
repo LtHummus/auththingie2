@@ -219,7 +219,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sess != nil && sess.UserID != "" && !sess.Expired() {
 			// if the user is allegedly logged in, try and get them from the db
 			u, err = m.db.GetUserByGuid(r.Context(), sess.UserID)
-			if err != nil {
+			if err != nil || u == nil {
 				log.Warn().Err(err).Msg("could not get user from db")
 
 				// clear the session
@@ -237,7 +237,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if sess == nil || u == nil {
+	if sess == nil {
 		// no session found
 		newSession, err := NewDefaultSession()
 		if err != nil {
