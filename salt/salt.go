@@ -21,12 +21,13 @@ const (
 
 func getSaltPath() string {
 	var saltPath string
-	saltPath = viper.GetString("salt_file")
+
+	saltPath = os.Getenv("SALT_FILE")
 	if saltPath != "" {
 		return saltPath
 	}
 
-	saltPath = os.Getenv("SALT_FILE")
+	saltPath = viper.GetString("salt_file")
 	if saltPath != "" {
 		return saltPath
 	}
@@ -99,7 +100,7 @@ func readSalt(path string) {
 	}
 
 	if read.Version != version {
-		log.Warn().Int("version", salt.Version).Int("expected_version", version).Msg("version mismatch")
+		log.Warn().Int("version", read.Version).Int("expected_version", version).Msg("version mismatch")
 		// in the future, we should upgrade in place
 		createSalt(path)
 	}
