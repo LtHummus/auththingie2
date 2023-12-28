@@ -18,6 +18,7 @@ func TestNewDefaultSession(t *testing.T) {
 	assert.WithinDuration(t, time.Now(), s.CreationTime, 1*time.Second)
 	assert.Equal(t, map[string]any{}, s.CustomData)
 	assert.Empty(t, s.UserID)
+	assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
 
 	decoded, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(s.SessionID)
 	require.NoError(t, err)

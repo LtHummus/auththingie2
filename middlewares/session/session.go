@@ -14,13 +14,15 @@ const (
 	IDLengthBytes = 32 // 256-bit
 
 	DefaultLifetime = 24 * time.Hour
+
+	DefaultSessionLifetime = 24 * 30 * time.Hour
 )
 
 type Session struct {
 	SessionID    string    `json:"session_id"`
 	UserID       string    `json:"user_id,omitempty"`
 	LoginTime    time.Time `json:"login_time"`
-	Expires      time.Time `json:"expires"`
+	Expires      time.Time `json:"expires"` // note to self, is this useful?
 	CreationTime time.Time `json:"creation_time"`
 
 	CustomData map[string]any `json:"custom_data"`
@@ -37,6 +39,7 @@ func NewDefaultSession() (Session, error) {
 		SessionID:    id,
 		CreationTime: time.Now(),
 		CustomData:   map[string]any{},
+		Expires:      time.Now().Add(DefaultSessionLifetime),
 	}, nil
 }
 
