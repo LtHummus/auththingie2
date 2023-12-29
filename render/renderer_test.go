@@ -1,23 +1,13 @@
 package render
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func getResponseBody(t *testing.T, resp *http.Response) string {
-	bodyBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	resp.Body.Close()
-
-	return string(bodyBytes)
-}
 
 func TestRender(t *testing.T) {
 	Init()
@@ -32,11 +22,9 @@ func TestRender(t *testing.T) {
 		resp := w.Result()
 		assert.Equal(t, "text/html; charset=utf-8", resp.Header.Get("Content-Type"))
 
-		body := getResponseBody(t, resp)
-
-		assert.Contains(t, body, `<h1>Welcome to AuthThingie!</h1>`)
-		assert.Contains(t, body, `<title>AuthThingie 2</title>`)
-		assert.Contains(t, body, `<script src="/static/js/auththingie.js"></script>`)
+		assert.Contains(t, w.Body.String(), `<h1>Welcome to AuthThingie!</h1>`)
+		assert.Contains(t, w.Body.String(), `<title>AuthThingie 2</title>`)
+		assert.Contains(t, w.Body.String(), `<script src="/static/js/auththingie.js"></script>`)
 	})
 
 	t.Run("test simple message", func(t *testing.T) {
@@ -44,12 +32,9 @@ func TestRender(t *testing.T) {
 
 		RenderSimpleMessage(w, "test-div", "hello world")
 
-		resp := w.Result()
-		body := getResponseBody(t, resp)
-
-		assert.Contains(t, body, `<div id="test-div">`)
-		assert.Contains(t, body, `<p class="notice">`)
-		assert.Contains(t, body, "hello world")
+		assert.Contains(t, w.Body.String(), `<div id="test-div">`)
+		assert.Contains(t, w.Body.String(), `<p class="notice">`)
+		assert.Contains(t, w.Body.String(), "hello world")
 	})
 
 	t.Run("test render error", func(t *testing.T) {
@@ -57,12 +42,9 @@ func TestRender(t *testing.T) {
 
 		RenderError(w, "test-div", "hello world")
 
-		resp := w.Result()
-		body := getResponseBody(t, resp)
-
-		assert.Contains(t, body, `<div id="test-div">`)
-		assert.Contains(t, body, `<p class="notice">`)
-		assert.Contains(t, body, "hello world")
+		assert.Contains(t, w.Body.String(), `<div id="test-div">`)
+		assert.Contains(t, w.Body.String(), `<p class="notice">`)
+		assert.Contains(t, w.Body.String(), "hello world")
 	})
 
 	t.Run("test render full page error", func(t *testing.T) {
@@ -70,12 +52,9 @@ func TestRender(t *testing.T) {
 
 		RenderFullPageError(w, "title", "error header", "oh no!")
 
-		resp := w.Result()
-		body := getResponseBody(t, resp)
-
-		assert.Contains(t, body, `<article class="grid">`)
-		assert.Contains(t, body, `<h1>error header</h1>`)
-		assert.Contains(t, body, "oh no!")
+		assert.Contains(t, w.Body.String(), `<article class="grid">`)
+		assert.Contains(t, w.Body.String(), `<h1>error header</h1>`)
+		assert.Contains(t, w.Body.String(), "oh no!")
 	})
 
 	t.Run("test htmx compatible error", func(t *testing.T) {
@@ -86,10 +65,9 @@ func TestRender(t *testing.T) {
 			RenderHTMXCompatibleError(w, r, "oh no!", "test-id")
 
 			resp := w.Result()
-			body := getResponseBody(t, resp)
 
 			assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
-			assert.Equal(t, "oh no!\n", body)
+			assert.Equal(t, "oh no!\n", w.Body.String())
 		})
 
 		t.Run("put proper data in headers when HTMX request", func(t *testing.T) {
@@ -100,14 +78,13 @@ func TestRender(t *testing.T) {
 			RenderHTMXCompatibleError(w, r, "oh no!", "test-id")
 
 			resp := w.Result()
-			body := getResponseBody(t, resp)
 
 			assert.Equal(t, "#test-id", resp.Header.Get("HX-Retarget"))
 			assert.Equal(t, "outerHTML", resp.Header.Get("HX-Reswap"))
 
 			assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 
-			assert.Equal(t, `<div id="test-id" class="error-box ">oh no!</div>`, strings.TrimSpace(body))
+			assert.Equal(t, `<div id="test-id" class="error-box ">oh no!</div>`, strings.TrimSpace(w.Body.String()))
 		})
 	})
 
@@ -123,10 +100,6 @@ func TestWriteJSONError(t *testing.T) {
 
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		require.NoError(t, err)
-
-		assert.JSONEq(t, `{"message":"test error message", "error_code":"1234", "failed":true}`, string(body))
+		assert.JSONEq(t, `{"message":"test error message", "error_code":"1234", "failed":true}`, w.Body.String())
 	})
 }

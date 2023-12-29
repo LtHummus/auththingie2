@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -96,11 +95,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		resp.Body.Close()
-
-		assert.Contains(t, string(body), "<strong>&lt;not logged in&gt;</strong>")
+		assert.Contains(t, w.Body.String(), "<strong>&lt;not logged in&gt;</strong>")
 	})
 
 	t.Run("with logged in user", func(t *testing.T) {
@@ -114,11 +109,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		resp.Body.Close()
-
-		assert.Contains(t, string(body), "test-user")
+		assert.Contains(t, w.Body.String(), "test-user")
 	})
 
 }
