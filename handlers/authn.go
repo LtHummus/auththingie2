@@ -39,7 +39,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 
 	u := session.GetUserFromRequest(r)
 	if u == nil {
-		writeJSONError(w, "You must be logged in to enroll keys", "authn.enroll.not_logged_in", http.StatusForbidden)
+		render.RenderJSONError(w, "You must be logged in to enroll keys", "authn.enroll.not_logged_in", http.StatusForbidden)
 		return
 	}
 
@@ -50,7 +50,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	err := session.WriteSession(w, r, s)
 	if err != nil {
 		log.Error().Err(err).Msg("could not update session")
-		writeJSONError(w, "Could not update user session", "authn.enroll.could_not_update_session", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not update user session", "authn.enroll.could_not_update_session", http.StatusInternalServerError)
 		return
 	}
 
@@ -65,7 +65,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	creation, sessionData, err := e.WebAuthn.BeginRegistration(u, webauthn.WithExclusions(excluded))
 	if err != nil {
 		log.Error().Err(err).Msg("could not create registration data")
-		writeJSONError(w, "Could not genereate registration challenge", "authn.enroll.could_not_gen_challenge", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not genereate registration challenge", "authn.enroll.could_not_gen_challenge", http.StatusInternalServerError)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	data, err := json.Marshal(creation)
 	if err != nil {
 		log.Error().Err(err).Msg("could not serialize registration data")
-		writeJSONError(w, "Could not serialize registration challenge", "authn.enroll.serialization_failure", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not serialize registration challenge", "authn.enroll.serialization_failure", http.StatusInternalServerError)
 		return
 	}
 
@@ -140,14 +140,14 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 
 	u := session.GetUserFromRequest(r)
 	if u != nil {
-		writeJSONError(w, "You are already logged in", "authn.login.already_logged_in", http.StatusForbidden)
+		render.RenderJSONError(w, "You are already logged in", "authn.login.already_logged_in", http.StatusForbidden)
 		return
 	}
 
 	res, sess, err := e.WebAuthn.BeginDiscoverableLogin()
 	if err != nil {
 		log.Error().Err(err).Msg("could not create discoverable login payload")
-		writeJSONError(w, "Could not create login challenge", "authn.login.could_not_create_challenge", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not create login challenge", "authn.login.could_not_create_challenge", http.StatusInternalServerError)
 		return
 	}
 
@@ -159,14 +159,14 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 	err = session.WriteSession(w, r, s)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not write session data")
-		writeJSONError(w, "Could not write session data", "authn.login.could_not_write_session", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_write_session", http.StatusInternalServerError)
 		return
 	}
 
 	data, err := json.Marshal(res)
 	if err != nil {
 		log.Error().Err(err).Msg("could not serialize challenge")
-		writeJSONError(w, "Could not serialize challenge", "authn.login.could_not_serialize", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not serialize challenge", "authn.login.could_not_serialize", http.StatusInternalServerError)
 		return
 	}
 
@@ -182,14 +182,14 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	response, err := protocol.ParseCredentialRequestResponse(r)
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse response")
-		writeJSONError(w, "Could not parse response", "authn.login.bad_parse", http.StatusBadRequest)
+		render.RenderJSONError(w, "Could not parse response", "authn.login.bad_parse", http.StatusBadRequest)
 		return
 	}
 
 	authID, err := getAuthID(r)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not get auth id")
-		writeJSONError(w, "Could not get auth session id", "authn.login.no_auth_session", http.StatusBadRequest)
+		render.RenderJSONError(w, "Could not get auth session id", "authn.login.no_auth_session", http.StatusBadRequest)
 		return
 	}
 
@@ -209,11 +209,11 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 		// TODO: maybe refactor this error handling logic
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Warn().Str("ip", util.FindTrueIP(r)).Msg("bad passkey attempt")
-			writeJSONError(w, "Key not registered to any user", "authn.login.unrecognized_key", http.StatusForbidden)
+			render.RenderJSONError(w, "Key not registered to any user", "authn.login.unrecognized_key", http.StatusForbidden)
 			return
 		}
 		log.Warn().Err(err).Str("ip", util.FindTrueIP(r)).Msg("could not validate credential")
-		writeJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusInternalServerError)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	err = session.WriteSession(w, r, sess)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
-		writeJSONError(w, "Could not write session data", "authn.login.could_not_update_session", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_update_session", http.StatusInternalServerError)
 		return
 	}
 

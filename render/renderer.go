@@ -2,6 +2,7 @@ package render
 
 import (
 	"embed"
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -153,6 +154,27 @@ func Render(w http.ResponseWriter, name string, data any) {
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Error().Err(err).Str("name", name).Msg("error writing response to buffer")
+	}
+}
+
+func RenderJSONError(w http.ResponseWriter, msg string, errorCode string, statusCode int) {
+	resp := struct {
+		Message   string `json:"message"`
+		ErrorCode string `json:"error_code"`
+		Failed    bool   `json:"failed"`
+	}{
+		Message:   msg,
+		ErrorCode: errorCode,
+		Failed:    true,
+	}
+
+	// this can never fail to marshal
+	bytes, _ := json.Marshal(resp)
+
+	w.WriteHeader(statusCode)
+	_, err := w.Write(bytes)
+	if err != nil {
+		log.Error().Err(err).Caller(1).Msg("could not write JSON error to response")
 	}
 }
 
