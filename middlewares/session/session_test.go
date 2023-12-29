@@ -45,6 +45,6 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 	})
 
 	assert.Equal(t, "1234", s.UserID)
-	assert.WithinDuration(t, time.Now().Add(24*time.Hour), s.Expires, 1*time.Second)
+	assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
 	assert.WithinDuration(t, time.Now(), s.CreationTime, 1*time.Second)
 }
