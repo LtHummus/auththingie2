@@ -7,11 +7,13 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func prepareViper(t *testing.T, config string) {
 	viper.SetConfigType("yaml")
-	viper.ReadConfig(strings.NewReader(config))
+	err := viper.ReadConfig(strings.NewReader(config))
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		viper.Reset()
 	})

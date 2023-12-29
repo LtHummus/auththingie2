@@ -49,7 +49,7 @@ func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 		})
 
 		viper.SetConfigType("yaml")
-		viper.ReadConfig(strings.NewReader(sampleRules))
+		_ = viper.ReadConfig(strings.NewReader(sampleRules))
 
 		a := ViperConfigAnalyzer{}
 		assert.Empty(t, a.rules)
@@ -79,7 +79,7 @@ rules:
 `
 
 		viper.SetConfigType("yaml")
-		viper.ReadConfig(strings.NewReader(badRules))
+		_ = viper.ReadConfig(strings.NewReader(badRules))
 
 		a := ViperConfigAnalyzer{}
 		err := a.UpdateFromConfigFile()
@@ -96,7 +96,7 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		})
 
 		viper.SetConfigType("yaml")
-		viper.ReadConfig(strings.NewReader(sampleRules))
+		_ = viper.ReadConfig(strings.NewReader(sampleRules))
 
 		a := ViperConfigAnalyzer{}
 		assert.Empty(t, a.rules)
@@ -122,7 +122,7 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		})
 
 		viper.SetConfigType("yaml")
-		viper.ReadConfig(strings.NewReader(sampleRules))
+		_ = viper.ReadConfig(strings.NewReader(sampleRules))
 
 		a := ViperConfigAnalyzer{}
 		assert.Empty(t, a.rules)

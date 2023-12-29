@@ -236,7 +236,7 @@ func TestWriteSession(t *testing.T) {
 		s := Session{}
 
 		assert.Panics(t, func() {
-			WriteSession(w, r, s)
+			_ = WriteSession(w, r, s)
 		})
 	})
 }
@@ -250,7 +250,7 @@ func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.DB
 		db: db,
 		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("hi!"))
+			_, _ = w.Write([]byte("hi!"))
 		}),
 	}
 }
@@ -261,14 +261,6 @@ func assertHandlerWasCalled(t *testing.T, r *http.Response) {
 	r.Body.Close()
 
 	assert.Equal(t, "hi!", string(body), "Handler was not called")
-}
-
-func assertHandlerWasNotCalled(t *testing.T, r *http.Response) {
-	body, err := io.ReadAll(r.Body)
-	assert.NoError(t, err)
-	r.Body.Close()
-
-	assert.NotEqual(t, "hi!", string(body), "Handler was called when it should not have been")
 }
 
 func assertSessionData(t *testing.T, sc *securecookie.SecureCookie, resp *http.Response, assertions func(t *testing.T, session *Session)) {

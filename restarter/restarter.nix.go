@@ -19,4 +19,7 @@ func innerRestart() {
 	env := os.Environ()
 
 	err = syscall.Exec(self, args, env) // #nosec G204 -- variables are not user controlled
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not restart process")
+	}
 }

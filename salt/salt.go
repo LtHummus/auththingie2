@@ -108,7 +108,6 @@ func readSalt(path string) {
 	log.Debug().Str("salt_path", path).Msg("loaded salt")
 
 	salt = &read
-	return
 }
 
 func GenerateSigningKey() []byte {

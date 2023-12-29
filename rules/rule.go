@@ -95,6 +95,7 @@ func (r *Rule) Matches(ri *RequestInfo) bool {
 	return sourceMatch && protocolMatch && hostMatch && pathMatch
 }
 
+//nolint:unused // maybe we'll use this someday :)
 func (r *Rule) toRawRule() rawRule {
 	rr := rawRule{}
 	rr.Name = r.Name
