@@ -2,6 +2,7 @@ package config
 
 import (
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -94,4 +95,75 @@ server:
 		errors := ValidateConfig()
 		assert.Len(t, errors, 3)
 	})
+}
+
+func TestIsDocker(t *testing.T) {
+	t.Run("env var is unset", func(t *testing.T) {
+		assert.False(t, IsDocker())
+	})
+
+	t.Run("env var is set", func(t *testing.T) {
+		t.Setenv("AT2_MODE", "docker")
+		assert.True(t, IsDocker())
+	})
+}
+
+func TestIsProductionMode(t *testing.T) {
+	t.Run("env var is unset", func(t *testing.T) {
+		assert.False(t, IsProductionMode())
+	})
+
+	t.Run("env var is set to something non-prod", func(t *testing.T) {
+		t.Setenv("ENVIRONMENT", "test")
+		assert.False(t, IsProductionMode())
+	})
+
+	t.Run("env var indicates prod mode", func(t *testing.T) {
+		t.Setenv("ENVIRONMENT", "prod")
+		assert.True(t, IsProductionMode())
+	})
+}
+
+func TestIsDebugLoggingEnabled(t *testing.T) {
+	t.Run("env var is unset", func(t *testing.T) {
+		assert.False(t, IsDebugLoggingEnabled())
+	})
+
+	t.Run("env var is set to something else", func(t *testing.T) {
+		t.Setenv("DEBUG_LOG", "false")
+		assert.False(t, IsDebugLoggingEnabled())
+	})
+
+	t.Run("env var says yes", func(t *testing.T) {
+		t.Setenv("DEBUG_LOG", "true")
+		assert.True(t, IsDebugLoggingEnabled())
+	})
+}
+
+func TestEnableDebugPage(t *testing.T) {
+	t.Cleanup(func() {
+		atomic.StoreUint32(&DebugFlagOverride, 0)
+	})
+
+	t.Run("defaults for prod mode", func(t *testing.T) {
+		t.Setenv("ENVIRONMENT", "prod")
+		assert.False(t, EnableDebugPage())
+	})
+
+	t.Run("defaults for non-prod", func(t *testing.T) {
+		assert.True(t, EnableDebugPage())
+	})
+
+	t.Run("explicitly enable in prod", func(t *testing.T) {
+		t.Setenv("ENVIRONMENT", "prod")
+		t.Setenv("ENABLE_DEBUG_PAGE", "true")
+		assert.True(t, EnableDebugPage())
+	})
+
+	t.Run("prod mode and flag is set", func(t *testing.T) {
+		t.Setenv("ENVIRONMENT", "prod")
+		atomic.StoreUint32(&DebugFlagOverride, 1)
+		assert.True(t, EnableDebugPage())
+	})
+
 }
