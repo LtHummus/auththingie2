@@ -30,6 +30,15 @@ func TestFlags(t *testing.T) {
 			},
 			expected: 15,
 		},
+		{
+			flags: webauthn.CredentialFlags{
+				UserPresent:    true,
+				UserVerified:   true,
+				BackupEligible: false,
+				BackupState:    false,
+			},
+			expected: 12,
+		},
 	}
 
 	for _, curr := range tc {
