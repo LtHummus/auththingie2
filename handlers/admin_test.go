@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -70,5 +71,20 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<a href="/admin/users/a">Edit User</a></td>`)
+	})
+
+	t.Run("db failure", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, sampleAdminUser.Id).Return(sampleAdminUser, nil)
+		db.On("GetAllUsers", mock.Anything).Return(nil, errors.New("whoops"))
+
+		r := makeTestRequest(t, http.MethodGet, "/admin", nil, withUser(sampleAdminUser))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 	})
 }
