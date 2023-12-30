@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
 	"github.com/lthummus/auththingie2/render"
 )
@@ -32,9 +31,7 @@ func TestEnv_HandleIndex(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		db.On("GetUserByGuid", mock.Anything, sampleAdminUser.Id).Return(sampleAdminUser, nil)
-
-		r := makeTestRequest(t, http.MethodGet, "/", nil, withUser(sampleAdminUser))
+		r := makeTestRequest(t, http.MethodGet, "/", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)

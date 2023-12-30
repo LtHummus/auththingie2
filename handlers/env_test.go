@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/middlewares/session"
@@ -53,11 +54,13 @@ var (
 			cd.req = csrf.UnsafeSkipCheck(cd.req)
 		}
 	}
-	withUser = func(u *user.User) connectionOption {
+	withUser = func(u *user.User, db *mocks.DB) connectionOption {
 		return func(cd *testConnectionData) {
 			cd.user = u
 			cd.sess.UserID = u.Id
 			cd.sess.LoginTime = time.Now()
+
+			db.On("GetUserByGuid", mock.Anything, u.Id).Return(u, nil)
 		}
 	}
 )
