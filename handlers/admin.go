@@ -230,6 +230,11 @@ func (e *Env) HandleEditUserSubmission(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not get user", http.StatusInternalServerError)
 		return
 	}
+	if u == nil {
+		log.Warn().Str("user_id", userId).Msg("could not find user")
+		http.Error(w, "could not find user", http.StatusNotFound)
+		return
+	}
 
 	newPwd := r.FormValue("new-pwd")
 	if strings.TrimSpace(newPwd) != "" {
@@ -399,8 +404,13 @@ func (e *Env) HandleAdminUnenrollTOTP(w http.ResponseWriter, r *http.Request) {
 
 	userToModify, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
-		log.Warn().Str("user_id", userId).Msg("could not get user from database")
+		log.Warn().Err(err).Str("user_id", userId).Msg("could not get user from database")
 		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	if userToModify == nil {
+		log.Warn().Str("user_id", userId).Msg("user not found")
+		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
 

@@ -63,6 +63,11 @@ var (
 			db.On("GetUserByGuid", mock.Anything, u.Id).Return(u, nil)
 		}
 	}
+	isHTMXRequest = func() connectionOption {
+		return func(cd *testConnectionData) {
+			cd.req.Header.Set("HX-Request", "true")
+		}
+	}
 )
 
 func setupSalts(t *testing.T) {

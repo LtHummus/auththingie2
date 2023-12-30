@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/lthummus/auththingie2/argon"
 	"github.com/lthummus/auththingie2/render"
 	rules2 "github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
@@ -380,5 +381,744 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `hx-confirm="Delete role b from this user?"`)
+	})
+}
+
+func TestEnv_HandleUserTagDelete(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleNonAdminUser, db), passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
+	})
+
+	t.Run("handle database error gracefully", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, errors.New("oh no!"))
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not get user from database")
+	})
+
+	t.Run("handle target user not found gracefully", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, nil)
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<div id="tag-error" class="error-box ">User not found in database</div>`)
+	})
+
+	t.Run("handle db error on save", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
+			Id:       "testuser",
+			Username: "a test user",
+			Roles:    []string{"aaa", "bbb", "dtag"},
+		}, nil)
+		db.On("SaveUser", mock.Anything, &user.User{
+			Id:       "testuser",
+			Username: "a test user",
+			Roles:    []string{"aaa", "bbb"},
+		}).Return(errors.New("whoops"))
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `Could not update user in database`)
+	})
+
+	t.Run("everything worked ok", func(t *testing.T) {
+		a, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
+			Id:       "testuser",
+			Username: "a test user",
+			Roles:    []string{"aaa", "bbb", "dtag"},
+		}, nil)
+		db.On("SaveUser", mock.Anything, &user.User{
+			Id:       "testuser",
+			Username: "a test user",
+			Roles:    []string{"aaa", "bbb"},
+		}).Return(nil)
+		a.On("KnownRoles", mock.Anything).Return([]string{"a", "b"})
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<span class="modify-badge-button add-badge-button" hx-on:click="clearTagError()" hx-patch="/admin/users/testuser/tags" hx-vals='{"new-tag":"a"}' hx-target="#tag-edit-table">`)
+	})
+}
+
+func TestBuildMissingRoles(t *testing.T) {
+	t.Run("sample input", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+
+		a.On("KnownRoles").Return([]string{"aaa", "bbb", "ccc", "ddd"})
+
+		missingRoles := e.buildMissingRoles(&user.User{
+			Roles: []string{"aaa", "bbb"},
+		})
+
+		assert.ElementsMatch(t, []string{"ccc", "ddd"}, missingRoles)
+	})
+}
+
+func TestEnv_RenderUserEditPage(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to do this")
+	})
+
+	t.Run("fail if non-admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to do this")
+	})
+
+	t.Run("handle database error", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("noooo"))
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "could not get user info")
+	})
+
+	t.Run("handle user does not exist", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "user does not exist")
+	})
+
+	t.Run("everything works ok", func(t *testing.T) {
+		a, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		a.On("KnownRoles").Return([]string{"a", "b", "c"})
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
+			Id:       "myuser",
+			Username: "ausername",
+			Roles:    []string{"a", "b"},
+			Admin:    false,
+		}, nil)
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "<li>Editing <strong>ausername</strong></li>")
+	})
+}
+
+func TestEnv_HandleEditUserSubmission(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin for this")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin for this")
+	})
+
+	t.Run("database error on user retrieval", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("womp womp"))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "could not get user")
+	})
+
+	t.Run("handle user not found", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("new-pwd", "anewpassword")
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "could not find user")
+	})
+
+	t.Run("could not save user", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("new-pwd", "anewpassword")
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
+			Id:       "myuser",
+			Username: "myuser",
+		}, nil)
+		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("whoopsies"))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "could not persist changes to database")
+	})
+
+	t.Run("All OK", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("new-pwd", "anewpassword")
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
+			Id:       "myuser",
+			Username: "myuser",
+		}, nil)
+		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectLocation, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin", redirectLocation.Path)
+
+		updatedUser := db.Mock.Calls[2].Arguments[1].(*user.User)
+		assert.NoError(t, argon.ValidatePassword("anewpassword", updatedUser.PasswordHash))
+	})
+}
+
+func TestEnv_HandleCreateUserPage(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil)
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+	})
+
+	t.Run("all ok", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<form action="/admin/users/create" method="post">`)
+	})
+}
+
+func TestEnv_HandleCreateUserPost(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if no username", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("pw1", "apass")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Username may not be blank")
+	})
+
+	t.Run("fail if pw is blank", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Password may not be blank")
+	})
+
+	t.Run("fail if passwords do not match", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "apass1")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Passwords do not match")
+	})
+
+	t.Run("check for existing user fails", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, errors.New("wheee"))
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "apass")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not query for username")
+	})
+
+	t.Run("user already exists", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByUsername", mock.Anything, "newuser").Return(&user.User{}, nil)
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "apass")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Username already exists")
+	})
+
+	t.Run("fail to save user", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
+		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("whoops"))
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "apass")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not create user in database")
+	})
+
+	t.Run("everything worked", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
+		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", "apass")
+		v.Add("pw2", "apass")
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin", redirectURL.Path)
+
+		createdUser := db.Mock.Calls[2].Arguments[1].(*user.User)
+		assert.Equal(t, "newuser", createdUser.Username)
+		assert.NoError(t, argon.ValidatePassword("apass", createdUser.PasswordHash))
+	})
+}
+
+func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+	seed := "sampletotpseed"
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if attempting to unenroll self", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/totp_unenroll", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "to unenroll yourself, you must use the normal method")
+	})
+
+	t.Run("fail to get user to modify", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("whe"))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "database error")
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "user not found")
+	})
+
+	t.Run("failed to save user", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
+			Id:       "myuser",
+			Username: "somerandomuseranme",
+			TOTPSeed: &seed,
+		}, nil)
+		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("could not save"))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "database error")
+	})
+
+	t.Run("all ok", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
+			Id:       "myuser",
+			Username: "somerandomuseranme",
+			TOTPSeed: &seed,
+		}, nil)
+		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin/users/myuser", redirectURL.Path)
+
+		modifiedUser := db.Mock.Calls[2].Arguments[1].(*user.User)
+		assert.Nil(t, modifiedUser.TOTPSeed)
+	})
+}
+
+func TestEnv_HandleUserDelete(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("attempt to delete self", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/delete", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you cannot delete yourself")
+	})
+
+	t.Run("deletion failure", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("DeleteUser", mock.Anything, "myuser").Return(errors.New("no delete for you"))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "database error")
+	})
+
+	t.Run("everything ok", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("DeleteUser", mock.Anything, "myuser").Return(nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin", redirectURL.Path)
 	})
 }
