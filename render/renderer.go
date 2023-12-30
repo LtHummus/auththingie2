@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 
@@ -28,48 +29,52 @@ var (
 	templates map[string]*template.Template
 
 	bufpool *bpool.BufferPool
+
+	once sync.Once
 )
 
 func Init() {
-	log.Info().Msg("starting initialization of template system")
+	once.Do(func() {
+		log.Info().Msg("starting initialization of template system")
 
-	templates = make(map[string]*template.Template)
-	bufpool = bpool.NewBufferPool(BufferPoolSize)
+		templates = make(map[string]*template.Template)
+		bufpool = bpool.NewBufferPool(BufferPoolSize)
 
-	bases, err := fs.Glob(templateFS, "templates/bases/*.gohtml")
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not load base HTML templates")
-	}
-
-	includes, err := fs.Glob(templateFS, "templates/includes/*.gohtml")
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not load includes HTML templates")
-	}
-
-	layouts, err := fs.Glob(templateFS, "templates/*.gohtml")
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not load layout HTML templates")
-	}
-
-	for _, curr := range includes {
-		t, err := template.ParseFS(templateFS, curr)
+		bases, err := fs.Glob(templateFS, "templates/bases/*.gohtml")
 		if err != nil {
-			log.Fatal().Err(err).Str("template", curr).Msg("could not parse include template")
+			log.Fatal().Err(err).Msg("could not load base HTML templates")
 		}
-		templates[filepath.Base(curr)] = t
-	}
 
-	for _, curr := range layouts {
-		files := append(bases, includes...)
-		files = append(files, curr)
-		t, err := template.ParseFS(templateFS, files...)
+		includes, err := fs.Glob(templateFS, "templates/includes/*.gohtml")
 		if err != nil {
-			log.Fatal().Err(err).Str("template", curr).Msg("could not parse template")
+			log.Fatal().Err(err).Msg("could not load includes HTML templates")
 		}
-		templates[filepath.Base(curr)] = t
-	}
 
-	log.Debug().Int("num_templates", len(templates)).Msg("templates loaded")
+		layouts, err := fs.Glob(templateFS, "templates/*.gohtml")
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not load layout HTML templates")
+		}
+
+		for _, curr := range includes {
+			t, err := template.ParseFS(templateFS, curr)
+			if err != nil {
+				log.Fatal().Err(err).Str("template", curr).Msg("could not parse include template")
+			}
+			templates[filepath.Base(curr)] = t
+		}
+
+		for _, curr := range layouts {
+			files := append(bases, includes...)
+			files = append(files, curr)
+			t, err := template.ParseFS(templateFS, files...)
+			if err != nil {
+				log.Fatal().Err(err).Str("template", curr).Msg("could not parse template")
+			}
+			templates[filepath.Base(curr)] = t
+		}
+
+		log.Debug().Int("num_templates", len(templates)).Msg("templates loaded")
+	})
 }
 
 type simpleMessageParams struct {
