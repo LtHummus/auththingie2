@@ -220,4 +220,165 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
 	})
+
+	t.Run("non admin user should fail", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("new-tag", "test-tag")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
+	})
+
+	t.Run("database error", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, errors.New("oh no"))
+
+		v := url.Values{}
+		v.Add("new-tag", "test-tag")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not get user from database:")
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, nil)
+
+		v := url.Values{}
+		v.Add("new-tag", "test-tag")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "User not found in database")
+	})
+
+	t.Run("no tag specified", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"a"},
+		}, nil)
+
+		v := url.Values{}
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Tag can not be blank")
+	})
+
+	t.Run("tag already exists specified", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"a"},
+		}, nil)
+
+		v := url.Values{}
+		v.Add("new-tag", "a")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Tag `a` already exists on user")
+	})
+
+	t.Run("database error on save", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"b"},
+		}, nil)
+		db.On("SaveUser", mock.Anything, mock.Anything).Return(errors.New("oh no"))
+
+		v := url.Values{}
+		v.Add("new-tag", "a")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not update user in database: ")
+	})
+
+	t.Run("everything worked", func(t *testing.T) {
+		a, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"b"},
+		}, nil)
+		db.On("SaveUser", mock.Anything, &user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"b", "a"},
+		}).Return(nil)
+
+		a.On("KnownRoles").Return([]string{"a", "b"})
+
+		v := url.Values{}
+		v.Add("new-tag", "a")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `hx-confirm="Delete role b from this user?"`)
+	})
 }
