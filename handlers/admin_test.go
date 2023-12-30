@@ -198,3 +198,26 @@ func TestEnv_HandleTestRule(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "you cannot access this page")
 	})
 }
+
+func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("not logged in should fail", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		v := url.Values{}
+		v.Add("new-tag", "test-tag")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF())
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
+	})
+}
