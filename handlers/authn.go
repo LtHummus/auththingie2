@@ -87,7 +87,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 }
 
 func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Request) {
-	log.Trace().Msg("inside HandlWebAuthnFinishRegistration")
+	log.Trace().Msg("inside HandleWebAuthnFinishRegistration")
 	u := session.GetUserFromRequest(r)
 	if u == nil {
 		http.Error(w, "must be logged in to do this", http.StatusForbidden)
