@@ -5,9 +5,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
+	"github.com/lthummus/auththingie2/salt"
 )
 
 func TestEnv_HandleLogout(t *testing.T) {
@@ -33,7 +36,20 @@ func TestEnv_HandleLogout(t *testing.T) {
 		// check for two cookies -- CSRF and session
 		assert.Len(t, resp.Cookies(), 2)
 
-		// TODO: can we validate the session data here?
+		sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
+		var sessionCookieData string
+		for _, curr := range resp.Cookies() {
+			if curr.Name == session.SessionCookieName {
+				sessionCookieData = curr.Value
+				break
+			}
+		}
+		assert.NotEmpty(t, sessionCookieData)
 
+		var sess session.Session
+		err = sc.Decode(session.SessionCookieName, sessionCookieData, &sess)
+		assert.NoError(t, err)
+
+		assert.Empty(t, sess.UserID)
 	})
 }
