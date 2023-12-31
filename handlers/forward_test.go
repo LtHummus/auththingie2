@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	session2 "github.com/lthummus/auththingie2/middlewares/session"
+	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
-	rules2 "github.com/lthummus/auththingie2/rules"
+	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
 
 	"github.com/google/uuid"
@@ -23,20 +23,20 @@ import (
 
 const sourceIPHeader = "X-Forwarded-For"
 
-type testRequestOption = func(sess *session2.Session)
+type testRequestOption = func(sess *session.Session)
 
 func withLoginTime(time time.Time) testRequestOption {
-	return func(sess *session2.Session) {
+	return func(sess *session.Session) {
 		sess.LoginTime = time
 	}
 }
 
-func buildUserCookie(t *testing.T, e *Env, user *user.User) *session2.Session {
+func buildUserCookie(t *testing.T, e *Env, user *user.User) *session.Session {
 	if user != nil && user.Id == "" {
 		user.Id = strings.Trim(uuid.New().String(), "-")
 	}
 
-	sess, err := session2.NewDefaultSession()
+	sess, err := session.NewDefaultSession()
 	require.NoError(t, err)
 
 	if user != nil {
@@ -63,12 +63,12 @@ func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequ
 	}
 
 	r.AddCookie(&http.Cookie{
-		Name:  session2.SessionCookieName,
+		Name:  session.SessionCookieName,
 		Value: sess.SessionID,
 	})
 
 	// so much copying :(
-	return session2.ArbitraryAttachSession(*sess, r, user, nil)
+	return session.ArbitraryAttachSession(*sess, r, user, nil)
 }
 
 func TestEnv_HandleNotAllowed(t *testing.T) {
@@ -118,7 +118,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusFound, resp.StatusCode)
 
 		// check to make sure the rule was passed properly
-		ri := a.Calls[0].Arguments[0].(*rules2.RequestInfo)
+		ri := a.Calls[0].Arguments[0].(*rules.RequestInfo)
 
 		assert.True(t, ri.Valid())
 		assert.Equal(t, http.MethodGet, ri.Method)
@@ -146,7 +146,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: true})
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{})
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{})
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
@@ -160,7 +160,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}})
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{PermittedRoles: []string{"foo", "bar"}})
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo", "bar"}})
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
@@ -174,7 +174,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}})
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{PermittedRoles: []string{"bar"}})
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"bar"}})
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
@@ -192,7 +192,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{Public: true})
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
@@ -218,7 +218,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.AddCookie(&http.Cookie{
-			Name:  session2.SessionCookieName,
+			Name:  session.SessionCookieName,
 			Value: "lol",
 		})
 
@@ -238,7 +238,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 
 		timeout := 5 * time.Minute
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{
 			PermittedRoles: []string{"a"},
 			Timeout:        &timeout,
 		})
@@ -257,7 +257,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 
 		timeout := 5 * time.Minute
 
-		a.On("MatchesRule", mock.Anything).Return(&rules2.Rule{
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{
 			PermittedRoles: []string{"a"},
 			Timeout:        &timeout,
 		})

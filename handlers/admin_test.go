@@ -15,7 +15,7 @@ import (
 
 	"github.com/lthummus/auththingie2/argon"
 	"github.com/lthummus/auththingie2/render"
-	rules2 "github.com/lthummus/auththingie2/rules"
+	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
 )
 
@@ -52,7 +52,7 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 		}, nil)
 
 		host := "test.example.com"
-		a.On("Rules").Return([]rules2.Rule{
+		a.On("Rules").Return([]rules.Rule{
 			{
 				Name:            "test-rule",
 				SourceAddress:   nil,
@@ -97,13 +97,13 @@ func TestEnv_HandleTestRule(t *testing.T) {
 		a, db, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		a.On("MatchesRule", &rules2.RequestInfo{
+		a.On("MatchesRule", &rules.RequestInfo{
 			Method:     http.MethodGet,
 			Protocol:   "https",
 			Host:       "test.example.com",
 			RequestURI: "/foo",
 			SourceIP:   net.ParseIP("11.11.11.11"),
-		}).Return(&rules2.Rule{Name: "test-rule"})
+		}).Return(&rules.Rule{Name: "test-rule"})
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com/foo")

@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -214,7 +213,6 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		err := json.NewDecoder(w.Result().Body).Decode(&createResponse)
 		assert.NoError(t, err)
 
-		fmt.Printf("%s\n", w.Body.String())
 		assert.Equal(t, "example.com", createResponse.Response.RelyingParty.Name)
 		assert.Equal(t, "example.com", createResponse.Response.RelyingParty.ID)
 		assert.Equal(t, sampleNonAdminUser.Username, createResponse.Response.User.Name)
@@ -288,7 +286,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		fmt.Printf("%s\n", w.Body.String())
+		
 		var challengeData *protocol.CredentialAssertion
 		err := json.NewDecoder(w.Result().Body).Decode(&challengeData)
 		assert.NoError(t, err)
