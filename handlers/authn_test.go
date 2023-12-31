@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -52,13 +53,13 @@ func TestWebAuthnFlow(t *testing.T) {
 
 	sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
 
+	rp := virtualwebauthn.RelyingParty{
+		Name:   "example.com",
+		ID:     "example.com",
+		Origin: "https://example.com",
+	}
+
 	t.Run("happy case", func(t *testing.T) {
-		// create our relaying party data and a new authenticator
-		rp := virtualwebauthn.RelyingParty{
-			Name:   "example.com",
-			ID:     "example.com",
-			Origin: "https://example.com",
-		}
 		authenticator := virtualwebauthn.NewAuthenticator()
 
 		// build test environment
@@ -159,6 +160,53 @@ func TestWebAuthnFlow(t *testing.T) {
 		assert.WithinDuration(t, time.Now(), sess.LoginTime, 1*time.Second)
 	})
 
+	t.Run("log in with key not found", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		w1 := httptest.NewRecorder()
+
+		mux.ServeHTTP(w1, r1)
+
+		assert.Equal(t, http.StatusOK, w1.Result().StatusCode)
+		var sess session.Session
+		err := sc.Decode(session.SessionCookieName, w1.Result().Cookies()[0].Value, &sess)
+		assert.NoError(t, err)
+
+		authenticator := virtualwebauthn.NewAuthenticator()
+		authenticator.Options.UserHandle = []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+
+		cred := virtualwebauthn.NewCredential(virtualwebauthn.KeyTypeEC2)
+		authenticator.AddCredential(cred)
+
+		assertOptions, err := virtualwebauthn.ParseAssertionOptions(w1.Body.String())
+		assert.NoError(t, err)
+		assert.NotNil(t, assertOptions)
+
+		assertionResponse := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *assertOptions)
+
+		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), passesCSRF(), withCustomSession(func(s *session.Session) {
+			s.CustomData = sess.CustomData
+		}))
+		w2 := httptest.NewRecorder()
+
+		db.On("FindUserByCredentialInfo", mock.Anything, mock.AnythingOfType("[]uint8"), mock.AnythingOfType("[]uint8")).Return(nil, sql.ErrNoRows)
+
+		mux.ServeHTTP(w2, r2)
+
+		assert.Equal(t, http.StatusForbidden, w2.Result().StatusCode)
+		assert.Contains(t, w2.Body.String(), "Key not registered to any user")
+		assert.Contains(t, w2.Body.String(), "authn.login.unrecognized_key")
+
+		passedUserHandle := db.Mock.Calls[0].Arguments[2].([]byte)
+		assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04, 0x05}, passedUserHandle)
+
+		passedCredentialID := db.Mock.Calls[0].Arguments[1].([]byte)
+		assert.Equal(t, cred.ID, passedCredentialID)
+
+		assert.Empty(t, w2.Result().Cookies())
+	})
 }
 
 func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
@@ -286,7 +334,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		
+
 		var challengeData *protocol.CredentialAssertion
 		err := json.NewDecoder(w.Result().Body).Decode(&challengeData)
 		assert.NoError(t, err)
