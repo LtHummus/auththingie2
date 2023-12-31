@@ -11,8 +11,10 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/google/uuid"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -26,7 +28,7 @@ var (
 	sampleTOTPSeed = "JBSWY3DPEHPK3PXP"
 
 	sampleAdminUser = &user.User{
-		Id:                "sample-admin",
+		Id:                uuid.New().String(),
 		Username:          "adminuser",
 		PasswordHash:      "",
 		Roles:             []string{},
@@ -38,7 +40,7 @@ var (
 	}
 
 	sampleNonAdminUser = &user.User{
-		Id:                "sample-regular",
+		Id:                uuid.New().String(),
 		Username:          "regularuser",
 		PasswordHash:      "",
 		Roles:             []string{"a", "b"},
@@ -50,7 +52,7 @@ var (
 	}
 
 	sampleNonAdminWithTOTP = &user.User{
-		Id:                "sample-totp",
+		Id:                uuid.New().String(),
 		Username:          "sampletotp",
 		PasswordHash:      "",
 		Roles:             []string{"b", "c"},
@@ -141,10 +143,16 @@ func setupSalts(t *testing.T) {
 func makeTestEnv(t *testing.T) (*mocks.Analyzer, *mocks.DB, *Env) {
 	a := mocks.NewAnalyzer(t)
 	db := mocks.NewDB(t)
+	wa, err := webauthn.New(&webauthn.Config{
+		RPID:          "example.com",
+		RPDisplayName: "example.com",
+		RPOrigins:     []string{"https://example.com"},
+	})
+	assert.NoError(t, err)
 	return a, db, &Env{
 		Database: db,
 		Analyzer: a,
-		WebAuthn: nil,
+		WebAuthn: wa,
 	}
 }
 
