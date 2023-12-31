@@ -18,50 +18,46 @@ func TestEnv_HandleDebug(t *testing.T) {
 
 	t.Run("not logged in should fail", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 	})
 
 	t.Run("not admin should fail", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 	})
 
 	t.Run("should render without explicit enable if admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 	})
 
 	t.Run("if flag is on, always render debug page", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		t.Setenv("ENABLE_DEBUG_PAGE", "true")
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 

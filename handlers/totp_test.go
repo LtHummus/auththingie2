@@ -40,19 +40,17 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("error if no validation data found", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/totp", nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 
 	t.Run("expired partial auth", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/totp", nil, withCustomSession(func(s *session.Session) {
 			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
@@ -62,7 +60,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		}))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "login has expired, please log in again")
@@ -70,7 +68,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("show login prompt", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/totp", nil, withCustomSession(func(s *session.Session) {
 			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
@@ -80,14 +77,13 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		}))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), ` <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>`)
 	})
 
 	t.Run("database error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, errors.New("whoops"))
 
@@ -103,7 +99,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "database error")
@@ -111,7 +107,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("user not found error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, nil)
 
@@ -127,7 +122,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "user not found")
@@ -135,7 +130,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("no TOTP set", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
@@ -155,7 +149,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "tried to validate totp for user that does not have it enabled")
@@ -163,7 +157,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("wrong TOTP given", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
@@ -183,7 +176,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Incorrect TOTP Code")
@@ -194,7 +187,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("correct TOTP code", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
@@ -217,7 +209,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
@@ -235,7 +227,6 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 	t.Run("correct TOTP code with redirect", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
@@ -259,7 +250,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
@@ -279,12 +270,11 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 	t.Run("not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be logged in to do this")
@@ -292,12 +282,11 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 	t.Run("already has totp disabled", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "totp is already disabled")
@@ -305,14 +294,13 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 	t.Run("db write error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("30 rock is a pretty good show"))
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not save updated user to database")
@@ -320,14 +308,13 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 	t.Run("everything is ok", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You do not currently have TOTP enabled")
@@ -345,24 +332,22 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("setup -- not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 	})
 
 	t.Run("setup -- already enrolled", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you already have totp enabled")
@@ -372,12 +357,11 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("enrollment data generated", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
@@ -424,12 +408,11 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- invalid session data", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not find TOTP enrollment data")
@@ -437,7 +420,6 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- expired session data", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
 			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
@@ -447,7 +429,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		}))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error: TOTP Enrollment Has Expired")
@@ -455,7 +437,6 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- submitted code missing", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
 			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
@@ -465,7 +446,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		}))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error: TOTP Code Can Not Be Blank")
@@ -473,7 +454,6 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- incorrect totp code", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("totp-code", "000000")
@@ -487,7 +467,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error: Incorrect TOTP Code")
@@ -495,7 +475,6 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- database error on write", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("UpdateTOTPSeed", mock.Anything, sampleNonAdminUser.Id, sampleTOTPSeed).Return(errors.New("bad bad bad"))
 
@@ -514,7 +493,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not update totp secret in database")
@@ -522,7 +501,6 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 	t.Run("post -- everything ok", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("UpdateTOTPSeed", mock.Anything, sampleNonAdminUser.Id, sampleTOTPSeed).Return(nil)
 
@@ -541,7 +519,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()

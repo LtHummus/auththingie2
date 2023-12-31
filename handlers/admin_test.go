@@ -25,12 +25,11 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Equal(t, strings.TrimSpace(w.Body.String()), "you cannot access this page")
@@ -38,7 +37,6 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 
 	t.Run("render if admin", func(t *testing.T) {
 		a, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetAllUsers", mock.Anything).Return([]*user.AdminListUser{
 			{
@@ -68,7 +66,7 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 		r := makeTestRequest(t, http.MethodGet, "/admin", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<a href="/admin/users/a">Edit User</a></td>`)
@@ -76,14 +74,13 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 
 	t.Run("db failure", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetAllUsers", mock.Anything).Return(nil, errors.New("whoops"))
 
 		r := makeTestRequest(t, http.MethodGet, "/admin", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 	})
@@ -95,7 +92,6 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("basic test", func(t *testing.T) {
 		a, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		a.On("MatchesRule", &rules.RequestInfo{
 			Method:     http.MethodGet,
@@ -112,7 +108,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Matched rule <strong>test-rule</strong>")
@@ -120,13 +116,12 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("fail if no url provided", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/ruletest", nil, withUser(sampleAdminUser, db))
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error in testing rule: URL to test was blank")
@@ -134,7 +129,6 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("fail if URL invalid", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("url", ":blahblah")
@@ -143,7 +137,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error in testing rule: Invalid URL to test:")
@@ -151,7 +145,6 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("fail if source IP invalid", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -161,7 +154,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error in testing rule: Invalid source IP")
@@ -169,7 +162,6 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("fail if logged in non-admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -177,7 +169,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 		r := makeTestRequest(t, http.MethodGet, fmt.Sprintf("/admin/ruletest?%s", v.Encode()), nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you cannot access this page")
@@ -185,7 +177,6 @@ func TestEnv_HandleTestRule(t *testing.T) {
 
 	t.Run("fail if logged in non-admin", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -193,7 +184,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 		r := makeTestRequest(t, http.MethodGet, fmt.Sprintf("/admin/ruletest?%s", v.Encode()), nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you cannot access this page")
@@ -206,7 +197,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("not logged in should fail", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
@@ -216,7 +206,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
@@ -224,7 +214,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("non admin user should fail", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
@@ -234,7 +223,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
@@ -242,7 +231,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("database error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, errors.New("oh no"))
 
@@ -254,7 +242,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Could not get user from database:")
@@ -262,7 +250,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, nil)
 
@@ -274,7 +261,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "User not found in database")
@@ -282,7 +269,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("no tag specified", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -297,7 +283,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Tag can not be blank")
@@ -305,7 +291,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("tag already exists specified", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -321,7 +306,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Tag `a` already exists on user")
@@ -329,7 +314,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("database error on save", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -346,7 +330,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Could not update user in database: ")
@@ -354,7 +338,6 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 	t.Run("everything worked", func(t *testing.T) {
 		a, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -377,7 +360,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `hx-confirm="Delete role b from this user?"`)
@@ -390,12 +373,11 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
@@ -403,12 +385,11 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleNonAdminUser, db), passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
@@ -416,14 +397,13 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("handle database error gracefully", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, errors.New("oh no!"))
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Could not get user from database")
@@ -431,14 +411,13 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("handle target user not found gracefully", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, nil)
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<div id="tag-error" class="error-box ">User not found in database</div>`)
@@ -446,7 +425,6 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("handle db error on save", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
 			Id:       "testuser",
@@ -462,7 +440,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `Could not update user in database`)
@@ -470,7 +448,6 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 	t.Run("everything worked ok", func(t *testing.T) {
 		a, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
 			Id:       "testuser",
@@ -487,7 +464,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<span class="modify-badge-button add-badge-button" hx-on:click="clearTagError()" hx-patch="/admin/users/testuser/tags" hx-vals='{"new-tag":"a"}' hx-target="#tag-edit-table">`)
@@ -514,12 +491,11 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to do this")
@@ -527,12 +503,11 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 	t.Run("fail if non-admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to do this")
@@ -540,14 +515,13 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 	t.Run("handle database error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("noooo"))
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not get user info")
@@ -555,14 +529,13 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 	t.Run("handle user does not exist", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "user does not exist")
@@ -570,7 +543,6 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 	t.Run("everything works ok", func(t *testing.T) {
 		a, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		a.On("KnownRoles").Return([]string{"a", "b", "c"})
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
@@ -583,7 +555,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "<li>Editing <strong>ausername</strong></li>")
@@ -596,12 +568,11 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin for this")
@@ -609,12 +580,11 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin for this")
@@ -622,14 +592,13 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("database error on user retrieval", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("womp womp"))
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not get user")
@@ -637,7 +606,6 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("handle user not found", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -648,7 +616,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not find user")
@@ -656,7 +624,6 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("could not save user", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -671,7 +638,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not persist changes to database")
@@ -679,7 +646,6 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("All OK", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -694,7 +660,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectLocation, err := w.Result().Location()
@@ -712,36 +678,33 @@ func TestEnv_HandleCreateUserPage(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil)
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 	})
 
 	t.Run("all ok", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<form action="/admin/users/create" method="post">`)
@@ -754,12 +717,11 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -767,12 +729,11 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -780,7 +741,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail if no username", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("pw1", "apass")
@@ -790,7 +750,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Username may not be blank")
@@ -798,7 +758,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail if pw is blank", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("username", "newuser")
@@ -809,7 +768,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Password may not be blank")
@@ -817,7 +776,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail if passwords do not match", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		v := url.Values{}
 		v.Add("username", "newuser")
@@ -828,7 +786,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Passwords do not match")
@@ -836,7 +794,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("check for existing user fails", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, errors.New("wheee"))
 
@@ -849,7 +806,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Could not query for username")
@@ -857,7 +814,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("user already exists", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(&user.User{}, nil)
 
@@ -870,7 +826,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Username already exists")
@@ -878,7 +834,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("fail to save user", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("whoops"))
@@ -892,7 +847,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Could not create user in database")
@@ -900,7 +855,6 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 	t.Run("everything worked", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
@@ -914,7 +868,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
@@ -934,12 +888,11 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -947,12 +900,11 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -960,12 +912,11 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("fail if attempting to unenroll self", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/totp_unenroll", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "to unenroll yourself, you must use the normal method")
@@ -973,14 +924,13 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("fail to get user to modify", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("whe"))
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "database error")
@@ -988,14 +938,13 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "user not found")
@@ -1003,7 +952,6 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("failed to save user", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
 			Id:       "myuser",
@@ -1015,7 +963,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "database error")
@@ -1023,7 +971,6 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 	t.Run("all ok", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
 			Id:       "myuser",
@@ -1035,7 +982,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
@@ -1053,12 +1000,11 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF())
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -1066,12 +1012,11 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
@@ -1079,12 +1024,11 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 	t.Run("attempt to delete self", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/delete", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "you cannot delete yourself")
@@ -1092,14 +1036,13 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 	t.Run("deletion failure", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(errors.New("no delete for you"))
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "database error")
@@ -1107,14 +1050,13 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 	t.Run("everything ok", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
-		mux := e.BuildRouter()
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
-		mux.ServeHTTP(w, r)
+		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
