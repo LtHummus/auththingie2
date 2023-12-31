@@ -171,7 +171,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 	t.Run("fail if passkeys is disabled", func(t *testing.T) {
 		viper.Set(config.KeyPasskeysDisabled, true)
 		t.Cleanup(func() {
-			viper.Reset()
+			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
 		_, _, e := makeTestEnv(t)
@@ -250,7 +250,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 	t.Run("fail if passkeys is disabled", func(t *testing.T) {
 		viper.Set(config.KeyPasskeysDisabled, true)
 		t.Cleanup(func() {
-			viper.Reset()
+			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
 		_, _, e := makeTestEnv(t)
@@ -310,7 +310,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 	t.Run("fail if passkeys disabled", func(t *testing.T) {
 		viper.Set(config.KeyPasskeysDisabled, true)
 		t.Cleanup(func() {
-			viper.Reset()
+			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
 		_, _, e := makeTestEnv(t)

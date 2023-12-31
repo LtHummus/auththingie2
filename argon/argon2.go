@@ -42,16 +42,25 @@ func init() {
 }
 
 func GenerateFromPassword(password string) (string, error) {
-	generatedSalt := securecookie.GenerateRandomKey(viper.GetInt(saltLengthKey))
-	if generatedSalt == nil {
-		log.Error().Int("salt_length_bytes", viper.GetInt(saltLengthKey)).Msg("could not generate random salt")
-		return "", errors.New("could not generate salt")
-	}
-
 	iterationCount := viper.GetUint32(iterationKey)
 	memoryCount := viper.GetUint32(memoryKey)
 	parallelismCount := uint8(viper.GetInt(parallelismKey)) // viper doesn't have GetUint8 :(
 	keyLength := viper.GetUint32(keyLengthKey)
+	saltLength := viper.GetInt(saltLengthKey)
+
+	log.Debug().
+		Uint32("iteration_count", iterationCount).
+		Uint32("memory_count", memoryCount).
+		Uint8("parallelism_count", parallelismCount).
+		Uint32("key_length", keyLength).
+		Int("salt_length", saltLength).
+		Msg("hashing password with argon2")
+
+	generatedSalt := securecookie.GenerateRandomKey(saltLength)
+	if generatedSalt == nil {
+		log.Error().Int("salt_length_bytes", viper.GetInt(saltLengthKey)).Msg("could not generate random salt")
+		return "", errors.New("could not generate salt")
+	}
 
 	hash := argon2.IDKey([]byte(password), generatedSalt, iterationCount, memoryCount, parallelismCount, keyLength)
 
