@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -66,6 +67,13 @@ func NewSQLiteFromConfig() (*SQLite, error) {
 	_, err = database.Exec("PRAGMA foreign_keys = ON")
 	if err != nil {
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not enable foreign keys: %w", err)
+	}
+
+	absDBFile, err := filepath.Abs(file)
+	if err != nil {
+		log.Warn().Str("raw_db_file", file).Err(err).Msg("could not get db file absolute path")
+	} else {
+		log.Info().Str("db_file", absDBFile).Msg("database initialized")
 	}
 
 	return &SQLite{

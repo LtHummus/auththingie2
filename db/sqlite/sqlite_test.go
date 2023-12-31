@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +17,7 @@ import (
 )
 
 func buildTestDatabase(t *testing.T) *SQLite {
-	dbName := hex.EncodeToString(securecookie.GenerateRandomKey(16))
+	dbName := fmt.Sprintf("at_test_%s.db", hex.EncodeToString(securecookie.GenerateRandomKey(16)))
 
 	tmpDir, err := os.MkdirTemp("", "at2dbtests")
 	require.NoError(t, err)
