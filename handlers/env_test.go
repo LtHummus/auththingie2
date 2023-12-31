@@ -42,6 +42,18 @@ var (
 	sampleNonAdminUser = &user.User{
 		Id:                uuid.New().String(),
 		Username:          "regularuser",
+		PasswordHash:      "$argon2id$v=19$m=65536,t=3,p=2$f5DrCPQlwRJ5q1fA4K+i/g$c8XhJISMUI3wjIUULHvn0HIJinvOBBb4KnvOcvuJ4e0", // test1
+		Roles:             []string{"a", "b"},
+		Admin:             false,
+		TOTPSeed:          nil,
+		RecoveryCodes:     nil,
+		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
+		StoredCredentials: nil,
+	}
+
+	sampleNonAdminWithOldArgonParams = &user.User{
+		Id:                uuid.New().String(),
+		Username:          "oldpwuser",
 		PasswordHash:      "$argon2id$v=19$m=32768,t=4,p=2$8bI7QCiqbhywTY82FHeMVKI1QgcRwAWYNqoI/95EhNI$u6q8XTUlKRXYZUZrGGXDu2KZHgJnGA8fI9aJSDIJRfA", // test1
 		Roles:             []string{"a", "b"},
 		Admin:             false,
@@ -54,7 +66,7 @@ var (
 	sampleNonAdminWithTOTP = &user.User{
 		Id:                uuid.New().String(),
 		Username:          "sampletotp",
-		PasswordHash:      "",
+		PasswordHash:      "$argon2id$v=19$m=65536,t=3,p=2$f5DrCPQlwRJ5q1fA4K+i/g$c8XhJISMUI3wjIUULHvn0HIJinvOBBb4KnvOcvuJ4e0", // test1
 		Roles:             []string{"b", "c"},
 		Admin:             false,
 		TOTPSeed:          &sampleTOTPSeed,
