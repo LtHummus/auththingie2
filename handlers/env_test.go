@@ -62,6 +62,43 @@ var (
 		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
 		StoredCredentials: nil,
 	}
+
+	keyFriendlyName               = "someRandomKey"
+	keyLastUsed                   = time.Now().Add(-2 * time.Hour)
+	sampleNonAdminWithCredentials = &user.User{
+		Id:                uuid.New().String(),
+		Username:          "ihavekeys",
+		PasswordHash:      "",
+		Roles:             []string{"a"},
+		Admin:             false,
+		TOTPSeed:          nil,
+		RecoveryCodes:     nil,
+		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
+		StoredCredentials: []user.Passkey{
+			{
+				Credential: webauthn.Credential{
+					ID:              []byte{86, 7, 148, 97, 110, 70, 193, 56, 81, 75, 190, 23, 211, 102, 137, 71},
+					PublicKey:       []byte{165, 1, 2, 3, 38, 32, 1, 33, 88, 32, 93, 166, 99, 29, 163, 204, 120, 247, 32, 174, 246, 70, 194, 51, 177, 15, 70, 183, 251, 124, 118, 45, 183, 79, 146, 29, 221, 234, 160, 47, 187, 236, 34, 88, 32, 75, 144, 209, 18, 170, 172, 69, 49, 211, 3, 238, 70, 62, 4, 28, 3, 120, 220, 85, 154, 189, 150, 127, 38, 167, 35, 144, 246, 66, 10, 155, 240},
+					AttestationType: "",
+					Transport:       nil,
+					Flags: webauthn.CredentialFlags{
+						UserPresent:    true,
+						UserVerified:   true,
+						BackupEligible: true,
+						BackupState:    true,
+					},
+					Authenticator: webauthn.Authenticator{
+						AAGUID:       []byte{186, 218, 85, 102, 167, 170, 64, 31, 189, 150, 69, 97, 154, 85, 18, 13},
+						SignCount:    0,
+						CloneWarning: false,
+						Attachment:   protocol.Platform,
+					},
+				},
+				FriendlyName: &keyFriendlyName,
+				LastUsed:     &keyLastUsed,
+			},
+		},
+	}
 )
 
 type connectionOption func(cd *testConnectionData)

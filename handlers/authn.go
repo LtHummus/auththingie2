@@ -331,7 +331,28 @@ func getAuthID(r *http.Request) (string, error) {
 }
 
 func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
+	u := session.GetUserFromRequest(r)
+	if u == nil {
+		render.RenderHTMXCompatibleError(w, r, "You must be logged in to do this", "modify-error")
+		return
+	}
+
 	kID := mux.Vars(r)["keyId"]
+
+	ownsKey := false
+	for _, curr := range u.StoredCredentials {
+		idStr := util.Base64Encoder.EncodeToString(curr.ID)
+		if idStr == kID {
+			ownsKey = true
+			break
+		}
+	}
+
+	if !ownsKey {
+		render.RenderHTMXCompatibleError(w, r, "You do not own that key", "modify-error")
+		return
+	}
+
 	k, err := e.Database.FindKeyById(r.Context(), kID)
 	if err != nil {
 		log.Warn().Err(err).Str("key_id", kID).Msg("could not find key id")
