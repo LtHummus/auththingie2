@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/mock"
@@ -21,6 +23,8 @@ import (
 )
 
 var (
+	sampleTOTPSeed = "JBSWY3DPEHPK3PXP"
+
 	sampleAdminUser = &user.User{
 		Id:                "sample-admin",
 		Username:          "adminuser",
@@ -44,6 +48,18 @@ var (
 		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
 		StoredCredentials: nil,
 	}
+
+	sampleNonAdminWithTOTP = &user.User{
+		Id:                "sample-totp",
+		Username:          "sampletotp",
+		PasswordHash:      "",
+		Roles:             []string{"b", "c"},
+		Admin:             false,
+		TOTPSeed:          &sampleTOTPSeed,
+		RecoveryCodes:     nil,
+		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
+		StoredCredentials: nil,
+	}
 )
 
 type connectionOption func(cd *testConnectionData)
@@ -56,16 +72,55 @@ var (
 	}
 	withUser = func(u *user.User, db *mocks.DB) connectionOption {
 		return func(cd *testConnectionData) {
-			cd.user = u
+			copiedUser := &user.User{
+				Id:                u.Id,
+				Username:          u.Username,
+				PasswordHash:      u.PasswordHash,
+				Roles:             make([]string, len(u.Roles)),
+				Admin:             u.Admin,
+				TOTPSeed:          u.TOTPSeed,
+				RecoveryCodes:     make([]string, len(u.RecoveryCodes)),
+				PasswordTimestamp: u.PasswordTimestamp,
+				StoredCredentials: make([]user.Passkey, len(u.StoredCredentials)),
+			}
+			copy(copiedUser.Roles, u.Roles)
+			copy(copiedUser.RecoveryCodes, u.RecoveryCodes)
+			for i := range u.StoredCredentials {
+				copiedUser.StoredCredentials[i] = user.Passkey{
+					Credential: webauthn.Credential{
+						ID:              u.StoredCredentials[i].ID,
+						PublicKey:       make([]byte, len(u.StoredCredentials[i].PublicKey)),
+						AttestationType: u.StoredCredentials[i].AttestationType,
+						Transport:       make([]protocol.AuthenticatorTransport, len(u.StoredCredentials[i].Transport)),
+						Flags:           u.StoredCredentials[i].Flags,
+						Authenticator: webauthn.Authenticator{
+							AAGUID:       make([]byte, len(u.StoredCredentials[i].Authenticator.AAGUID)),
+							SignCount:    u.StoredCredentials[i].Authenticator.SignCount,
+							CloneWarning: u.StoredCredentials[i].Authenticator.CloneWarning,
+							Attachment:   u.StoredCredentials[i].Authenticator.Attachment,
+						},
+					},
+				}
+				copy(copiedUser.StoredCredentials[i].Credential.PublicKey, u.StoredCredentials[i].Credential.PublicKey)
+				copy(copiedUser.StoredCredentials[i].Transport, u.StoredCredentials[i].Transport)
+				copy(copiedUser.StoredCredentials[i].Authenticator.AAGUID, u.StoredCredentials[i].Authenticator.AAGUID)
+			}
+
+			cd.user = copiedUser
 			cd.sess.UserID = u.Id
 			cd.sess.LoginTime = time.Now()
 
-			db.On("GetUserByGuid", mock.Anything, u.Id).Return(u, nil)
+			db.On("GetUserByGuid", mock.Anything, u.Id).Return(copiedUser, nil)
 		}
 	}
 	isHTMXRequest = func() connectionOption {
 		return func(cd *testConnectionData) {
 			cd.req.Header.Set("HX-Request", "true")
+		}
+	}
+	withCustomSession = func(s func(s *session.Session)) connectionOption {
+		return func(cd *testConnectionData) {
+			s(cd.sess)
 		}
 	}
 )

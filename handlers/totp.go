@@ -179,7 +179,12 @@ func (e *Env) HandleTOTPDisable(w http.ResponseWriter, r *http.Request) {
 func (e *Env) handleTotpEnableSubmission(w http.ResponseWriter, r *http.Request) {
 	sess := session.GetSessionFromRequest(r)
 
-	totpEnrollmentData := sess.CustomData[TotpEnrollmentCustomDataKey].(totpEnrollment)
+	totpEnrollmentData, ok := sess.CustomData[TotpEnrollmentCustomDataKey].(totpEnrollment)
+	if !ok {
+		log.Warn().Msg("no session data for completing TOTP enrollment")
+		http.Error(w, "could not find TOTP enrollment data", http.StatusBadRequest)
+		return
+	}
 
 	if totpEnrollmentData.Expiration.Before(time.Now()) {
 		e.renderSetupPage(w, r, "TOTP Enrollment Has Expired")
