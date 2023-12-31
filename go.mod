@@ -3,6 +3,7 @@ module github.com/lthummus/auththingie2
 go 1.21
 
 require (
+	github.com/descope/virtualwebauthn v1.0.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-webauthn/webauthn v0.10.0
 	github.com/golang-migrate/migrate/v4 v4.17.0
