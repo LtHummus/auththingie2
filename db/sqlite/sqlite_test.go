@@ -205,6 +205,7 @@ func TestSQLite_UpdateCredentialOnLogin(t *testing.T) {
 	assert.NoError(t, err)
 
 	k, err = db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+	assert.NoError(t, err)
 
 	assert.Equal(t, uint32(10), k.Credential.Authenticator.SignCount)
 }
@@ -384,7 +385,8 @@ func TestSQLite_UpdatePassword(t *testing.T) {
 		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
 		assert.NoError(t, err)
 
-		u.SetPassword("newpassword")
+		err = u.SetPassword("newpassword")
+		assert.NoError(t, err)
 
 		err = db.UpdatePassword(context.TODO(), u)
 		assert.NoError(t, err)
