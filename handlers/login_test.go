@@ -247,8 +247,10 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Equal(t, "", finalURL.Host)
 		assert.Equal(t, "/", finalURL.Path)
 
-		time.Sleep(100 * time.Millisecond) // disgusting hack to make sure the migration goroutine is done
-
+		// wait until the update password goroutine has finished
+		assert.Eventually(t, func() bool {
+			return len(db.Mock.Calls) >= 2
+		}, 5*time.Second, 250*time.Millisecond)
 		updatedUser := db.Mock.Calls[1].Arguments[1].(*user.User)
 
 		assert.True(t, strings.HasPrefix(updatedUser.PasswordHash, "$argon2id$v=19$m=65536,t=3,p=2$"))

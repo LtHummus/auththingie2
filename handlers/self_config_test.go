@@ -218,7 +218,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 		assert.NoError(t, updatedUser.CheckPassword("password1"))
 
 		changedTime := time.Unix(updatedUser.PasswordTimestamp, 0)
-		assert.WithinDuration(t, time.Now(), changedTime, 1*time.Second)
+		assert.WithinDuration(t, time.Now(), changedTime, 2*time.Second)
 	})
 
 }

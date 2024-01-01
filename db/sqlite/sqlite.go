@@ -48,6 +48,13 @@ func NewSQLiteFromConfig() (*SQLite, error) {
 		return nil, errors.New("db: NewSQLiteFromConfig: db file not set")
 	}
 
+	absDBFile, err := filepath.Abs(file)
+	if err != nil {
+		log.Warn().Str("raw_db_file", file).Err(err).Msg("could not get db file absolute path")
+	}
+
+	log.Info().Str("raw_db_file", file).Str("abs_db_file", absDBFile).Msg("starting database initialization")
+
 	database, err := sql.Open("sqlite3", file)
 	if err != nil {
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not open db: %w", err)
@@ -69,12 +76,7 @@ func NewSQLiteFromConfig() (*SQLite, error) {
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not enable foreign keys: %w", err)
 	}
 
-	absDBFile, err := filepath.Abs(file)
-	if err != nil {
-		log.Warn().Str("raw_db_file", file).Err(err).Msg("could not get db file absolute path")
-	} else {
-		log.Info().Str("db_file", absDBFile).Msg("database initialized")
-	}
+	log.Info().Str("raw_db_file", file).Str("abs_db_file", absDBFile).Msg("finished database initialization")
 
 	return &SQLite{
 		db:        database,
