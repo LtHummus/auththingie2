@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/hex"
@@ -8,12 +9,17 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/argon"
+	"github.com/lthummus/auththingie2/user"
 )
 
 func buildTestDatabase(t *testing.T) *SQLite {
@@ -127,6 +133,267 @@ func TestSQLite_GetUserByX(t *testing.T) {
 		u, err := db.FindUserByCredentialInfo(context.TODO(), []byte{1, 2, 3, 4, 5, 6, 7}, uuidBytes)
 		assert.ErrorIs(t, err, sql.ErrNoRows)
 		assert.Nil(t, u)
+	})
+
+	t.Run("find key by id", func(t *testing.T) {
+		k, err := db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+		assert.NoError(t, err)
+
+		assert.Equal(t, "aaaaa", *k.FriendlyName)
+		assert.Equal(t, credentialIDBytes, k.ID)
+		assert.Equal(t, credentialPubKeyBytes, k.PublicKey)
+	})
+
+	t.Run("find key by id doesn't eixst", func(t *testing.T) {
+		_, err := db.FindKeyById(context.TODO(), "nononono")
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+	})
+}
+
+func TestSQLite_UpdateKeyName(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("happy case", func(t *testing.T) {
+		newName := "another_key"
+		err := db.UpdateKeyName(context.TODO(), "ICSCHqqe14nQqUIXkBNtww", &newName)
+		assert.NoError(t, err)
+
+		var id string
+		var name *string
+		err = db.db.QueryRow("SELECT id, friendly_name FROM main.webauthn_keys WHERE id = $1", "ICSCHqqe14nQqUIXkBNtww").Scan(&id, &name)
+		assert.NoError(t, err)
+		assert.Equal(t, "ICSCHqqe14nQqUIXkBNtww", id)
+		assert.Equal(t, newName, *name)
+	})
+
+	t.Run("set to nil", func(t *testing.T) {
+		err := db.UpdateKeyName(context.TODO(), "ICSCHqqe14nQqUIXkBNtww", nil)
+		assert.NoError(t, err)
+
+		var id string
+		var name *string
+		err = db.db.QueryRow("SELECT id, friendly_name FROM main.webauthn_keys WHERE id = $1", "ICSCHqqe14nQqUIXkBNtww").Scan(&id, &name)
+		assert.NoError(t, err)
+		assert.Equal(t, "ICSCHqqe14nQqUIXkBNtww", id)
+		assert.Nil(t, name)
+	})
+
+	t.Run("delete key", func(t *testing.T) {
+		db2 := buildTestDatabase(t)
+
+		err := db2.DeleteKey(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+		assert.NoError(t, err)
+
+		var id string
+		err = db2.db.QueryRow("SELECT id FROM main.webauthn_keys WHERE id = $1", "ICSCHqqe14nQqUIXkBNtww").Scan(&id)
+		assert.ErrorIs(t, err, sql.ErrNoRows)
+
+		err = db2.DeleteKey(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+		assert.Contains(t, err.Error(), "sqlite: DeleteKey: key not found")
+	})
+}
+
+func TestSQLite_UpdateCredentialOnLogin(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	k, err := db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(0), k.Credential.Authenticator.SignCount)
+
+	k.Credential.Authenticator.SignCount = 10
+	err = db.UpdateCredentialOnLogin(context.TODO(), &k.Credential)
+	assert.NoError(t, err)
+
+	k, err = db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+
+	assert.Equal(t, uint32(10), k.Credential.Authenticator.SignCount)
+}
+
+func TestSQLite_SaveCredentialForUser(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	newCred := &webauthn.Credential{
+		ID:              securecookie.GenerateRandomKey(16),
+		PublicKey:       securecookie.GenerateRandomKey(32),
+		AttestationType: "none",
+		Transport:       nil,
+		Flags: webauthn.CredentialFlags{
+			UserPresent:    true,
+			UserVerified:   true,
+			BackupState:    true,
+			BackupEligible: true,
+		},
+		Authenticator: webauthn.Authenticator{
+			AAGUID:       securecookie.GenerateRandomKey(16),
+			SignCount:    0,
+			CloneWarning: false,
+			Attachment:   "none",
+		},
+	}
+
+	err := db.SaveCredentialForUser(context.TODO(), "8744ac1b-9074-4a70-a202-5ad6d4a6e5e0", newCred)
+	assert.NoError(t, err)
+
+	u, err := db.GetUserByGuid(context.TODO(), "8744ac1b-9074-4a70-a202-5ad6d4a6e5e0")
+	assert.NoError(t, err)
+
+	assert.Len(t, u.StoredCredentials, 2)
+
+	var foundCred *webauthn.Credential
+	for _, curr := range u.StoredCredentials {
+		if bytes.Equal(curr.Credential.ID, newCred.ID) {
+			foundCred = &curr.Credential
+		}
+	}
+	assert.NotNil(t, foundCred)
+}
+
+func TestSQLite_DeleteUser(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("happy case", func(t *testing.T) {
+		err := db.DeleteUser(context.TODO(), "8744ac1b-9074-4a70-a202-5ad6d4a6e5e0")
+		assert.NoError(t, err)
+
+		var count int
+		err = db.db.QueryRow("SELECT COUNT(*) FROM users WHERE id = '8744ac1b-9074-4a70-a202-5ad6d4a6e5e0'").Scan(&count)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 0, count)
+
+		// make sure the key is deleted too
+		err = db.db.QueryRow("SELECT COUNT(*) FROM webauthn_keys WHERE user_id = '8744ac1b-9074-4a70-a202-5ad6d4a6e5e0'").Scan(&count)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 0, count)
+	})
+
+	t.Run("error on delete non existent user", func(t *testing.T) {
+		err := db.DeleteUser(context.TODO(), "nononononono")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to delete, no rows affected")
+	})
+}
+
+func TestSQLite_SaveUser(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("happy case", func(t *testing.T) {
+		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.NoError(t, err)
+
+		u.Roles = []string{"new", "roles", "end", "up", "here"}
+
+		err = db.SaveUser(context.TODO(), u)
+		assert.NoError(t, err)
+
+		u2, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.NoError(t, err)
+
+		assert.Len(t, u2.Roles, 5)
+		assert.Equal(t, []string{"new", "roles", "end", "up", "here"}, u2.Roles)
+	})
+
+	t.Run("update non existent user", func(t *testing.T) {
+		u := &user.User{
+			Id:    "this-is-an-invalid-id",
+			Roles: []string{},
+		}
+		err := db.SaveUser(context.TODO(), u)
+		assert.ErrorIs(t, err, ErrNoUsersAffected)
+	})
+}
+
+func TestSQLite_CreateUser(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("base case", func(t *testing.T) {
+		u := &user.User{
+			Id:                uuid.New().String(),
+			Username:          "anewuser",
+			PasswordHash:      "abcdefg",
+			Roles:             []string{"a}"},
+			Admin:             false,
+			TOTPSeed:          nil,
+			RecoveryCodes:     []string{},
+			PasswordTimestamp: time.Now().Unix(),
+		}
+		err := db.CreateUser(context.TODO(), u)
+		assert.NoError(t, err)
+
+		u2, err := db.GetUserByUsername(context.TODO(), "anewuser")
+		assert.NoError(t, err)
+
+		assert.Equal(t, u.Username, u2.Username)
+		assert.Equal(t, u.PasswordHash, u2.PasswordHash)
+		assert.Equal(t, u.TOTPSeed, u2.TOTPSeed)
+		assert.Equal(t, u.PasswordTimestamp, u2.PasswordTimestamp)
+	})
+
+	t.Run("duplicate username", func(t *testing.T) {
+		u := &user.User{
+			Id:                uuid.New().String(),
+			Username:          "ben",
+			PasswordHash:      "abcdefg",
+			Roles:             []string{"a}"},
+			Admin:             false,
+			TOTPSeed:          nil,
+			RecoveryCodes:     []string{},
+			PasswordTimestamp: time.Now().Unix(),
+		}
+
+		err := db.CreateUser(context.TODO(), u)
+		assert.Error(t, err)
+	})
+}
+
+func TestSQLite_UpdateTOTPSeed(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("happy case", func(t *testing.T) {
+		err := db.UpdateTOTPSeed(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e", "ABCDEFG")
+		assert.NoError(t, err)
+
+		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.NoError(t, err)
+
+		assert.Equal(t, "ABCDEFG", *u.TOTPSeed)
+	})
+
+	t.Run("user does not exist", func(t *testing.T) {
+		err := db.UpdateTOTPSeed(context.TODO(), "abbbb", "ABCDEFG")
+		assert.Error(t, err)
+	})
+}
+
+func TestSQLite_GetAllUsers(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("happy case", func(t *testing.T) {
+		users, err := db.GetAllUsers(context.TODO())
+		assert.NoError(t, err)
+
+		assert.Len(t, users, 2)
+	})
+}
+
+func TestSQLite_UpdatePassword(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("basic stuff", func(t *testing.T) {
+		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.NoError(t, err)
+
+		u.SetPassword("newpassword")
+
+		err = db.UpdatePassword(context.TODO(), u)
+		assert.NoError(t, err)
+
+		u2, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.NoError(t, err)
+
+		assert.NoError(t, argon.ValidatePassword("newpassword", u2.PasswordHash))
+		assert.WithinDuration(t, time.Now(), time.Unix(u.PasswordTimestamp, 0), 2*time.Second)
 	})
 }
 
