@@ -26,7 +26,7 @@ const (
 func RunFTUEServer(step Step) {
 
 	fe := &ftueEnv{}
-	
+
 	if step == StepConfigExists {
 		log.Info().Msg("noticed there's a config file; attempting to initialize systems")
 		analyzer, err := rules.NewFromConfig()
