@@ -24,6 +24,7 @@ import (
 
 var importCache *ttlcache.Cache[string, *importer.Results]
 var initCache = sync.OnceFunc(func() {
+	log.Debug().Msg("initializing import cache")
 	importCache = ttlcache.New[string, *importer.Results](ttlcache.WithTTL[string, *importer.Results](72 * time.Hour))
 })
 
@@ -87,7 +88,8 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPage).Methods(http.MethodGet)
 	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPOST).Methods(http.MethodPost)
 
-	m.HandleFunc("/ftue/import", fe.HandleImport)
+	m.HandleFunc("/ftue/import", fe.HandleRenderImportPage).Methods(http.MethodGet)
+	m.HandleFunc("/ftue/import", fe.HandlerImportPageUpload).Methods(http.MethodPost)
 	m.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)
 
 	m.HandleFunc("/ftue/restart", HandleRestartPage).Methods(http.MethodGet)

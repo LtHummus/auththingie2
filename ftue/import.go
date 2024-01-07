@@ -14,20 +14,13 @@ import (
 	"github.com/lthummus/auththingie2/rules"
 )
 
-func (fe *ftueEnv) HandleImport(w http.ResponseWriter, r *http.Request) {
-	initCache()
-	if r.Method == http.MethodGet {
-		render.Render(w, "ftue_import.gohtml", &ftueParams{
-			CSRFField: csrf.TemplateField(r),
-		})
-	} else if r.Method == http.MethodPost {
-		fe.handleFileUpload(w, r)
-	} else {
-		http.Error(w, "not found", http.StatusNotFound)
-	}
+func (fe *ftueEnv) HandleRenderImportPage(w http.ResponseWriter, r *http.Request) {
+	render.Render(w, "ftue_import.gohtml", &ftueParams{
+		CSRFField: csrf.TemplateField(r),
+	})
 }
 
-func (fe *ftueEnv) handleFileUpload(w http.ResponseWriter, r *http.Request) {
+func (fe *ftueEnv) HandlerImportPageUpload(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse form")

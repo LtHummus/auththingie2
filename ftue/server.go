@@ -46,6 +46,8 @@ func RunFTUEServer(step Step) {
 
 	h := fe.buildMux(step)
 
+	initCache()
+
 	if os.Getenv("FTUE_REQUEST_LOGGER") == "true" {
 		log.Warn().Msg("initializing request logging")
 		h = handlers.LoggingHandler(os.Stdout, h)
