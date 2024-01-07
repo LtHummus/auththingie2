@@ -84,7 +84,8 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	m.HandleFunc("/ftue/step1", fe.HandleFTUEStep1).Methods(http.MethodGet)
 
-	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratch)
+	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPage).Methods(http.MethodGet)
+	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPOST).Methods(http.MethodPost)
 
 	m.HandleFunc("/ftue/import", fe.HandleImport)
 	m.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)

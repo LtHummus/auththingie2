@@ -10,19 +10,13 @@ import (
 	"github.com/lthummus/auththingie2/user"
 )
 
-func (fe *ftueEnv) HandleFTUEScratch(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		fe.handleScratchAdminCrate(w, r)
-	} else if r.Method == http.MethodGet {
-		render.Render(w, "ftuescratch.gohtml", &ftueParams{
-			CSRFField: csrf.TemplateField(r),
-		})
-	} else {
-		http.Error(w, "not found", http.StatusNotFound)
-	}
+func (fe *ftueEnv) HandleFTUEScratchRenderPage(w http.ResponseWriter, r *http.Request) {
+	render.Render(w, "ftuescratch.gohtml", &ftueParams{
+		CSRFField: csrf.TemplateField(r),
+	})
 }
 
-func (fe *ftueEnv) handleScratchAdminCrate(w http.ResponseWriter, r *http.Request) {
+func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	if username == "" {
 		render.Render(w, "ftuescratch.gohtml", &ftueParams{
