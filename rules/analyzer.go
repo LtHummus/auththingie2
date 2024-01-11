@@ -186,7 +186,7 @@ func (a *ViperConfigAnalyzer) Rules() []Rule {
 
 	ret := make([]Rule, len(a.rules))
 	copied := copy(ret, a.rules)
-	log.Debug().Int("num_copied", copied).Msg("copied rules")
+	log.Debug().Caller(1).Int("num_copied", copied).Msg("copied rules")
 	return ret
 }
 

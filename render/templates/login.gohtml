@@ -14,9 +14,15 @@
                         {{ .Error }}
                     </p>
                 {{ end }}
+                {{ if .Message }}
+                    <p class="login-info-box">
+                        {{ .Message }}
+                    </p>
+                {{ end }}
                 <form action="/login" method="post">
                     {{ .CSRFField }}
                     <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
+                    <input type="hidden" name="message" value="{{ .Message }}" />
                         <input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />
                         <input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>
                         <button type="submit" class="contrast">Login</button>

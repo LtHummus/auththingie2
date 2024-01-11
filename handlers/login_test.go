@@ -42,6 +42,21 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
 
+	t.Run("render login page with message", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodGet, "/login?message=This+is+a+test+message", nil)
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.Contains(t, w.Body.String(), `This is a test message`)
+		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
+	})
+
 	t.Run("login page should not have passkey option if passkeys are disabled", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 

@@ -17,6 +17,14 @@
     border-radius: 10px;
 }
 
+.login-info-box {
+    padding: 20px;
+    background-color: #335f7b;
+    color: white;
+    margin-bottom: 15px;
+    border-radius: 10px;
+}
+
 .no-error {
     display: none;
 }

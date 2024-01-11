@@ -24,6 +24,7 @@ type loginPageParams struct {
 	CSRFToken      string
 	RedirectURI    string
 	Error          string
+	Message        string
 	EnablePasskeys bool
 }
 
@@ -42,6 +43,19 @@ func getRedirectURIFromRequest(r *http.Request) string {
 	return redirectURI
 }
 
+func getMessageFromRequest(r *http.Request) string {
+	message := ""
+	if formMessage := r.FormValue(loginMessageParam); formMessage != "" {
+		message = formMessage
+	}
+
+	if queryMessage := r.URL.Query().Get(loginMessageParam); queryMessage != "" {
+		message = queryMessage
+	}
+
+	return message
+}
+
 func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		e.handleLoginPost(w, r)
@@ -51,6 +65,7 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 			CSRFField:      csrf.TemplateField(r),
 			CSRFToken:      csrf.Token(r),
 			RedirectURI:    getRedirectURIFromRequest(r),
+			Message:        getMessageFromRequest(r),
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 		})
 	} else {

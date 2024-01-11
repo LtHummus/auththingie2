@@ -22,7 +22,8 @@ const (
 	hostHeader       = "X-Forwarded-Host"
 	requestURIHeader = "X-Forwarded-Uri"
 
-	redirectURLParam = "redirect_uri"
+	redirectURLParam  = "redirect_uri"
+	loginMessageParam = "message"
 )
 
 func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
@@ -95,7 +96,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {
 		log.Debug().Str("username", "<not logged in>").Msg("redirecting to login page")
-		redirectToLogin(w, r, ri)
+		redirectToLogin(w, r, ri, "You are not logged in. Please log in.")
 		return
 	}
 
@@ -105,7 +106,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	if rule != nil && rule.Timeout != nil && source == session.UserSourceSession && time.Since(sess.LoginTime) > *rule.Timeout {
 		// user has logged in, but not since the timeout, so prompt for relogin
 		log.Warn().Str("user_id", sess.UserID).Time("login_time", sess.LoginTime).Dur("rule_timeout", *rule.Timeout).Msg("need to reauthenticate")
-		redirectToLogin(w, r, ri)
+		redirectToLogin(w, r, ri, "This matched rule requires you to log in again")
 		return
 	}
 
@@ -120,8 +121,11 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", viper.GetString("server.auth_url")), http.StatusFound)
 }
 
-func redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo) {
+func redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, message string) {
 	v := url.Values{}
 	v.Set(redirectURLParam, ri.GetURL())
+	if message != "" {
+		v.Set(loginMessageParam, message)
+	}
 	http.Redirect(w, r, fmt.Sprintf("%s/login?%s", viper.GetString("server.auth_url"), v.Encode()), http.StatusFound)
 }
