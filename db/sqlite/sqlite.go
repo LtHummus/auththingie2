@@ -174,7 +174,8 @@ func (s *SQLite) GetUserByGuid(ctx context.Context, guid string) (*user.User, er
 	var admin bool
 	var totpSeed *string
 	var passwordTimestamp int64
-	err := s.db.QueryRowContext(ctx, "SELECT id, username, password, roles, admin, totp_seed, password_timestamp FROM users WHERE id = $1", guid).Scan(&id, &username, &password, &roles, &admin, &totpSeed, &passwordTimestamp)
+	var disabled int64
+	err := s.db.QueryRowContext(ctx, "SELECT id, username, password, roles, admin, totp_seed, password_timestamp, disabled FROM users WHERE id = $1", guid).Scan(&id, &username, &password, &roles, &admin, &totpSeed, &passwordTimestamp, &disabled)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("guid", guid).Msg("user not found")
@@ -203,6 +204,7 @@ func (s *SQLite) GetUserByGuid(ctx context.Context, guid string) (*user.User, er
 		TOTPSeed:          totpSeed,
 		PasswordTimestamp: passwordTimestamp,
 		StoredCredentials: credentials,
+		Disabled:          disabled != 0,
 	}, nil
 }
 func (s *SQLite) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
@@ -212,7 +214,8 @@ func (s *SQLite) GetUserByUsername(ctx context.Context, username string) (*user.
 	var admin bool
 	var totpSeed *string
 	var passwordTimestamp int64
-	err := s.db.QueryRowContext(ctx, "SELECT id, password, roles, admin, totp_seed, password_timestamp FROM users WHERE username = $1", username).Scan(&id, &password, &roles, &admin, &totpSeed, &passwordTimestamp)
+	var disabled int64
+	err := s.db.QueryRowContext(ctx, "SELECT id, password, roles, admin, totp_seed, password_timestamp, disabled FROM users WHERE username = $1", username).Scan(&id, &password, &roles, &admin, &totpSeed, &passwordTimestamp, &disabled)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("username", username).Msg("user not found")
@@ -241,6 +244,7 @@ func (s *SQLite) GetUserByUsername(ctx context.Context, username string) (*user.
 		TOTPSeed:          totpSeed,
 		PasswordTimestamp: passwordTimestamp,
 		StoredCredentials: credentials,
+		Disabled:          disabled != 0,
 	}, nil
 
 }

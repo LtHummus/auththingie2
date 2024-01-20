@@ -1,0 +1,12 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}Account Disabled{{end}}
+
+{{define "content"}}
+    <div id="forbidden-container">
+        <article class="grid">
+            <h1>Account Disabled</h1>
+            <p>Your account has been disabled. You are currently logged in as <strong>{{ .Username }}</strong></p>
+        </article>
+    </div>
+{{end}}

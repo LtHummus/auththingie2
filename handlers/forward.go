@@ -51,6 +51,21 @@ func (e *Env) HandleNotAllowed(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, "forbidden.gohtml", &params)
 }
 
+func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
+	username := "<not logged in>"
+
+	if user := session.GetUserFromRequest(r); user != nil {
+		username = user.Username
+	}
+
+	params := struct {
+		Username string
+	}{username}
+
+	w.WriteHeader(http.StatusForbidden)
+	render.Render(w, "disabled.gohtml", &params)
+}
+
 func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	ri := pullInfoFromRequest(r)
 	log.
@@ -97,6 +112,18 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		log.Debug().Str("username", "<not logged in>").Msg("redirecting to login page")
 		redirectToLogin(w, r, ri, "You are not logged in. Please log in.")
+		return
+	}
+
+	if source == session.UserSourceBasicAuth && user.TOTPEnabled() {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth with TOTP enabled")
+		http.Error(w, "Can not use basic auth with TOTP enabled", http.StatusForbidden)
+		return
+	}
+
+	if user.Disabled {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("account disabled, forwarding to message")
+		http.Redirect(w, r, fmt.Sprintf("%s/disabled", viper.GetString("server.auth_url")), http.StatusFound)
 		return
 	}
 

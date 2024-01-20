@@ -193,9 +193,56 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, "/forbidden", redirectLocation.Path)
 	})
 
+	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {
+		t.Skip("disabling until file can be refactored to account for TOTP")
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}, TOTPSeed: &sampleTOTPSeed})
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo"}})
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		assert.Equal(t, "aaa", w.Body.String())
+	})
+
+	t.Run("yes rule, non-admin, user is disabled", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}, Disabled: true})
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo"}})
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusFound, resp.StatusCode)
+
+		redirectLocation, err := resp.Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/disabled", redirectLocation.Path)
+
+	})
+
 	t.Run("yes rule, rule is public, no user", func(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("yes rule, rule is public, disabled user", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, sampleDisabledUser)
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
 

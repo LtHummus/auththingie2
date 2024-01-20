@@ -133,6 +133,18 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if u.Disabled {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", u.Username).Msg("login of disabled account")
+		render.Render(w, "login.gohtml", &loginPageParams{
+			CSRFField:      csrf.TemplateField(r),
+			CSRFToken:      csrf.Token(r),
+			Error:          "Account is disabled",
+			RedirectURI:    redirectURL,
+			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		})
+		return
+	}
+
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(u)
 

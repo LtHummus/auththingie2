@@ -225,6 +225,38 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		assert.Equal(t, sess.UserID, "test-user")
 	})
 
+	t.Run("can't proceed if account is disabled", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
+			Id:       "test-user",
+			Username: "testuser",
+			TOTPSeed: &sampleTOTPSeed,
+			Disabled: true,
+		}, nil)
+
+		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
+		require.NoError(t, err)
+
+		v := url.Values{}
+		v.Add("totp-code", correctTOTP)
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
+			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
+				UserID:     "test-user",
+				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
+			}
+		}))
+
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Error: Account is disabled")
+		assert.Empty(t, w.Result().Cookies())
+	})
+
 	t.Run("correct TOTP code with redirect", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 

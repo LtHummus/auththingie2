@@ -31,11 +31,13 @@ func (e *Env) BuildRouter() http.Handler {
 		"/forward",
 		"/auth",
 		"/forbidden",
+		"/disabled",
 	})
 
 	muxer.HandleFunc("/forward", e.HandleCheckRequest)
 	muxer.HandleFunc("/auth", e.HandleCheckRequest)
 	muxer.HandleFunc("/forbidden", e.HandleNotAllowed)
+	muxer.HandleFunc("/disabled", e.HandleAccountDisabled)
 
 	muxer.HandleFunc("/debug", e.HandleDebug)
 

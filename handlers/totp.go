@@ -123,6 +123,12 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data *t
 		return
 	}
 
+	if user.Disabled {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted login of disabled account")
+		e.handleTotpPrompt(w, r, data, "Account is disabled")
+		return
+	}
+
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(user)
 

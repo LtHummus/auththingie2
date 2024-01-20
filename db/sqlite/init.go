@@ -17,7 +17,7 @@ import (
 //go:embed migrations/*
 var migrations embed.FS
 
-const latestVersion = 2
+const latestVersion = 3
 
 func migrateDatabase(db *sql.DB) error {
 	d, err := iofs.New(migrations, "migrations")

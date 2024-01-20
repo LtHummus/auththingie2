@@ -230,6 +230,12 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 		log.Warn().Err(err).Msg("could not update key info on login")
 	}
 
+	if foundUser.Disabled {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", foundUser.Username).Msg("user is disabled")
+		render.RenderJSONError(w, "Account is disabled", "authn.login.disabled", http.StatusForbidden)
+		return
+	}
+
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(foundUser)
 

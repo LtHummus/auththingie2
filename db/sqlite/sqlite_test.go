@@ -329,6 +329,7 @@ func TestSQLite_CreateUser(t *testing.T) {
 		assert.Equal(t, u.PasswordHash, u2.PasswordHash)
 		assert.Equal(t, u.TOTPSeed, u2.TOTPSeed)
 		assert.Equal(t, u.PasswordTimestamp, u2.PasswordTimestamp)
+		assert.Equal(t, false, u.Disabled)
 	})
 
 	t.Run("duplicate username", func(t *testing.T) {

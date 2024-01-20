@@ -40,6 +40,7 @@ type User struct {
 	RecoveryCodes     []string
 	PasswordTimestamp int64
 	StoredCredentials []Passkey
+	Disabled          bool
 }
 
 type AdminListUser struct {
@@ -48,6 +49,7 @@ type AdminListUser struct {
 	Roles    []string
 	Admin    bool
 	UsesTOTP bool
+	Disabled bool
 }
 
 func (u *User) CheckPassword(candidate string) error {

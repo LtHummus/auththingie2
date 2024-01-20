@@ -52,6 +52,10 @@ func (s *Session) Expired() bool {
 }
 
 func (s *Session) PlaceUserInSession(u *user.User) {
+	if u.Disabled {
+		log.Panic().Str("username", u.Username).Msg("attempted to place disabled user in session")
+	}
+
 	log.Debug().Str("username", u.Username).Msg("placing in session")
 	s.UserID = u.Id
 	s.Expires = time.Now().Add(DefaultSessionLifetime)

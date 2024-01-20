@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/argon"
 	"github.com/lthummus/auththingie2/config"
@@ -149,6 +150,49 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Invalid Username or Password")
 		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
+	})
+
+	t.Run("can't login with disabled account", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("username", "regularuser")
+		v.Add("password", "test1")
+		v.Add("redirect_uri", "https://test.example.com/foo")
+
+		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUser, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()), passesCSRF())
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Account is disabled")
+		assert.Empty(t, w.Result().Cookies())
+	})
+
+	t.Run("login passes with disable if TOTP is enabled", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("username", "regularuser")
+		v.Add("password", "test1")
+		v.Add("redirect_uri", "https://test.example.com/foo")
+
+		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUserWithTOTP, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()), passesCSRF())
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		require.NoError(t, err)
+		assert.Equal(t, "/totp", redirectURL.Path)
 	})
 
 	t.Run("valid username/password with no TOTP and redirect uri", func(t *testing.T) {
