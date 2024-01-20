@@ -1064,3 +1064,91 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 		assert.Equal(t, "/admin", redirectURL.Path)
 	})
 }
+
+func TestEnv_HandleUserDisableEnable(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("fail if not logged in", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("fail if not admin", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you must be an admin to access this page")
+	})
+
+	t.Run("attempt to modify self", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPatch, fmt.Sprintf("/admin/users/%s/disable", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "you cannot delete yourself")
+	})
+
+	t.Run("modification failure", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(errors.New("no modify for you"))
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "database error")
+	})
+
+	t.Run("everything ok for disable", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(nil)
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<input hx-patch="/admin/users/myuser/disable" hx-target="#account-disable-switch" hx-swap="innerHTML" type="checkbox" id="account-enabled" name="enabled" role="switch"  />`)
+	})
+
+	t.Run("everything ok for enable", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("enabled", "on")
+
+		db.On("SetUserEnabled", mock.Anything, "myuser", true).Return(nil)
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<input hx-patch="/admin/users/myuser/disable" hx-target="#account-disable-switch" hx-swap="innerHTML" type="checkbox" id="account-enabled" name="enabled" role="switch"  checked  />`)
+
+	})
+}

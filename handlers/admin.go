@@ -469,10 +469,16 @@ func (e *Env) HandleUserDisableEnable(w http.ResponseWriter, r *http.Request) {
 	shouldEnable := r.FormValue("enabled") != ""
 	log.Debug().Str("user_id", userId).Bool("should_enable", shouldEnable).Msg("got enable/disable request")
 
-	e.Database.SetUserEnabled(r.Context(), userId, shouldEnable)
+	err := e.Database.SetUserEnabled(r.Context(), userId, shouldEnable)
+	if err != nil {
+		log.Error().Err(err).Str("user_id", userId).Bool("should_enable", shouldEnable).Msg("could not enable or disable user")
+		render.RenderHTMXCompatibleError(w, r, "Could not modify user -- database error", "enable-disable-error")
+		return
+	}
 
 	// dirty hack here to avoid using (and querying for) the entire user struct
 	params := map[string]any{}
+	params["Error"] = ""
 	params["User"] = struct {
 		Id       string
 		Disabled bool

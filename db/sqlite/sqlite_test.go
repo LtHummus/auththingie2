@@ -400,6 +400,30 @@ func TestSQLite_UpdatePassword(t *testing.T) {
 	})
 }
 
+func TestSQLite_SetUserEnabled(t *testing.T) {
+	db := buildTestDatabase(t)
+
+	t.Run("enable user", func(t *testing.T) {
+		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		require.NoError(t, err)
+
+		assert.False(t, u.Disabled)
+
+		err = db.SetUserEnabled(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e", false)
+		require.NoError(t, err)
+
+		u, err = db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.True(t, u.Disabled)
+
+		err = db.SetUserEnabled(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e", true)
+		require.NoError(t, err)
+
+		u, err = db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		assert.False(t, u.Disabled)
+
+	})
+}
+
 func TestFlags(t *testing.T) {
 	tc := []struct {
 		flags    webauthn.CredentialFlags
