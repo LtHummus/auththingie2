@@ -450,3 +450,32 @@ func (e *Env) HandleUserDelete(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/admin", http.StatusFound)
 }
+
+func (e *Env) HandleUserDisableEnable(w http.ResponseWriter, r *http.Request) {
+	u := session.GetUserFromRequest(r)
+	if u == nil || !u.Admin {
+		http.Error(w, "you must be an admin to access this page", http.StatusUnauthorized)
+		return
+	}
+
+	userId := mux.Vars(r)["userId"]
+
+	if u.Id == userId {
+		log.Warn().Str("user_id", userId).Msg("tried to delete self")
+		http.Error(w, "you cannot delete yourself", http.StatusUnprocessableEntity)
+		return
+	}
+
+	shouldEnable := r.FormValue("enabled") != ""
+	log.Debug().Str("user_id", userId).Bool("should_enable", shouldEnable).Msg("got enable/disable request")
+
+	e.Database.SetUserEnabled(r.Context(), userId, shouldEnable)
+
+	// dirty hack here to avoid using (and querying for) the entire user struct
+	params := map[string]any{}
+	params["User"] = struct {
+		Id       string
+		Disabled bool
+	}{userId, !shouldEnable}
+	render.Render(w, "account_disable_switch.gohtml", params)
+}

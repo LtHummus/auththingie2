@@ -12,13 +12,19 @@
                     <li>Editing <strong>{{ .User.Username }}</strong></li>
                 </ul>
             </nav>
-            <div>
+            <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
                 <h3>Edit Roles</h3>
-                <div id="tag-edit-table" hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+                <div id="tag-edit-table">
                     {{template "tagtableinternal.gohtml" . }}
                 </div>
 
                 <h3>Security Settings</h3>
+
+                <h4>Account Enablement</h4>
+
+                <form id="account-disable-switch">
+                    {{template "account_disable_switch.gohtml" . }}
+                </form>
 
                 <h4>Change Password</h4>
 

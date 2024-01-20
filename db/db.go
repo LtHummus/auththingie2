@@ -28,4 +28,6 @@ type DB interface {
 	NeedsSetup(ctx context.Context) (bool, error)
 	UpdateTOTPSeed(ctx context.Context, userID string, secret string) error
 	UpdatePassword(ctx context.Context, user *user.User) error
+
+	SetUserEnabled(ctx context.Context, userId string, enabled bool) error
 }

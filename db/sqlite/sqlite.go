@@ -601,3 +601,12 @@ func (s *SQLite) UpdatePassword(ctx context.Context, user *user.User) error {
 	_, err := s.db.ExecContext(ctx, "UPDATE users SET password = $1, password_timestamp = $2 WHERE username = $3", user.PasswordHash, user.PasswordTimestamp, user.Username)
 	return err
 }
+
+func (s *SQLite) SetUserEnabled(ctx context.Context, userId string, enabled bool) error {
+	disabledValue := 0
+	if !enabled {
+		disabledValue = 1
+	}
+	_, err := s.db.ExecContext(ctx, "UPDATE users SET disabled = $1 WHERE id = $2", disabledValue, userId)
+	return err
+}

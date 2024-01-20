@@ -1,0 +1,4 @@
+<label for="account-enabled">
+    <input hx-patch="/admin/users/{{ .User.Id }}/disable" hx-target="#account-disable-switch" hx-swap="innerHTML" type="checkbox" id="account-enabled" name="enabled" role="switch" {{ if not .User.Disabled }} checked {{ end }} />
+    Account Enabled
+</label>

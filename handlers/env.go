@@ -58,6 +58,7 @@ func (e *Env) BuildRouter() http.Handler {
 	muxer.HandleFunc("/admin/users/{userId}/delete", e.HandleUserDelete).Methods(http.MethodPost)
 	muxer.HandleFunc("/admin/users/{userId}/tags", e.HandleUserPatchTagsModification).Methods(http.MethodPatch)
 	muxer.HandleFunc("/admin/users/{userId}/tags/{tag}", e.HandleUserTagDelete).Methods(http.MethodDelete)
+	muxer.HandleFunc("/admin/users/{userId}/disable", e.HandleUserDisableEnable).Methods(http.MethodPatch)
 	muxer.HandleFunc("/admin/ruletest", e.HandleTestRule).Methods(http.MethodGet)
 	muxer.HandleFunc("/admin", e.HandleAdminPage).Methods(http.MethodGet)
 
