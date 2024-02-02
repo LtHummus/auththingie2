@@ -13,9 +13,9 @@ import (
 const (
 	IDLengthBytes = 32 // 256-bit
 
-	DefaultLifetime = 24 * time.Hour
+	DefaultLifetime = 30 * 24 * time.Hour
 
-	DefaultSessionLifetime = 24 * 30 * time.Hour
+	DefaultSessionLifetime = 30 * 24 * time.Hour
 )
 
 type Session struct {
