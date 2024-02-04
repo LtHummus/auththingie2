@@ -26,8 +26,6 @@ const (
 	SessionCookieName = "auththingie2_session"
 
 	sessionContextKey userContextKeyType = "session_info"
-
-	CookieLifetime = 48 * time.Hour
 )
 
 type UserSource int
@@ -153,7 +151,7 @@ func generateCookie(value string) *http.Cookie {
 		Domain:   viper.GetString("server.domain"),
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(DefaultLifetime.Seconds()),
+		MaxAge:   int(CookieLifetime().Seconds()),
 	}
 }
 

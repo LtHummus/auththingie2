@@ -1,5 +1,7 @@
 package config
 
 const (
-	KeyPasskeysDisabled = "passkeys.disabled"
+	KeyPasskeysDisabled    = "passkeys.disabled"
+	DefaultCookieLifetime  = "session.cookie.timeout"
+	DefaultSessionLifetime = "session.timeout"
 )

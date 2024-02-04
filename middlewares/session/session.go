@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/user"
 
 	"github.com/rs/zerolog/log"
@@ -13,9 +16,9 @@ import (
 const (
 	IDLengthBytes = 32 // 256-bit
 
-	DefaultLifetime = 30 * 24 * time.Hour
+	DefaultCookieLifetime = 30 * 24 * time.Hour
 
-	DefaultSessionLifetime = 30 * 24 * time.Hour
+	DefaultSessionLifetime = 7 * 24 * time.Hour
 )
 
 type Session struct {
@@ -39,8 +42,26 @@ func NewDefaultSession() (Session, error) {
 		SessionID:    id,
 		CreationTime: time.Now(),
 		CustomData:   map[string]any{},
-		Expires:      time.Now().Add(DefaultSessionLifetime),
+		Expires:      time.Now().Add(SessionLifetime()),
 	}, nil
+}
+
+func CookieLifetime() time.Duration {
+	d := viper.GetDuration(config.DefaultSessionLifetime)
+	if d != 0 {
+		return d
+	}
+
+	return DefaultCookieLifetime
+}
+
+func SessionLifetime() time.Duration {
+	d := viper.GetDuration(config.DefaultCookieLifetime)
+	if d != 0 {
+		return d
+	}
+
+	return DefaultSessionLifetime
 }
 
 func (s *Session) ID() string {
@@ -58,7 +79,7 @@ func (s *Session) PlaceUserInSession(u *user.User) {
 
 	log.Debug().Str("username", u.Username).Msg("placing in session")
 	s.UserID = u.Id
-	s.Expires = time.Now().Add(DefaultSessionLifetime)
+	s.Expires = time.Now().Add(SessionLifetime())
 	s.LoginTime = time.Now()
 }
 
