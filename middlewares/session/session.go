@@ -25,8 +25,8 @@ type Session struct {
 	SessionID    string    `json:"session_id"`
 	UserID       string    `json:"user_id,omitempty"`
 	LoginTime    time.Time `json:"login_time"`
-	Expires      time.Time `json:"expires"` // note to self, is this useful?
-	CreationTime time.Time `json:"creation_time"`
+	Expires      time.Time `json:"expires"`
+	CreationTime time.Time `json:"creation_time"` // note to self, is this useful?
 
 	CustomData map[string]any `json:"custom_data"`
 }
