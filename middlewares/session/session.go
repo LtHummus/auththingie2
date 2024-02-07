@@ -47,7 +47,7 @@ func NewDefaultSession() (Session, error) {
 }
 
 func CookieLifetime() time.Duration {
-	d := viper.GetDuration(config.DefaultSessionLifetime)
+	d := viper.GetDuration(config.DefaultCookieLifetime)
 	if d != 0 {
 		return d
 	}
@@ -56,7 +56,7 @@ func CookieLifetime() time.Duration {
 }
 
 func SessionLifetime() time.Duration {
-	d := viper.GetDuration(config.DefaultCookieLifetime)
+	d := viper.GetDuration(config.DefaultSessionLifetime)
 	if d != 0 {
 		return d
 	}
@@ -77,10 +77,11 @@ func (s *Session) PlaceUserInSession(u *user.User) {
 		log.Panic().Str("username", u.Username).Msg("attempted to place disabled user in session")
 	}
 
-	log.Debug().Str("username", u.Username).Msg("placing in session")
 	s.UserID = u.Id
 	s.Expires = time.Now().Add(SessionLifetime())
 	s.LoginTime = time.Now()
+	log.Debug().Str("username", u.Username).Time("expires", s.Expires).Time("login_time", s.LoginTime).Msg("placing in session")
+
 }
 
 func generateSessionID() (string, error) {

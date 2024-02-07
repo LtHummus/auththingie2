@@ -244,13 +244,15 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sess = &newSession
-		log.Debug().Msg("making new default session")
 		encoded, err := m.sc.Encode(SessionCookieName, sess)
 		if err != nil {
 			log.Error().Err(err).Msg("could not encode session data")
 		}
 
-		http.SetCookie(w, generateCookie(encoded))
+		newCookie := generateCookie(encoded)
+		log.Debug().Dur("session_lifetime", SessionLifetime()).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
+
+		http.SetCookie(w, newCookie)
 	}
 
 	info := &sessionData{
