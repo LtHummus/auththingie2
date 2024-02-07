@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/viper"
@@ -27,11 +28,13 @@ type debugPageInfo struct {
 	BuildTemplate      template.HTML
 	EnvVarTemplate     template.HTML
 	RequestTemplate    template.HTML
+	UserTemplate       template.HTML
+	SessionTemplate    template.HTML
 }
 
 func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	u := session.GetUserFromRequest(r)
-	if (u == nil || !u.Admin) && !config.EnableDebugPage() {
+	if (u == nil || !u.Admin || u.Disabled) && !config.EnableDebugPage() {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
@@ -101,6 +104,32 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"util.FindTrueIP", util.FindTrueIP(r)},
 	})
 
+	userTable := table.NewWriter()
+	userTable.AppendHeader(table.Row{"Key", "Value"})
+	if u != nil {
+		userTable.AppendRows([]table.Row{
+			{"id", u.Id},
+			{"username", u.Username},
+			{"roles", strings.Join(u.Roles, ", ")},
+			{"is_admin", fmt.Sprintf("%v", u.Admin)},
+			{"totp_enabled", fmt.Sprintf("%v", u.TOTPEnabled())},
+			{"password_timestamp", fmt.Sprintf("%d", u.PasswordTimestamp)},
+			{"passkey_count", fmt.Sprintf("%d", len(u.StoredCredentials))},
+		})
+	}
+
+	s := session.GetSessionFromRequest(r)
+
+	sessionTable := table.NewWriter()
+	sessionTable.AppendHeader(table.Row{"Key", "Value"})
+	sessionTable.AppendRows([]table.Row{
+		{"session_id", s.SessionID},
+		{"user_id", s.UserID},
+		{"login_time", s.LoginTime.Format(time.RFC1123)},
+		{"expires", s.Expires.Format(time.RFC1123)},
+		{"creation_time", s.CreationTime.Format(time.RFC1123)},
+	})
+
 	render.Render(w, "debug.gohtml", &debugPageInfo{
 		DependencyTemplate: template.HTML(depTable.RenderHTML()),     // #nosec G203 -- table library handles escaping for us
 		VarsTemplate:       template.HTML(data.RenderHTML()),         // #nosec G203
@@ -108,6 +137,8 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		ConfigTemplate:     template.HTML(configTable.RenderHTML()),  // #nosec G203
 		EnvVarTemplate:     template.HTML(envTable.RenderHTML()),     // #nosec G203
 		RequestTemplate:    template.HTML(requestTable.RenderHTML()), // #nosec G203
+		UserTemplate:       template.HTML(userTable.RenderHTML()),    // #nosec G203
+		SessionTemplate:    template.HTML(sessionTable.RenderHTML()), // #nosec G203
 	})
 
 }
