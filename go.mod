@@ -5,8 +5,8 @@ go 1.21
 require (
 	github.com/descope/virtualwebauthn v1.0.2
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-webauthn/webauthn v0.10.0
-	github.com/golang-migrate/migrate/v4 v4.17.0
+	github.com/go-webauthn/webauthn v0.10.2
+	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/csrf v1.7.2
 	github.com/gorilla/handlers v1.5.2
@@ -14,8 +14,8 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gurkankaymak/hocon v1.2.19
 	github.com/hyperjumptech/jiffy v1.0.0
-	github.com/jedib0t/go-pretty/v6 v6.5.4
-	github.com/jellydator/ttlcache/v3 v3.1.1
+	github.com/jedib0t/go-pretty/v6 v6.5.8
+	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
@@ -24,8 +24,8 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
-	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.19.0
+	github.com/stretchr/testify v1.9.0
+	golang.org/x/crypto v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -34,9 +34,9 @@ require (
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
-	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
-	github.com/go-webauthn/x v0.1.6 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
+	github.com/go-webauthn/x v0.1.9 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -56,14 +56,14 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
