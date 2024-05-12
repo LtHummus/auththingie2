@@ -66,11 +66,25 @@ func GetSaltPath() string {
 }
 
 func createSalt(path string) {
+	signingSalt := securecookie.GenerateRandomKey(saltLength)
+	if signingSalt == nil {
+		log.Fatal().Msg("could not generate signing salt")
+	}
+
+	encryptionSalt := securecookie.GenerateRandomKey(saltLength)
+	if encryptionSalt == nil {
+		log.Fatal().Msg("could not generate encryption salt")
+	}
+
+	csrfSalt := securecookie.GenerateRandomKey(saltLength)
+	if csrfSalt == nil {
+		log.Fatal().Msg("could not generate CSRF salt")
+	}
 	p := &payload{
 		Version:    version,
-		Signing:    securecookie.GenerateRandomKey(saltLength),
-		Encryption: securecookie.GenerateRandomKey(saltLength),
-		CSRF:       securecookie.GenerateRandomKey(saltLength),
+		Signing:    signingSalt,
+		Encryption: encryptionSalt,
+		CSRF:       csrfSalt,
 	}
 
 	encoded, _ := json.Marshal(p)
