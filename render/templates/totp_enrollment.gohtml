@@ -26,6 +26,7 @@
                     <div>
                         <p>Scan the QR code to set up your Google Authenticator (or whatever) app. Then enter a code in to the box to continue</p>
                         <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
+                        <input type="hidden" name="totp-enrollment-ticket" value="{{ .EnrollmentTicket }}" />
                     </div>
 
             </div>

@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"net/http"
-	"net/url"
 
 	"github.com/gorilla/csrf"
 	"github.com/rs/zerolog/log"
@@ -16,6 +14,7 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/pwmigrate"
 	"github.com/lthummus/auththingie2/render"
+	"github.com/lthummus/auththingie2/totp"
 	"github.com/lthummus/auththingie2/util"
 )
 
@@ -117,19 +116,8 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if u.TOTPEnabled() {
-		partialAuthData := generatePartialAuthData(u.Id)
-		sess := session.GetSessionFromRequest(r)
-		sess.CustomData[TOTPPartialDataCustomKey] = partialAuthData
-		err := session.WriteSession(w, r, sess)
-		if err != nil {
-			log.Error().Err(err).Msg("could not update session data")
-			http.Error(w, "could not update session data on login", http.StatusInternalServerError)
-			return
-		}
-
-		v := url.Values{}
-		v.Set(redirectURLParam, redirectURL)
-		http.Redirect(w, r, fmt.Sprintf("%s/totp?%s", viper.GetString("auth_url"), v.Encode()), http.StatusFound)
+		loginTicket := totp.GenerateLoginTicket(u.Id, redirectURL)
+		e.handleTotpPrompt(w, r, loginTicket, "")
 		return
 	}
 

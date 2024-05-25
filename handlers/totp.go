@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/base32"
 	"encoding/base64"
-	"encoding/gob"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -17,86 +16,72 @@ import (
 
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
+	enrollment "github.com/lthummus/auththingie2/totp"
 	"github.com/lthummus/auththingie2/util"
 )
 
 const (
-	TotpEnrollmentCustomDataKey = "totp_enrollment"
-	TOTPPartialDataCustomKey    = "totp_validation"
-	TotpEnrollmentValidityTime  = 7 * time.Minute
+	totpEnrollmentTicketFieldName = "totp-enrollment-ticket"
+	totpLoginTicketFieldName      = "totp-login-ticket"
 )
 
-type totpEnrollment struct {
-	Secret     string
-	Expiration time.Time
-}
-
-type totpPartialAuthData struct {
-	UserID     string
-	Expiration time.Time
-}
-
 type totpEnrollmentPageParams struct {
-	CSRFField     template.HTML
-	QRCodeDataURL template.URL
-	Error         string
+	CSRFField        template.HTML
+	QRCodeDataURL    template.URL
+	Error            string
+	EnrollmentTicket string
 }
 
 type totpPromptParams struct {
 	CSRFField   template.HTML
 	Error       string
-	RedirectURI string
-}
-
-func init() {
-	gob.Register(totpEnrollment{})
-	gob.Register(totpPartialAuthData{})
-}
-
-func generatePartialAuthData(userID string) *totpPartialAuthData {
-	return &totpPartialAuthData{
-		UserID:     userID,
-		Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-	}
+	LoginTicket string
 }
 
 func (e *Env) HandleTOTPValidation(w http.ResponseWriter, r *http.Request) {
-	sess := session.GetSessionFromRequest(r)
-
-	partialAuthData, ok := sess.CustomData[TOTPPartialDataCustomKey].(totpPartialAuthData)
-	if !ok {
-		log.Warn().Msg("went to totp page with no totp partial auth data")
-		http.Error(w, "login data not found", http.StatusBadRequest)
+	rawTicket := r.FormValue(totpLoginTicketFieldName)
+	if rawTicket == "" {
+		log.Warn().Msg("totp login page hit with no ticket")
+		http.Error(w, "no login ticket in request", http.StatusBadRequest)
 		return
 	}
 
-	if partialAuthData.Expiration.Before(time.Now()) {
-		http.Error(w, "login has expired, please log in again", http.StatusBadRequest)
+	ticket, err := enrollment.DecodeLoginTicket(rawTicket)
+	if err != nil {
+		log.Error().Err(err).Msg("could not decode login ticket")
+		http.Error(w, "could not decode login ticket", http.StatusBadRequest)
 		return
 	}
 
 	if r.Method == http.MethodGet {
-		e.handleTotpPrompt(w, r, &partialAuthData, "")
+		e.handleTotpPrompt(w, r, ticket, "")
 	} else if r.Method == http.MethodPost {
-		e.handleTotpValidate(w, r, &partialAuthData)
+		e.handleTotpValidate(w, r, ticket)
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
 	}
 }
 
-func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, data *totpPartialAuthData, errorMessage string) {
+func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTicket enrollment.LoginTicket, errorMessage string) {
+	encodedTicket, err := loginTicket.Encode()
+	if err != nil {
+		log.Error().Err(err).Msg("could not encode login ticket")
+		http.Error(w, "could not encode login ticket", http.StatusInternalServerError)
+		return
+	}
+
 	params := &totpPromptParams{
 		CSRFField:   csrf.TemplateField(r),
 		Error:       errorMessage,
-		RedirectURI: getRedirectURIFromRequest(r),
+		LoginTicket: encodedTicket,
 	}
 
 	render.Render(w, "totp_prompt.gohtml", params)
 }
 
-func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data *totpPartialAuthData) {
+func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data enrollment.LoginTicket) {
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
-	redirectURI := getRedirectURIFromRequest(r)
+	redirectURI := data.RedirectURI
 
 	user, err := e.Database.GetUserByGuid(r.Context(), data.UserID)
 	if err != nil {
@@ -183,16 +168,21 @@ func (e *Env) HandleTOTPDisable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Env) handleTotpEnableSubmission(w http.ResponseWriter, r *http.Request) {
-	sess := session.GetSessionFromRequest(r)
-
-	totpEnrollmentData, ok := sess.CustomData[TotpEnrollmentCustomDataKey].(totpEnrollment)
-	if !ok {
-		log.Warn().Msg("no session data for completing TOTP enrollment")
-		http.Error(w, "could not find TOTP enrollment data", http.StatusBadRequest)
+	encodedTicket := r.FormValue(totpEnrollmentTicketFieldName)
+	if encodedTicket == "" {
+		log.Warn().Msg("no ticket in request")
+		http.Error(w, "no enrollment ticket in request", http.StatusBadRequest)
 		return
 	}
 
-	if totpEnrollmentData.Expiration.Before(time.Now()) {
+	enrollmentTicket, err := enrollment.DecodeEnrollmentTicket(encodedTicket)
+	if err != nil {
+		log.Error().Err(err).Msg("could not decode enrollment ticket")
+		http.Error(w, "enrollment ticket is not decodable", http.StatusBadRequest)
+		return
+	}
+
+	if enrollmentTicket.Expiration.Before(time.Now()) {
 		e.renderSetupPage(w, r, "TOTP Enrollment Has Expired")
 		return
 	}
@@ -203,7 +193,7 @@ func (e *Env) handleTotpEnableSubmission(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	valid := totp.Validate(submittedCode, totpEnrollmentData.Secret)
+	valid := totp.Validate(submittedCode, enrollmentTicket.Seed)
 	if !valid {
 		e.renderSetupPage(w, r, "Incorrect TOTP Code")
 		return
@@ -214,8 +204,13 @@ func (e *Env) handleTotpEnableSubmission(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "you must be logged in to do this", http.StatusUnauthorized)
 		return
 	}
+	if user.Id != enrollmentTicket.UserID {
+		log.Error().Str("our_user_id", user.Id).Str("ticket_user_id", enrollmentTicket.UserID).Msg("user mismatch on ticket")
+		http.Error(w, "this is not your enrollment ticket", http.StatusForbidden)
+		return
+	}
 
-	err := e.Database.UpdateTOTPSeed(r.Context(), user.Id, totpEnrollmentData.Secret)
+	err = e.Database.UpdateTOTPSeed(r.Context(), user.Id, enrollmentTicket.Seed)
 	if err != nil {
 		log.Error().Err(err).Str("username", user.Username).Msg("could not persist totp secret")
 		http.Error(w, "could not update totp secret in database", http.StatusInternalServerError)
@@ -237,16 +232,25 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 		http.Error(w, "you already have totp enabled", http.StatusBadRequest)
 		return
 	}
-	sess := session.GetSessionFromRequest(r)
 
 	var err error
 	var secret []byte
 
-	if oldEnrollment, ok := sess.CustomData[TotpEnrollmentCustomDataKey].(*totpEnrollment); ok {
-		if oldEnrollment.Expiration.After(time.Now()) {
-			secret, err = base32.StdEncoding.DecodeString(oldEnrollment.Secret)
-			if err != nil {
-				log.Warn().Err(err).Msg("could not decode already valid totp secret")
+	if oldTicket := r.FormValue(totpEnrollmentTicketFieldName); oldTicket != "" {
+		var decoded enrollment.EnrollmentTicket
+		decoded, err = enrollment.DecodeEnrollmentTicket(oldTicket)
+		if err != nil {
+			log.Warn().Err(err).Msg("enrollment ticket already exists, but ignoring")
+		} else {
+			if decoded.UserID != u.Id {
+				log.Warn().Str("our_user_id", u.Id).Str("ticket_user_id", decoded.UserID).Msg("ticket and user mismatch, ignoring")
+			} else if decoded.Expiration.Before(time.Now()) {
+				log.Warn().Time("expiration", decoded.Expiration).Msg("ticket has expired, ignoring")
+			} else {
+				secret, err = base32.StdEncoding.DecodeString(decoded.Seed)
+				if err != nil {
+					log.Warn().Err(err).Msg("could not decode already packaged seed")
+				}
 			}
 		}
 	}
@@ -269,18 +273,15 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 		return
 	}
 
-	qrDataURL := fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(pngBytes))
-
-	sess.CustomData[TotpEnrollmentCustomDataKey] = &totpEnrollment{
-		Secret:     seed.Secret(),
-		Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-	}
-	err = session.WriteSession(w, r, sess)
+	ticket := enrollment.GenerateEnrollmentTicket(u.Id, seed.Secret())
+	encoded, err := ticket.Encode()
 	if err != nil {
-		log.Error().Err(err).Msg("could not update session with totp enrollment data")
-		http.Error(w, "could not update session with totp enrollment data", http.StatusInternalServerError)
+		log.Error().Err(err).Msg("could not generate enrollment ticket")
+		http.Error(w, "could not generate enrollment ticket", http.StatusInternalServerError)
 		return
 	}
+
+	qrDataURL := fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(pngBytes))
 
 	log.Debug().Str("totp_secret", seed.Secret()).Msg("generated secret")
 
@@ -288,7 +289,8 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 		Error:     errorMessage,
 		CSRFField: csrf.TemplateField(r),
 		//#nosec G203 -- contents are entirely generated server side
-		QRCodeDataURL: template.URL(qrDataURL),
+		QRCodeDataURL:    template.URL(qrDataURL),
+		EnrollmentTicket: encoded,
 	})
 
 }

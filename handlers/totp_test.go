@@ -26,13 +26,41 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/salt"
+	enrollment "github.com/lthummus/auththingie2/totp"
 	"github.com/lthummus/auththingie2/user"
 )
 
 var (
-	dataURLRegex    = regexp.MustCompile(`data:image/png;base64,(.*?)"`)
-	qrCodeDataRegex = regexp.MustCompile(`^otpauth://totp/AuthThingie:regularuser\?algorithm=SHA1&digits=6&issuer=AuthThingie&period=30&secret=([A-Z0-9]{32})$`)
+	dataURLRegex          = regexp.MustCompile(`data:image/png;base64,(.*?)"`)
+	qrCodeDataRegex       = regexp.MustCompile(`^otpauth://totp/AuthThingie:regularuser\?algorithm=SHA1&digits=6&issuer=AuthThingie&period=30&secret=([A-Z0-9]{32})$`)
+	enrollmentTicketRegex = regexp.MustCompile(`<input type="hidden" name="totp-enrollment-ticket" value="(.*)" />`)
+	loginTicketRegex      = regexp.MustCompile(`<input type="hidden" name="totp-login-ticket" value="(.*)" />`)
 )
+
+func buildEnrollmentTicket(t *testing.T, userID string, seed string, expiration time.Time) string {
+	et := enrollment.EnrollmentTicket{
+		UserID:     userID,
+		Seed:       seed,
+		Expiration: expiration,
+	}
+	encoded, err := et.Encode()
+	require.NoError(t, err)
+
+	return encoded
+}
+
+func buildLoginTicket(t *testing.T, userID string, redirectURI string, expiration time.Time) string {
+	lt := enrollment.LoginTicket{
+		UserID:      userID,
+		RedirectURI: redirectURI,
+		Expiration:  expiration,
+	}
+
+	encoded, err := lt.Encode()
+	require.NoError(t, err)
+
+	return encoded
+}
 
 func TestEnv_HandleTOTPValidation(t *testing.T) {
 	setupSalts(t)
@@ -49,53 +77,16 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 
-	t.Run("expired partial auth", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
-
-		r := makeTestRequest(t, http.MethodGet, "/totp", nil, withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(-TotpEnrollmentValidityTime),
-			}
-		}))
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "login has expired, please log in again")
-	})
-
-	t.Run("show login prompt", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
-
-		r := makeTestRequest(t, http.MethodGet, "/totp", nil, withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), ` <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>`)
-	})
-
 	t.Run("database error", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, errors.New("whoops"))
 
 		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -111,14 +102,10 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, nil)
 
 		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -139,13 +126,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 		v := url.Values{}
 		v.Add("totp-code", "000000")
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -165,14 +148,10 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		}, nil)
 
 		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -198,14 +177,10 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", correctTOTP)
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -239,13 +214,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 		v := url.Values{}
 		v.Add("totp-code", correctTOTP)
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
@@ -271,14 +242,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 
 		v := url.Values{}
 		v.Add("totp-code", correctTOTP)
-		v.Add("redirect_uri", "https://test.example.com/something")
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "https://test.example.com/something", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF(), withCustomSession(func(s *session.Session) {
-			s.CustomData[TOTPPartialDataCustomKey] = &totpPartialAuthData{
-				UserID:     "test-user",
-				Expiration: time.Now().Add(TotpEnrollmentValidityTime),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -355,7 +321,6 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 		assert.Nil(t, updatedUser.TOTPSeed)
 		assert.False(t, updatedUser.TOTPEnabled())
 	})
-
 }
 
 func TestEnv_HandleTOTPSetup(t *testing.T) {
@@ -423,19 +388,14 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		qrMatches := qrCodeDataRegex.FindStringSubmatch(data.String())
 		assert.Len(t, qrMatches, 2)
 
-		// decode the seession data cookie
-		assert.Len(t, w.Result().Cookies(), 1)
+		ticketMatches := enrollmentTicketRegex.FindStringSubmatch(w.Body.String())
+		assert.Len(t, ticketMatches, 2)
 
-		sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
-		var sess session.Session
-		err = sc.Decode(session.SessionCookieName, w.Result().Cookies()[0].Value, &sess)
+		et, err := enrollment.DecodeEnrollmentTicket(ticketMatches[1])
 		assert.NoError(t, err)
 
-		// make sure the secret in the QR code is the same as the secret in the session data
-		enrollmentData, ok := sess.CustomData[TotpEnrollmentCustomDataKey].(totpEnrollment)
-		assert.True(t, ok)
-
-		assert.Equal(t, enrollmentData.Secret, qrMatches[1])
+		assert.Equal(t, et.Seed, qrMatches[1])
+		assert.Equal(t, sampleNonAdminUser.Id, et.UserID)
 	})
 
 	t.Run("post -- invalid session data", func(t *testing.T) {
@@ -447,18 +407,17 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "could not find TOTP enrollment data")
+		assert.Contains(t, w.Body.String(), "no enrollment ticket in request")
 	})
 
 	t.Run("post -- expired session data", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
-			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
-				Secret:     sampleTOTPSeed,
-				Expiration: time.Now().Add(-5 * time.Minute),
-			}
-		}))
+		q := url.Values{}
+		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(-5*time.Minute)))
+
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -470,12 +429,12 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	t.Run("post -- submitted code missing", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
-			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
-				Secret:     sampleTOTPSeed,
-				Expiration: time.Now().Add(5 * time.Minute),
-			}
-		}))
+		q := url.Values{}
+		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(5*time.Minute)))
+
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -488,14 +447,10 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
 		v := url.Values{}
+		v.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
-			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
-				Secret:     sampleTOTPSeed,
-				Expiration: time.Now().Add(5 * time.Minute),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -515,13 +470,9 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 		v := url.Values{}
 		v.Add("totp-code", code)
+		v.Add(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
-			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
-				Secret:     sampleTOTPSeed,
-				Expiration: time.Now().Add(5 * time.Minute),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -541,13 +492,9 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 		v := url.Values{}
 		v.Add("totp-code", code)
+		v.Add(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
-			s.CustomData[TotpEnrollmentCustomDataKey] = totpEnrollment{
-				Secret:     sampleTOTPSeed,
-				Expiration: time.Now().Add(5 * time.Minute),
-			}
-		}))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 

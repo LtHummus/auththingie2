@@ -13,13 +13,13 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/argon"
 	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/salt"
+	enrollment "github.com/lthummus/auththingie2/totp"
 	"github.com/lthummus/auththingie2/user"
 )
 
@@ -189,10 +189,15 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		e.BuildRouter().ServeHTTP(w, r)
 
-		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
-		redirectURL, err := w.Result().Location()
-		require.NoError(t, err)
-		assert.Equal(t, "/totp", redirectURL.Path)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		ticketMatches := loginTicketRegex.FindStringSubmatch(w.Body.String())
+		assert.Len(t, ticketMatches, 2)
+
+		decoded, err := enrollment.DecodeLoginTicket(ticketMatches[1])
+		assert.NoError(t, err)
+
+		assert.Equal(t, sampleDisabledUserWithTOTP.Id, decoded.UserID)
+		assert.WithinDuration(t, time.Now().Add(5*time.Minute), decoded.Expiration, time.Second)
 	})
 
 	t.Run("valid username/password with no TOTP and redirect uri", func(t *testing.T) {
@@ -272,14 +277,17 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		e.BuildRouter().ServeHTTP(w, r)
 
-		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
-		finalURL, err := w.Result().Location()
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		ticketMatches := loginTicketRegex.FindStringSubmatch(w.Body.String())
+		assert.Len(t, ticketMatches, 2)
+
+		ticket, err := enrollment.DecodeLoginTicket(ticketMatches[1])
 		assert.NoError(t, err)
 
-		assert.Equal(t, "https", finalURL.Scheme)
-		assert.Equal(t, "example.com", finalURL.Host)
-		assert.Equal(t, "/totp", finalURL.Path)
-		assert.Equal(t, "https://test.example.com/foo", finalURL.Query().Get("redirect_uri"))
+		assert.Equal(t, sampleNonAdminWithTOTP.Id, ticket.UserID)
+		assert.WithinDuration(t, time.Now().Add(5*time.Minute), ticket.Expiration, time.Second)
+		assert.Equal(t, "https://test.example.com/foo", ticket.RedirectURI)
 	})
 
 	t.Run("migrate password on login", func(t *testing.T) {

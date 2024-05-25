@@ -15,7 +15,7 @@
                 {{ end }}
                 <form action="/totp" method="post">
                     {{ .CSRFField }}
-                    <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
+                    <input type="hidden" name="totp-login-ticket" value="{{ .LoginTicket }}" />
                     <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
                     <button type="submit" class="contrast">Continue</button>
                 </form>
