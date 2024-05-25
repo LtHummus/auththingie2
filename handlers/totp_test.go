@@ -398,6 +398,17 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		assert.Equal(t, sampleNonAdminUser.Id, et.UserID)
 	})
 
+	t.Run("patch -- return a 404", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPatch, "/enable_totp", nil, passesCSRF())
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+	})
+
 	t.Run("post -- invalid session data", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 
@@ -410,7 +421,23 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "no enrollment ticket in request")
 	})
 
-	t.Run("post -- expired session data", func(t *testing.T) {
+	t.Run("post -- invalid ticket", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		q := url.Values{}
+		q.Set(totpEnrollmentTicketFieldName, "abcdefghijklmnopqrstuvwxyz")
+
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF())
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "enrollment ticket is not decodable")
+	})
+
+	t.Run("post -- expired ticket", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
 		q := url.Values{}
@@ -424,13 +451,44 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error: TOTP Enrollment Has Expired")
+
+		// check that a new ticket has been issued
+		ticketMatches := enrollmentTicketRegex.FindStringSubmatch(w.Body.String())
+		assert.Len(t, ticketMatches, 2)
+
+		newTicket, err := enrollment.DecodeEnrollmentTicket(ticketMatches[1])
+		assert.NoError(t, err)
+
+		assert.Equal(t, sampleNonAdminUser.Id, newTicket.UserID)
+		assert.WithinDuration(t, time.Now().Add(5*time.Minute), newTicket.Expiration, time.Second)
+		assert.NotEqual(t, "AAAAAAAAAA", newTicket.Seed)
+	})
+
+	t.Run("post -- mismatched user ticket", func(t *testing.T) {
+		_, db, e := makeTestEnv(t)
+
+		code, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
+		assert.NoError(t, err)
+
+		q := url.Values{}
+		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, "invalid-id", sampleTOTPSeed, time.Now().Add(5*time.Minute)))
+		q.Set("totp-code", code)
+
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "this is not your enrollment ticket")
 	})
 
 	t.Run("post -- submitted code missing", func(t *testing.T) {
 		_, db, e := makeTestEnv(t)
 
 		q := url.Values{}
-		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(5*time.Minute)))
+		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -441,6 +499,16 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Error: TOTP Code Can Not Be Blank")
+
+		// make sure the ticket is still good
+		ticketMatches := enrollmentTicketRegex.FindStringSubmatch(w.Body.String())
+		assert.Len(t, ticketMatches, 2)
+
+		ticket, err := enrollment.DecodeEnrollmentTicket(ticketMatches[1])
+		assert.NoError(t, err)
+
+		assert.Equal(t, sampleNonAdminUser.Id, ticket.UserID)
+		assert.Equal(t, sampleTOTPSeed, ticket.Seed)
 	})
 
 	t.Run("post -- incorrect totp code", func(t *testing.T) {
