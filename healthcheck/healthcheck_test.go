@@ -57,6 +57,30 @@ func TestCheckHealth(t *testing.T) {
 		assert.True(t, called)
 	})
 
+	t.Run("unhealthy service", func(t *testing.T) {
+		called := false
+
+		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			called = true
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		srv.TLS = &tls.Config{}
+		srv.StartTLS()
+		defer srv.Close()
+
+		// replace client with one that will accept the generated certs, then swap back when the test is complete
+		client = srv.Client()
+
+		t.Cleanup(func() {
+			client = &http.Client{}
+		})
+
+		err := CheckHealth(srv.URL, 5*time.Second, false)
+		assert.Error(t, err)
+
+		assert.True(t, called)
+	})
+
 	t.Run("fail test if bad cert and we haven't told to ignore", func(t *testing.T) {
 		called := false
 		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

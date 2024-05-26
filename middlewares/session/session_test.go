@@ -36,15 +36,32 @@ func TestSession_Expired(t *testing.T) {
 }
 
 func TestSession_PlaceUserInSession(t *testing.T) {
-	s, err := NewDefaultSession()
-	require.NoError(t, err)
+	t.Run("basic case", func(t *testing.T) {
+		s, err := NewDefaultSession()
+		require.NoError(t, err)
 
-	s.PlaceUserInSession(&user.User{
-		Username: "foo",
-		Id:       "1234",
+		s.PlaceUserInSession(&user.User{
+			Username: "foo",
+			Id:       "1234",
+		})
+
+		assert.Equal(t, "1234", s.UserID)
+		assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
+		assert.WithinDuration(t, time.Now(), s.CreationTime, 1*time.Second)
 	})
 
-	assert.Equal(t, "1234", s.UserID)
-	assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
-	assert.WithinDuration(t, time.Now(), s.CreationTime, 1*time.Second)
+	t.Run("panic on disabled user", func(t *testing.T) {
+		s, err := NewDefaultSession()
+		require.NoError(t, err)
+
+		u := &user.User{
+			Username: "foo",
+			Id:       "1234",
+			Disabled: true,
+		}
+
+		assert.Panics(t, func() {
+			s.PlaceUserInSession(u)
+		})
+	})
 }
