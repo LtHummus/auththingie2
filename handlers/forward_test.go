@@ -194,18 +194,50 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {
-		t.Skip("disabling until file can be refactored to account for TOTP")
-		a, _, e := makeTestEnv(t)
-		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}, TOTPSeed: &sampleTOTPSeed})
+		a, db, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+		r.SetBasicAuth("username", "test1")
 
+		db.On("GetUserByUsername", mock.Anything, "username").Return(&user.User{Username: "test",
+			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
+			Admin:        false,
+			Roles:        []string{"foo"},
+			TOTPSeed:     &sampleTOTPSeed,
+		}, nil)
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo"}})
+
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
 
 		resp := w.Result()
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-		assert.Equal(t, "aaa", w.Body.String())
+		assert.Contains(t, w.Body.String(), "Can not use basic auth with TOTP enabled")
+	})
+
+	t.Run("yes rule, non-admin, has TOTP w/ passkeys", func(t *testing.T) {
+		a, db, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+		r.SetBasicAuth("username", "test1")
+
+		db.On("GetUserByUsername", mock.Anything, "username").Return(&user.User{
+			Username:     "test",
+			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
+			Admin:        false,
+			Roles:        []string{"foo"},
+			StoredCredentials: []user.Passkey{
+				{}, // force one passkey
+			},
+		}, nil)
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo"}})
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		assert.Contains(t, w.Body.String(), "Can not use basic auth with passkeys enabled")
 	})
 
 	t.Run("yes rule, non-admin, user is disabled", func(t *testing.T) {

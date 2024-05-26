@@ -158,7 +158,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		assert.Equal(t, UserSourceInvalidUser, source)
 	})
 
-	t.Run("return invalid user if basic auth user has TOTP enabled", func(t *testing.T) {
+	t.Run("return basic auth even if basic auth user has TOTP enabled", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
 		db := mocks.NewDB(t)
 
@@ -173,9 +173,12 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		}, nil)
 
 		user, source := GetUserFromRequestAllowFallback(r, db)
-		assert.Nil(t, user)
 
-		assert.Equal(t, UserSourceInvalidUser, source)
+		assert.True(t, user.TOTPEnabled())
+		assert.Equal(t, "test", user.Username)
+		assert.Equal(t, "ABCDEFG", *user.TOTPSeed)
+
+		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 
 	t.Run("return invalid user if user has passkeys enabled", func(t *testing.T) {
@@ -196,9 +199,10 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		}, nil)
 
 		user, source := GetUserFromRequestAllowFallback(r, db)
-		require.Nil(t, user)
 
-		assert.Equal(t, UserSourceInvalidUser, source)
+		assert.Equal(t, "test", user.Username)
+		assert.Len(t, user.StoredCredentials, 1)
+		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 }
 

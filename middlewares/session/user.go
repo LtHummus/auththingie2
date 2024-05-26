@@ -129,16 +129,6 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 		}()
 	}
 
-	if dbu.TOTPEnabled() {
-		log.Warn().Str("username", username).Str("ip", util.FindTrueIP(r)).Msg("can not use basic auth if user is TOTP enabled")
-		return nil, UserSourceInvalidUser
-	}
-
-	if len(dbu.StoredCredentials) != 0 {
-		log.Warn().Str("username", username).Str("ip", util.FindTrueIP(r)).Int("stored_credential_count", len(dbu.StoredCredentials)).Msg("can not use basic auth if user has passkeys")
-		return nil, UserSourceInvalidUser
-	}
-
 	return dbu, UserSourceBasicAuth
 }
 

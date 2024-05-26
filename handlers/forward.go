@@ -116,8 +116,14 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == session.UserSourceBasicAuth && user.TOTPEnabled() {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth with TOTP enabled")
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
 		http.Error(w, "Can not use basic auth with TOTP enabled", http.StatusForbidden)
+		return
+	}
+
+	if source == session.UserSourceBasicAuth && len(user.StoredCredentials) > 0 {
+		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
+		http.Error(w, "Can not use basic auth with passkeys enabled", http.StatusForbidden)
 		return
 	}
 
