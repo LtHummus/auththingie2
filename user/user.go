@@ -134,7 +134,7 @@ func (u *User) SetPassword(password string) error {
 func (u *User) WebAuthnID() []byte {
 	parsed, err := uuid.Parse(u.Id)
 	if err != nil {
-		log.Fatal().Str("user_id", u.Id).Msg("could not parse uuid")
+		log.Panic().Str("user_id", u.Id).Msg("could not parse uuid")
 	}
 
 	bytes, _ := parsed.MarshalBinary()
