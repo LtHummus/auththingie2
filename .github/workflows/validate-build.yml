@@ -7,7 +7,7 @@ on:
       - reopened
 
 jobs:
-  docker:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
