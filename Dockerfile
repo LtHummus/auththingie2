@@ -11,12 +11,12 @@ COPY go.sum go.sum
 
 RUN xx-go mod download
 
-ARG TARGETPLATFORM
-RUN xx-apk add musl-dev gcc
-
 COPY . .
 
 RUN go test ./...
+
+ARG TARGETPLATFORM
+RUN xx-apk add musl-dev gcc
 
 ENV CGO_ENABLED=1
 RUN xx-go build -ldflags "-linkmode 'external' -extldflags '-static'" -o ./auththingie2 . && \
