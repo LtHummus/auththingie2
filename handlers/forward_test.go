@@ -71,6 +71,23 @@ func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequ
 	return session.ArbitraryAttachSession(*sess, r, user, nil)
 }
 
+func TestEnv_HandleAccountDisabled(t *testing.T) {
+	render.Init()
+
+	t.Run("basic case", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		_, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Username: "sample-user", Disabled: true})
+
+		e.HandleAccountDisabled(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		assert.Contains(t, w.Body.String(), "Your account has been disabled. You are currently logged in as <strong>sample-user</strong>")
+	})
+}
+
 func TestEnv_HandleNotAllowed(t *testing.T) {
 	render.Init()
 
