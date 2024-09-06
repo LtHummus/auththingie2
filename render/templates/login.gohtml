@@ -28,6 +28,7 @@
                         <button type="submit" class="contrast">Login</button>
                 </form>
                 {{ if .EnablePasskeys }}
+                    <hr class="passkey-line" />
                     <div id="authn_login_error" class="error-box no-error"></div>
                     <button onclick="handleDiscoverLogin({{ .CSRFToken }})" id="passkey-login-button">
                         <img src="/static/images/fido-passkey-white.svg" alt="Passkey Logo" class="passkey-logo" />
