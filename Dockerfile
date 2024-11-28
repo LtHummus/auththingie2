@@ -1,7 +1,6 @@
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
-FROM --platform=$BUILDPLATFORM golang:1.22-alpine AS build
-RUN apk add clang lld git
+FROM --platform=$BUILDPLATFORM golang:1.23 AS build
 COPY --from=xx / /
 
 
@@ -16,7 +15,7 @@ COPY . .
 RUN go test ./...
 
 ARG TARGETPLATFORM
-RUN xx-apk add musl-dev gcc
+RUN xx-apt-get -y install gcc
 
 ENV CGO_ENABLED=1
 RUN xx-go build -ldflags "-linkmode 'external' -extldflags '-static'" -o ./auththingie2 . && \
