@@ -355,7 +355,8 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !ownsKey {
-		render.RenderHTMXCompatibleError(w, r, "You do not own that key", "modify-error")
+		log.Warn().Str("username", u.Username).Str("key_id", kID).Msg("user attempted to modify key they did not own")
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Could not find key with id %s", kID), "modify-error")
 		return
 	}
 

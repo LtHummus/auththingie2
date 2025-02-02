@@ -537,7 +537,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "You do not own that key")
+		assert.Contains(t, w.Body.String(), "Could not find key with id VgeUYW5GwThRS74X02aJRw")
 		assert.NotEmpty(t, w.Header().Get("HX-Retarget"))
 	})
 
