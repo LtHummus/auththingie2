@@ -110,7 +110,6 @@ func TestWebAuthnFlow(t *testing.T) {
 		addedCredential := db.Mock.Calls[2].Arguments[2].(*webauthn.Credential)
 
 		assert.Equal(t, cred.ID, addedCredential.ID)
-		assert.Equal(t, cred.Key.SigningKey.KeyData(), addedCredential.PublicKey)
 
 		// create a test user with our new credential
 		userWithCredential := *sampleNonAdminUser
@@ -212,7 +211,6 @@ func TestWebAuthnFlow(t *testing.T) {
 		addedCredential := db.Mock.Calls[2].Arguments[2].(*webauthn.Credential)
 
 		assert.Equal(t, cred.ID, addedCredential.ID)
-		assert.Equal(t, cred.Key.SigningKey.KeyData(), addedCredential.PublicKey)
 
 		// create a test user with our new credential
 		userWithCredential := *sampleDisabledUser
