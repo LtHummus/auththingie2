@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/gorilla/securecookie"
@@ -40,30 +39,6 @@ func init() {
 	viper.SetDefault(parallelismKey, defaultParallelism)
 	viper.SetDefault(saltLengthKey, defaultSaltLength)
 	viper.SetDefault(keyLengthKey, defaultKeyLength)
-}
-
-func safeCastUint8(x int) (uint8, error) {
-	if x < 0 {
-		return 0, fmt.Errorf("argon2: can not cast %d to uint8", x)
-	}
-
-	if x > math.MaxUint8 {
-		return 0, fmt.Errorf("argon2: can not cast %d uint8", x)
-	}
-
-	return uint8(x), nil
-}
-
-func safeCastUin32(x int) (uint32, error) {
-	if x < 0 {
-		return 0, fmt.Errorf("argon2: can not cast %d to uint32", x)
-	}
-
-	if x > math.MaxUint32 {
-		return 0, fmt.Errorf("argon2: can not %d to uint32", x)
-	}
-
-	return uint32(x), nil
 }
 
 func GenerateFromPassword(password string) (string, error) {
@@ -160,7 +135,7 @@ func decodeHashParts(encodedHash string) (uint32, uint32, uint8, []byte, uint32,
 	if err != nil {
 		return 0, 0, 0, nil, 0, nil, 0, err
 	}
-	saltLength, err := safeCastUin32(len(salt))
+	saltLength, err := safeCastUint32(len(salt))
 	if err != nil {
 		return 0, 0, 0, nil, 0, nil, 0, fmt.Errorf("argon2: decodeHashParts: invalid salt length: %w", err)
 	}
@@ -169,7 +144,7 @@ func decodeHashParts(encodedHash string) (uint32, uint32, uint8, []byte, uint32,
 	if err != nil {
 		return 0, 0, 0, nil, 0, nil, 0, err
 	}
-	keyLength, err := safeCastUin32(len(hash))
+	keyLength, err := safeCastUint32(len(hash))
 	if err != nil {
 		return 0, 0, 0, nil, 0, nil, 0, fmt.Errorf("argon2: decodeHashParts: invalid key length: %w", err)
 	}
