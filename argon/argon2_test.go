@@ -1,6 +1,7 @@
 package argon
 
 import (
+	"encoding/base64"
 	"regexp"
 	"testing"
 
@@ -58,4 +59,36 @@ func TestNeedsMigration(t *testing.T) {
 	t.Run("require migration if argon props are incorrect", func(t *testing.T) {
 		assert.True(t, NeedsMigration("$argon2id$v=19$m=32768,t=4,p=2$doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs$zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0"))
 	})
+}
+
+func TestDecodeHashParts(t *testing.T) {
+	t.Run("happy case", func(t *testing.T) {
+		memory, iterations, parallelism, salt, saltLen, hash, keyLen, err := decodeHashParts("$argon2id$v=19$m=32768,t=4,p=2$doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs$zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0")
+		assert.NoError(t, err)
+
+		assert.Equal(t, uint32(32768), memory)
+		assert.Equal(t, uint32(4), iterations)
+		assert.Equal(t, uint8(2), parallelism)
+		assert.Equal(t, "doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs", base64.RawStdEncoding.Strict().EncodeToString(salt))
+		assert.Equal(t, uint32(32), saltLen)
+		assert.Equal(t, "zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0", base64.RawStdEncoding.Strict().EncodeToString(hash))
+		assert.Equal(t, uint32(32), keyLen)
+	})
+
+	t.Run("invalid parallelism (too large)", func(t *testing.T) {
+		_, _, _, _, _, _, _, err := decodeHashParts("$argon2id$v=19$m=32768,t=4,p=999$doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs$zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0")
+		assert.Error(t, err)
+	})
+
+}
+
+func TestArgonConfigInvalid(t *testing.T) {
+	oldValue := viper.GetInt(parallelismKey)
+	viper.Set(parallelismKey, 999)
+	t.Cleanup(func() {
+		viper.Set(parallelismKey, oldValue)
+	})
+
+	_, err := GenerateFromPassword("abcdefg")
+	assert.Error(t, err)
 }
