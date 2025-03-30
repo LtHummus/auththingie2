@@ -144,7 +144,7 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 		return
 	}
 
-	res, sess, err := e.WebAuthn.BeginDiscoverableLogin()
+	res, sess, err := e.WebAuthn.BeginDiscoverableLogin(webauthn.WithUserVerification(protocol.VerificationPreferred))
 	if err != nil {
 		log.Error().Err(err).Msg("could not create discoverable login payload")
 		render.RenderJSONError(w, "Could not create login challenge", "authn.login.could_not_create_challenge", http.StatusInternalServerError)
