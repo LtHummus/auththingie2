@@ -1,10 +1,23 @@
 package durations
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
+
+func appendAmount(sb *strings.Builder, amt int, unitName string, written bool) {
+	if written {
+		sb.WriteString(" ")
+	}
+
+	sb.WriteString(strconv.Itoa(amt))
+	sb.WriteString(" ")
+	sb.WriteString(unitName)
+	if amt != 1 {
+		sb.WriteString("s")
+	}
+}
 
 func NiceDuration(dur time.Duration) string {
 	var sb strings.Builder
@@ -15,12 +28,7 @@ func NiceDuration(dur time.Duration) string {
 		d := int(dur.Hours() / 24)
 		dur -= time.Duration(d) * 24 * time.Hour
 
-		u := "days"
-		if d == 1 {
-			u = "day"
-		}
-
-		sb.WriteString(fmt.Sprintf("%d %s", d, u))
+		appendAmount(&sb, d, "day", written)
 		written = true
 	}
 
@@ -28,17 +36,7 @@ func NiceDuration(dur time.Duration) string {
 		h := int(dur.Hours())
 		dur -= time.Duration(h) * time.Hour
 
-		u := "hours"
-		if h == 1 {
-			u = "hour"
-		}
-
-		spacer := ""
-		if written {
-			spacer = " "
-		}
-
-		sb.WriteString(fmt.Sprintf("%s%d %s", spacer, h, u))
+		appendAmount(&sb, h, "hour", written)
 		written = true
 	}
 
@@ -46,31 +44,22 @@ func NiceDuration(dur time.Duration) string {
 		m := int(dur.Minutes())
 		dur -= time.Duration(m) * time.Minute
 
-		u := "minutes"
-		if m == 1 {
-			u = "minute"
-		}
-		spacer := ""
-		if written {
-			spacer = " "
-		}
-
-		sb.WriteString(fmt.Sprintf("%s%d %s", spacer, m, u))
+		appendAmount(&sb, m, "minute", written)
 		written = true
 	}
 
 	if dur > 0 || (!written && dur == 0) {
-		spacer := ""
+		// special case for remaining seconds
 		if written {
-			spacer = " "
+			sb.WriteString(" ")
 		}
 
-		u := "seconds"
-		if dur == 1*time.Second {
-			u = "second"
+		sb.WriteString(strconv.FormatFloat(dur.Seconds(), 'f', -1, 64))
+		sb.WriteString(" ")
+		sb.WriteString("second")
+		if dur != 1*time.Second {
+			sb.WriteString("s")
 		}
-
-		sb.WriteString(fmt.Sprintf("%s%.2g %s", spacer, dur.Seconds(), u))
 	}
 
 	return sb.String()
