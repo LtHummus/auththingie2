@@ -5,6 +5,9 @@ on:
     types:
       - opened
       - reopened
+  push:
+    branches-ignore:
+      - main
 
 jobs:
   validate:
@@ -16,7 +19,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22.x'
+          go-version: '1.24.x'
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
@@ -31,3 +34,14 @@ jobs:
         run: gotestsum --format github-actions
 
 
+  security:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v3
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
