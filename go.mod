@@ -15,7 +15,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gurkankaymak/hocon v1.2.21
-	github.com/hyperjumptech/jiffy v1.0.0
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/jellydator/ttlcache/v3 v3.3.0
 	github.com/makiuchi-d/gozxing v0.1.1
@@ -32,7 +31,6 @@ require (
 )
 
 require (
-	github.com/antlr/antlr4 v0.0.0-20200124162019-2d7f727a00b7 // indirect
 	github.com/boombuler/barcode v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
