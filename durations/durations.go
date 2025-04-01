@@ -2,6 +2,7 @@ package durations
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -55,11 +56,13 @@ func NiceDuration(dur time.Duration) string {
 			sb.WriteString(" ")
 		}
 
+		s := math.Trunc(dur.Seconds())
+
 		// use sprintf here because we get better control of precision
-		sb.WriteString(fmt.Sprintf("%.2g", dur.Seconds()))
+		sb.WriteString(fmt.Sprintf("%.2g", s))
 		sb.WriteString(" ")
 		sb.WriteString("second")
-		if dur != 1*time.Second {
+		if s != 1 {
 			sb.WriteString("s")
 		}
 	}

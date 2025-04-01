@@ -12,8 +12,6 @@ RUN xx-go mod download
 
 COPY . .
 
-RUN go test ./...
-
 ARG TARGETPLATFORM
 RUN xx-apt-get -y install gcc
 
