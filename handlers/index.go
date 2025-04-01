@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hyperjumptech/jiffy"
-
+	"github.com/lthummus/auththingie2/durations"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/user"
@@ -34,7 +33,7 @@ func (e *Env) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		if loginDuration < loginDurationMinimum {
 			durationString = "just now"
 		} else {
-			durationString = fmt.Sprintf("%s ago", jiffy.DescribeDuration(loginDuration, jiffy.NewWant()))
+			durationString = fmt.Sprintf("%s ago", durations.NiceDuration(loginDuration))
 		}
 	}
 

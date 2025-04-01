@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"github.com/hyperjumptech/jiffy"
+	"github.com/lthummus/auththingie2/durations"
 )
 
 type DisplayableRule struct {
@@ -46,7 +46,7 @@ func RuleToDisplayableRule(r Rule) *DisplayableRule {
 	}
 
 	if r.Timeout != nil {
-		dr.Timeout = jiffy.DescribeDuration(*r.Timeout, jiffy.NewWant())
+		dr.Timeout = durations.NiceDuration(*r.Timeout)
 	}
 
 	return dr

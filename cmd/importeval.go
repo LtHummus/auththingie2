@@ -5,11 +5,11 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/hyperjumptech/jiffy"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/lthummus/auththingie2/durations"
 	"github.com/lthummus/auththingie2/importer"
 )
 
@@ -59,7 +59,7 @@ var importEvalCmd = &cobra.Command{
 		for i, curr := range r.Rules {
 			tout := "<default>"
 			if curr.Timeout != nil {
-				tout = jiffy.DescribeDuration(*curr.Timeout, jiffy.NewWant())
+				tout = durations.NiceDuration(*curr.Timeout)
 			}
 			ruleTable.AppendRow(table.Row{fmt.Sprintf("%d\n", i+1),
 				curr.Name,
