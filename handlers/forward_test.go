@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
@@ -44,6 +47,21 @@ func buildUserCookie(t *testing.T, e *Env, user *user.User) *session.Session {
 	}
 
 	return &sess
+}
+
+func setAttachHeaders(t *testing.T) {
+	viper.Set(config.AttachUserIDAuthResponseHeader, "Id-Header")
+	viper.Set(config.AttachUsernameAuthResponseHeader, "Username-Header")
+
+	t.Cleanup(func() {
+		viper.Set(config.AttachUserIDAuthResponseHeader, "")
+		viper.Set(config.AttachUsernameAuthResponseHeader, "")
+	})
+}
+
+func validateHeaders(t *testing.T, id string, username string, r *http.Response) {
+	assert.Equal(t, id, r.Header.Get("Id-Header"))
+	assert.Equal(t, username, r.Header.Get("Username-Header"))
 }
 
 func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequestOption) *http.Request {
@@ -164,6 +182,23 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
+	t.Run("no rule, user is admin, header should be attached", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: true})
+
+		setAttachHeaders(t)
+
+		a.On("MatchesRule", mock.Anything).Return(nil)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		validateHeaders(t, "5", "test", resp)
+	})
+
 	t.Run("yes rule, user is admin", func(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: true})
@@ -178,6 +213,23 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
+	t.Run("yes rule, user is admin, headers attached", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: true})
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{})
+
+		setAttachHeaders(t)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		validateHeaders(t, "5", "test", resp)
+	})
+
 	t.Run("yes rule, non-admin, group is allowed", func(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}})
@@ -190,6 +242,23 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		resp := w.Result()
 
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("yes rule, non-admin, group allowed, headers attached", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, &user.User{Id: "1234", Username: "test", Admin: false, Roles: []string{"foo"}})
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo", "bar"}})
+
+		setAttachHeaders(t)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		validateHeaders(t, "1234", "test", resp)
 	})
 
 	t.Run("yes rule, non-admin, user is not allowed", func(t *testing.T) {
@@ -289,7 +358,42 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
+	t.Run("yes rule, rule is public, no user, attach headers", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
+
+		setAttachHeaders(t)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		validateHeaders(t, publicUserIDHeaderValue, publicUsernameHeaderValue, resp)
+	})
+
 	t.Run("yes rule, rule is public, disabled user", func(t *testing.T) {
+		a, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, sampleDisabledUser)
+
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
+
+		setAttachHeaders(t)
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		validateHeaders(t, publicUserIDHeaderValue, publicUsernameHeaderValue, resp)
+
+	})
+
+	t.Run("yes rule, rule is public, disabled user, attach headers", func(t *testing.T) {
 		a, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, sampleDisabledUser)
 

@@ -10,9 +10,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
+	"github.com/lthummus/auththingie2/user"
 	"github.com/lthummus/auththingie2/util"
 )
 
@@ -24,6 +26,9 @@ const (
 
 	redirectURLParam  = "redirect_uri"
 	loginMessageParam = "message"
+
+	publicUsernameHeaderValue = "<auththingie2 public access>"
+	publicUserIDHeaderValue   = "00000000-0000-0000-0000-000000000000"
 )
 
 func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
@@ -66,6 +71,15 @@ func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, "disabled.gohtml", &params)
 }
 
+func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
+	if headerName := viper.GetString(config.AttachUsernameAuthResponseHeader); headerName != "" {
+		w.Header().Set(headerName, user.Username)
+	}
+	if headerName := viper.GetString(config.AttachUserIDAuthResponseHeader); headerName != "" {
+		w.Header().Set(headerName, user.Id)
+	}
+}
+
 func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	ri := pullInfoFromRequest(r)
 	log.
@@ -101,6 +115,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// if we have a rule and the rule is public, just allow the user through...there is nothing else we need to do
 	if rule != nil && rule.Public {
 		log.Debug().Str("rule", rule.Name).Msg("rule is public; allowing access")
+		potentiallyAttacheUser(w, &user.User{Id: publicUserIDHeaderValue, Username: publicUsernameHeaderValue})
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -146,6 +161,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// next, check to see if the user is admin (implicitly allowed everything) or is in the group that allows
 	// access to that url
 	if user.Admin || (rule != nil && user.GroupsOverlap(rule.PermittedRoles)) {
+		potentiallyAttacheUser(w, user)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
