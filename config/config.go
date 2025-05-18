@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+
+	"github.com/lthummus/auththingie2/argon"
 )
 
 var (
@@ -117,6 +119,46 @@ func ValidateConfig() []string {
 	return errorsFound
 }
 
+func cleanDefaultArgon(everything map[string]any) {
+	securityBlock, found := everything["security"].(map[string]any)
+	if !found {
+		return
+	}
+
+	argonBlock, found := securityBlock["argon2"].(map[string]any)
+	if !found {
+		return
+	}
+
+	if argonBlock["memory"] == argon.DefaultMemory {
+		delete(argonBlock, "memory")
+	}
+
+	if argonBlock["iterations"] == argon.DefaultIterations {
+		delete(argonBlock, "iterations")
+	}
+
+	if argonBlock["parallelism"] == argon.DefaultParallelism {
+		delete(argonBlock, "parallelism")
+	}
+
+	if argonBlock["saltlength"] == argon.DefaultSaltLength {
+		delete(argonBlock, "saltlength")
+	}
+
+	if argonBlock["keylength"] == argon.DefaultKeyLength {
+		delete(argonBlock, "keylength")
+	}
+
+	if len(argonBlock) == 0 {
+		delete(securityBlock, "argon2")
+	}
+
+	if len(securityBlock) == 0 {
+		delete(everything, "security")
+	}
+}
+
 func WriteCurrentConfigState(overrides ...WriteOverride) error {
 	Lock.Lock()
 	defer Lock.Unlock()
@@ -132,6 +174,8 @@ func WriteCurrentConfigState(overrides ...WriteOverride) error {
 	for _, curr := range overrides {
 		everything[curr.Key] = curr.Value
 	}
+
+	cleanDefaultArgon(everything)
 
 	data, err := yaml.Marshal(everything)
 	if err != nil {

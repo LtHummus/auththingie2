@@ -83,10 +83,10 @@ func TestDecodeHashParts(t *testing.T) {
 }
 
 func TestArgonConfigInvalid(t *testing.T) {
-	oldValue := viper.GetInt(parallelismKey)
-	viper.Set(parallelismKey, 999)
+	oldValue := viper.GetInt(ParallelismKey)
+	viper.Set(ParallelismKey, 999)
 	t.Cleanup(func() {
-		viper.Set(parallelismKey, oldValue)
+		viper.Set(ParallelismKey, oldValue)
 	})
 
 	_, err := GenerateFromPassword("abcdefg")
