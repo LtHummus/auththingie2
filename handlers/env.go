@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/db"
+	"github.com/lthummus/auththingie2/loginfailure"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
@@ -17,9 +18,10 @@ import (
 )
 
 type Env struct {
-	Database db.DB
-	Analyzer rules.Analyzer
-	WebAuthn *webauthn.WebAuthn
+	Database      db.DB
+	Analyzer      rules.Analyzer
+	WebAuthn      *webauthn.WebAuthn
+	AccountLocker loginfailure.Counter
 }
 
 func (e *Env) BuildRouter() http.Handler {

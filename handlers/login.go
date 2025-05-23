@@ -90,6 +90,17 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
+	if e.AccountLocker != nil && e.AccountLocker.IsUserLocked(username) {
+		render.Render(w, "login.gohtml", &loginPageParams{
+			CSRFField:      csrf.TemplateField(r),
+			CSRFToken:      csrf.Token(r),
+			Error:          "Account is locked due to failures",
+			RedirectURI:    redirectURL,
+			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		})
+		return
+	}
+
 	u, err := e.Database.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		log.Error().Err(err).Msg("could not query for user")
@@ -103,6 +114,9 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		// do an argon validation even though it won't work because we want to consume some time so the existence of a user can't
 		// be detected via timing
 		_ = argon.ValidatePassword("aaaaaaaaaa", fakeArgonHash)
+		if e.AccountLocker != nil {
+			e.AccountLocker.RecordFailure(username)
+		}
 
 		render.Render(w, "login.gohtml", &loginPageParams{
 			CSRFField:      csrf.TemplateField(r),
@@ -117,6 +131,10 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	err = u.CheckPassword(password)
 	if err != nil {
 		log.Error().Str("ip", util.FindTrueIP(r)).Err(err).Msg("invalid login")
+		if e.AccountLocker != nil {
+			e.AccountLocker.RecordFailure(username)
+		}
+
 		render.Render(w, "login.gohtml", &loginPageParams{
 			CSRFField:      csrf.TemplateField(r),
 			CSRFToken:      csrf.Token(r),

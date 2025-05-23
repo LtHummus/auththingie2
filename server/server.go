@@ -19,6 +19,7 @@ import (
 	"github.com/lthummus/auththingie2/db/sqlite"
 	"github.com/lthummus/auththingie2/ftue"
 	"github.com/lthummus/auththingie2/handlers"
+	"github.com/lthummus/auththingie2/loginfailure"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/salt"
@@ -83,9 +84,10 @@ func RunServer() {
 	}
 
 	e := handlers.Env{
-		Analyzer: f,
-		Database: database,
-		WebAuthn: wan,
+		Analyzer:      f,
+		Database:      database,
+		WebAuthn:      wan,
+		AccountLocker: loginfailure.NewInMemoryCounter(30*time.Minute, 5, 15*time.Minute),
 	}
 	log.Info().Msg("services initialized")
 
