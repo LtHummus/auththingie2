@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/argon"
 )
 
 func prepareViper(t *testing.T, config string) {
@@ -168,4 +170,71 @@ func TestEnableDebugPage(t *testing.T) {
 		assert.True(t, EnableDebugPage())
 	})
 
+}
+
+func TestCleanupDefaultArgon(t *testing.T) {
+	t.Run("complete cleanup", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		viper.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+		viper.SetDefault(argon.IterationKey, argon.DefaultIterations)
+		viper.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+		viper.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+		viper.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
+		everything := viper.AllSettings()
+
+		cleanDefaultArgon(everything)
+
+		assert.Len(t, everything, 0)
+	})
+
+	t.Run("leave only non-default keys", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		viper.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+		viper.SetDefault(argon.IterationKey, argon.DefaultIterations)
+		viper.SetDefault(argon.ParallelismKey, 56)
+		viper.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+		viper.SetDefault(argon.KeyLengthKey, 952348)
+
+		everything := viper.AllSettings()
+
+		cleanDefaultArgon(everything)
+
+		assert.Len(t, everything, 1)
+
+		securityBlock := everything["security"].(map[string]any)
+		assert.Len(t, securityBlock, 1)
+
+		argonBlock := securityBlock["argon2"].(map[string]any)
+		assert.Len(t, argonBlock, 2)
+
+		assert.Equal(t, 952348, argonBlock["keylength"])
+		assert.Equal(t, 56, argonBlock["parallelism"])
+	})
+
+	t.Run("leave other security things alone", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		viper.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+		viper.SetDefault(argon.IterationKey, argon.DefaultIterations)
+		viper.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+		viper.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+		viper.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
+		viper.Set("security.foo", "hello")
+
+		everything := viper.AllSettings()
+
+		cleanDefaultArgon(everything)
+
+		assert.Len(t, everything, 1)
+	})
 }
