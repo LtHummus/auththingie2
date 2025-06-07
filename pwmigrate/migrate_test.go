@@ -31,7 +31,7 @@ func makeTestUser() *user.User {
 
 func TestMigrateUser(t *testing.T) {
 	t.Run("basic test", func(t *testing.T) {
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 		u := makeTestUser()
 
 		db.On("UpdatePassword", mock.Anything, u).Return(nil)
@@ -42,7 +42,7 @@ func TestMigrateUser(t *testing.T) {
 	})
 
 	t.Run("don't update if you can't get the lock", func(t *testing.T) {
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 		u := makeTestUser()
 
 		attemptLockUser(u.Id)
@@ -54,7 +54,7 @@ func TestMigrateUser(t *testing.T) {
 	})
 
 	t.Run("gracefull handle failed write", func(t *testing.T) {
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 		u := makeTestUser()
 
 		db.On("UpdatePassword", mock.Anything, u).Return(errors.New("oops"))

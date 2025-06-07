@@ -147,7 +147,7 @@ var (
 			cd.req = csrf.UnsafeSkipCheck(cd.req)
 		}
 	}
-	withUser = func(u *user.User, db *mocks.DB) connectionOption {
+	withUser = func(u *user.User, db *mocks.MockDB) connectionOption {
 		return func(cd *testConnectionData) {
 			copiedUser := &user.User{
 				Id:                u.Id,
@@ -215,9 +215,9 @@ func setupSalts(t *testing.T) {
 	salt.CheckOrMakeSalt()
 }
 
-func makeTestEnv(t *testing.T) (*mocks.Analyzer, *mocks.DB, *Env) {
-	a := mocks.NewAnalyzer(t)
-	db := mocks.NewDB(t)
+func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *Env) {
+	a := mocks.NewMockAnalyzer(t)
+	db := mocks.NewMockDB(t)
 	wa, err := webauthn.New(&webauthn.Config{
 		RPID:          "example.com",
 		RPDisplayName: "example.com",

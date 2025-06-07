@@ -1,0 +1,13 @@
+dir: mocks
+filename: "{{.InterfaceName}}.go"
+pkgname: "mocks"
+packages:
+  github.com/lthummus/auththingie2/db:
+    config:
+      all: true
+  github.com/lthummus/auththingie2/rules:
+    config:
+      all: true
+  github.com/lthummus/auththingie2/loginlimit:
+    config:
+      all: true

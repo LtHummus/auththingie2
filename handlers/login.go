@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"github.com/lthummus/auththingie2/loginlimit"
 	"html/template"
 	"net/http"
 
@@ -90,6 +93,17 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
+	if e.LoginLimiter != nil && e.LoginLimiter.IsAccountLocked(username) {
+		render.Render(w, "login.gohtml", &loginPageParams{
+			CSRFField:      csrf.TemplateField(r),
+			CSRFToken:      csrf.Token(r),
+			Error:          "This account is temporarily locked",
+			RedirectURI:    redirectURL,
+			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		})
+		return
+	}
+
 	u, err := e.Database.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		log.Error().Err(err).Msg("could not query for user")
@@ -104,10 +118,25 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		// be detected via timing
 		_ = argon.ValidatePassword("aaaaaaaaaa", fakeArgonHash)
 
+		errorMessage := "Invalid Username or Password"
+
+		if e.LoginLimiter != nil {
+			remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
+			if errors.Is(err, loginlimit.ErrAccountLocked) {
+				errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
+			} else if err != nil {
+				log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
+				errorMessage = "An error happened attempting to log you in"
+			} else {
+				errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
+			}
+
+		}
+
 		render.Render(w, "login.gohtml", &loginPageParams{
 			CSRFField:      csrf.TemplateField(r),
 			CSRFToken:      csrf.Token(r),
-			Error:          "Invalid Username or Password",
+			Error:          errorMessage,
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 		})
@@ -117,10 +146,26 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	err = u.CheckPassword(password)
 	if err != nil {
 		log.Error().Str("ip", util.FindTrueIP(r)).Err(err).Msg("invalid login")
+
+		errorMessage := "Invalid Username or Password"
+
+		if e.LoginLimiter != nil {
+			remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
+			if errors.Is(err, loginlimit.ErrAccountLocked) {
+				errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
+			} else if err != nil {
+				log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
+				errorMessage = "An error happened attempting to log you in"
+			} else {
+				errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
+			}
+
+		}
+
 		render.Render(w, "login.gohtml", &loginPageParams{
 			CSRFField:      csrf.TemplateField(r),
 			CSRFToken:      csrf.Token(r),
-			Error:          "Invalid Username or Password",
+			Error:          errorMessage,
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 		})
