@@ -2,6 +2,7 @@ package loginlimit
 
 import (
 	"errors"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"sync"
 	"time"
@@ -14,6 +15,16 @@ type LoginLimiter interface {
 
 var (
 	ErrAccountLocked = errors.New("loginlimit: account is locked")
+)
+
+const (
+	ConfigKeyLoginFailureLimit = "security.account_lock.failure_limit"
+	ConfigKeyLookbackTime      = "security.account_lock.lookback_time"
+	ConfigKeyLockDuration      = "security.account_lock.lock_duration"
+
+	DefaultFailureLimit        = 5
+	DefaultLookbackTime        = 15 * time.Minute
+	DefaultAccountLockDuration = 15 * time.Minute
 )
 
 type InMemoryLoginLimiter struct {
@@ -29,9 +40,24 @@ type InMemoryLoginLimiter struct {
 }
 
 func NewInMemoryLimiter() *InMemoryLoginLimiter {
-	failureLimit := viper.GetInt("security.account_lock.failure_limit")
-	lookbackTime := viper.GetDuration("security.account_lock.lookback_time")
-	lockDuration := viper.GetDuration("security.account_lock.lock_duration")
+	failureLimit := viper.GetInt(ConfigKeyLoginFailureLimit)
+	lookbackTime := viper.GetDuration(ConfigKeyLookbackTime)
+	lockDuration := viper.GetDuration(ConfigKeyLockDuration)
+
+	// we do it this way so we don't mistakenly pollute the config file with our values
+	if failureLimit == 0 {
+		failureLimit = DefaultFailureLimit
+	}
+
+	if lookbackTime == 0 {
+		lookbackTime = DefaultLookbackTime
+	}
+
+	if lockDuration == 0 {
+		lockDuration = DefaultAccountLockDuration
+	}
+
+	log.Info().Int("failure_limit", failureLimit).Dur("lookback_time", lookbackTime).Dur("lock_duration", lockDuration).Msg("initializing account login failure locker")
 
 	imll := constructLimiter(failureLimit, lookbackTime, lockDuration)
 

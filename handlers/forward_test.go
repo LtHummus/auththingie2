@@ -94,7 +94,7 @@ func TestEnv_HandleAccountDisabled(t *testing.T) {
 
 	t.Run("basic case", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "sample-user", Disabled: true})
 
 		e.HandleAccountDisabled(w, r)
@@ -111,7 +111,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 	t.Run("not logged in", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
 		e.HandleNotAllowed(w, r)
@@ -125,7 +125,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 	t.Run("with logged in user", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test-user"})
 
 		e.HandleNotAllowed(w, r)
@@ -141,7 +141,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 func TestEnv_HandleCheckRequest(t *testing.T) {
 	t.Run("handle matches no rules; no user", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
 		a.On("MatchesRule", mock.Anything).Return(nil)
@@ -169,7 +169,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("no rule, but user is admin", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: true})
 
 		a.On("MatchesRule", mock.Anything).Return(nil)
@@ -183,7 +183,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("no rule, user is admin, header should be attached", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: true})
 
 		setAttachHeaders(t)
@@ -200,7 +200,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, user is admin", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: true})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{})
@@ -214,7 +214,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, user is admin, headers attached", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: true})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{})
@@ -231,7 +231,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, group is allowed", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo", "bar"}})
@@ -245,7 +245,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, group allowed, headers attached", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "1234", Username: "test", Admin: false, Roles: []string{"foo"}})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo", "bar"}})
@@ -262,7 +262,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, user is not allowed", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"bar"}})
@@ -280,7 +280,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {
-		a, db, e := makeTestEnv(t)
+		a, db, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
 
@@ -302,7 +302,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ passkeys", func(t *testing.T) {
-		a, db, e := makeTestEnv(t)
+		a, db, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
 
@@ -327,7 +327,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, user is disabled", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Username: "test", Admin: false, Roles: []string{"foo"}, Disabled: true})
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"foo"}})
@@ -345,7 +345,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, rule is public, no user", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
@@ -359,7 +359,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, rule is public, no user, attach headers", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
@@ -376,7 +376,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, rule is public, disabled user", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, sampleDisabledUser)
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
@@ -394,7 +394,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, rule is public, disabled user, attach headers", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, sampleDisabledUser)
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{Public: true})
@@ -408,7 +408,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("invalid headers specified", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 		r := httptest.NewRequest(http.MethodGet, "/check", nil)
 
 		w := httptest.NewRecorder()
@@ -420,7 +420,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("invalid cookie", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.AddCookie(&http.Cookie{
 			Name:  session.SessionCookieName,
@@ -441,7 +441,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("works with duration (still in time)", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Minute)))
 
 		timeout := 5 * time.Minute
@@ -460,7 +460,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("works with duration (needs to reauth)", func(t *testing.T) {
-		a, _, e := makeTestEnv(t)
+		a, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Hour)))
 
 		timeout := 5 * time.Minute

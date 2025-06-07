@@ -17,7 +17,7 @@ func TestEnv_HandleDebug(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "prod")
 
 	t.Run("not logged in should fail", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil)
 		w := httptest.NewRecorder()
@@ -28,7 +28,7 @@ func TestEnv_HandleDebug(t *testing.T) {
 	})
 
 	t.Run("not admin should fail", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -39,7 +39,7 @@ func TestEnv_HandleDebug(t *testing.T) {
 	})
 
 	t.Run("should render without explicit enable if admin", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/debug", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
@@ -50,7 +50,7 @@ func TestEnv_HandleDebug(t *testing.T) {
 	})
 
 	t.Run("if flag is on, always render debug page", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		t.Setenv("ENABLE_DEBUG_PAGE", "true")
 

@@ -15,7 +15,7 @@ func TestEnv_HandleIndex(t *testing.T) {
 	render.Init()
 
 	t.Run("not logged in", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/", nil)
 		w := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestEnv_HandleIndex(t *testing.T) {
 	})
 
 	t.Run("logged in", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()

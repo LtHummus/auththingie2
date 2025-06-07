@@ -23,7 +23,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 	render.Init()
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/edit_self", nil)
 		w := httptest.NewRecorder()
@@ -35,7 +35,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 	})
 
 	t.Run("render if logged in", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/edit_self", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 	})
 
 	t.Run("don't render passkeys if disabled", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		viper.Set(config.KeyPasskeysDisabled, true)
 		t.Cleanup(func() {
@@ -68,7 +68,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 	})
 
 	t.Run("show correct TOTP status if user is enrolled", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/edit_self", nil, withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func TestEnv_HandleSelfConfigPasswordGet(t *testing.T) {
 	render.Init()
 
 	t.Run("basic case", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/edit_self/password", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	render.Init()
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "password1")
@@ -119,7 +119,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("incorrect initial password", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "password1")
@@ -137,7 +137,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("mismatched new passwords", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "test1")
@@ -155,7 +155,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("blank new passwords", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "test1")
@@ -173,7 +173,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("error on db update", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "test1")
@@ -193,7 +193,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("everything worked", func(t *testing.T) {
-		_, db, e := makeTestEnv(t)
+		_, db, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "test1")

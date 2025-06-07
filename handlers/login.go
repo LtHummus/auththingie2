@@ -93,7 +93,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
-	if e.LoginLimiter != nil && e.LoginLimiter.IsAccountLocked(username) {
+	if e.LoginLimiter.IsAccountLocked(username) {
 		render.Render(w, "login.gohtml", &loginPageParams{
 			CSRFField:      csrf.TemplateField(r),
 			CSRFToken:      csrf.Token(r),
@@ -120,17 +120,14 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 		errorMessage := "Invalid Username or Password"
 
-		if e.LoginLimiter != nil {
-			remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
-			if errors.Is(err, loginlimit.ErrAccountLocked) {
-				errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-			} else if err != nil {
-				log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
-				errorMessage = "An error happened attempting to log you in"
-			} else {
-				errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-			}
-
+		remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
+		if errors.Is(err, loginlimit.ErrAccountLocked) {
+			errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
+		} else if err != nil {
+			log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
+			errorMessage = "An error happened attempting to log you in"
+		} else {
+			errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
 		}
 
 		render.Render(w, "login.gohtml", &loginPageParams{
@@ -149,17 +146,14 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 		errorMessage := "Invalid Username or Password"
 
-		if e.LoginLimiter != nil {
-			remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
-			if errors.Is(err, loginlimit.ErrAccountLocked) {
-				errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-			} else if err != nil {
-				log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
-				errorMessage = "An error happened attempting to log you in"
-			} else {
-				errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-			}
-
+		remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
+		if errors.Is(err, loginlimit.ErrAccountLocked) {
+			errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
+		} else if err != nil {
+			log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
+			errorMessage = "An error happened attempting to log you in"
+		} else {
+			errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
 		}
 
 		render.Render(w, "login.gohtml", &loginPageParams{
