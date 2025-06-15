@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -539,6 +540,20 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		assert.NotEmpty(t, w.Header().Get("HX-Retarget"))
 	})
 
+	t.Run("key not found", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/aaaaaaa", nil, passesCSRF(), withUser(sampleNonAdminUser, db), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Could not find key with id aaaaaaa")
+		assert.NotEmpty(t, w.Header().Get("HX-Retarget"))
+	})
+
 	t.Run("renders non-editable row", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
@@ -655,4 +670,67 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "Could not modify key:")
 	})
 
+}
+
+func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
+	setupSalts(t)
+	render.Init()
+
+	t.Run("happy case", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		var payload struct {
+			Keys []string `json:"keys"`
+		}
+		err := json.NewDecoder(w.Result().Body).Decode(&payload)
+		require.NoError(t, err)
+
+		require.Len(t, payload.Keys, 1)
+		assert.Equal(t, "VgeUYW5GwThRS74X02aJRw==", payload.Keys[0])
+	})
+
+	t.Run("with multiple passkeys", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), withUser(sampleNonAdminWithMultiplePasskeys, db), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		var payload struct {
+			Keys []string `json:"keys"`
+		}
+		err := json.NewDecoder(w.Result().Body).Decode(&payload)
+		require.NoError(t, err)
+
+		require.Len(t, payload.Keys, 2)
+		assert.Equal(t, "VgeUYW5GwThRS74X02aJRw==", payload.Keys[0])
+		assert.Equal(t, "tVfcIye/f4wewg8/z/WmOw==", payload.Keys[1])
+	})
+
+	t.Run("not logged in", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), isHTMXRequest())
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "must be logged in")
+		assert.Equal(t, "#modify-error", w.Header().Get("HX-Retarget"))
+		assert.Equal(t, "outerHTML", w.Header().Get("HX-Reswap"))
+	})
 }

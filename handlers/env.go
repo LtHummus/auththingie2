@@ -75,6 +75,7 @@ func (e *Env) BuildRouter() http.Handler {
 	muxer.HandleFunc("/webauthn/finishdiscover", e.HandleWebAuthnFinishDiscoverableLogin)
 	muxer.HandleFunc("/webauthn/keys/{keyId}", e.HandleWebAuthnEditKey)
 	muxer.HandleFunc("/webauthn/keys/{keyId}/edit", e.HandleWebAuthnEditKey)
+	muxer.HandleFunc("/webauthn/keys", e.GetEnrolledPasskeyKeyIDs)
 
 	muxer.PathPrefix("/static/").Handler(render.StaticFSHandler())
 

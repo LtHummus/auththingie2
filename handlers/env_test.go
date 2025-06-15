@@ -137,6 +137,62 @@ var (
 			},
 		},
 	}
+	sampleNonAdminWithMultiplePasskeys = &user.User{
+		Id:                uuid.New().String(),
+		Username:          "ihavekeys",
+		PasswordHash:      "",
+		Roles:             []string{"a"},
+		Admin:             false,
+		TOTPSeed:          nil,
+		RecoveryCodes:     nil,
+		PasswordTimestamp: time.Now().Add(-10 * time.Hour).Unix(),
+		StoredCredentials: []user.Passkey{
+			{
+				Credential: webauthn.Credential{
+					ID:              []byte{86, 7, 148, 97, 110, 70, 193, 56, 81, 75, 190, 23, 211, 102, 137, 71},
+					PublicKey:       []byte{165, 1, 2, 3, 38, 32, 1, 33, 88, 32, 93, 166, 99, 29, 163, 204, 120, 247, 32, 174, 246, 70, 194, 51, 177, 15, 70, 183, 251, 124, 118, 45, 183, 79, 146, 29, 221, 234, 160, 47, 187, 236, 34, 88, 32, 75, 144, 209, 18, 170, 172, 69, 49, 211, 3, 238, 70, 62, 4, 28, 3, 120, 220, 85, 154, 189, 150, 127, 38, 167, 35, 144, 246, 66, 10, 155, 240},
+					AttestationType: "",
+					Transport:       nil,
+					Flags: webauthn.CredentialFlags{
+						UserPresent:    true,
+						UserVerified:   true,
+						BackupEligible: true,
+						BackupState:    true,
+					},
+					Authenticator: webauthn.Authenticator{
+						AAGUID:       []byte{186, 218, 85, 102, 167, 170, 64, 31, 189, 150, 69, 97, 154, 85, 18, 13},
+						SignCount:    0,
+						CloneWarning: false,
+						Attachment:   protocol.Platform,
+					},
+				},
+				FriendlyName: &keyFriendlyName,
+				LastUsed:     &keyLastUsed,
+			},
+			{
+				Credential: webauthn.Credential{
+					ID:              []byte{181, 87, 220, 35, 39, 191, 127, 140, 30, 194, 15, 63, 207, 245, 166, 59},
+					PublicKey:       []byte{241, 207, 131, 106, 200, 171, 99, 251, 101, 45, 152, 125, 135, 54, 163, 6, 171, 54, 107, 71, 153, 193, 2, 99, 196, 5, 159, 201, 111, 59, 233, 10, 32, 90, 191, 115, 30, 128, 136, 157, 69, 242, 192, 157, 8, 71, 62, 138, 26, 195, 112, 163, 145, 84, 108, 255, 0, 193, 23, 91, 235, 168, 167, 246, 131, 53, 7, 67, 223, 152, 115, 176, 155, 146, 34, 46, 211, 249},
+					AttestationType: "",
+					Transport:       nil,
+					Flags: webauthn.CredentialFlags{
+						UserPresent:    true,
+						UserVerified:   true,
+						BackupEligible: true,
+						BackupState:    true,
+					},
+					Authenticator: webauthn.Authenticator{
+						AAGUID:       []byte{124, 211, 149, 213, 32, 159, 139, 22, 212, 19, 40, 124, 170, 35, 112, 209},
+						SignCount:    0,
+						CloneWarning: false,
+						Attachment:   protocol.Platform,
+					},
+				},
+				FriendlyName: &keyFriendlyName,
+				LastUsed:     &keyLastUsed,
+			},
+		},
+	}
 )
 
 type connectionOption func(cd *testConnectionData)
