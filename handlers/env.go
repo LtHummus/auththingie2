@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"github.com/lthummus/auththingie2/loginlimit"
 	"net/http"
 
+	"github.com/lthummus/auththingie2/loginlimit"
+
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 
@@ -13,8 +13,6 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
-	"github.com/lthummus/auththingie2/salt"
-	"github.com/lthummus/auththingie2/util/csrfskip"
 )
 
 type Env struct {
@@ -29,12 +27,12 @@ func (e *Env) BuildRouter() http.Handler {
 
 	muxer := mux.NewRouter()
 
-	skipper := csrfskip.NewSkipper([]string{
-		"/forward",
-		"/auth",
-		"/forbidden",
-		"/disabled",
-	})
+	//skipper := csrfskip.NewSkipper([]string{
+	//	"/forward",
+	//	"/auth",
+	//	"/forbidden",
+	//	"/disabled",
+	//})
 
 	muxer.HandleFunc("/forward", e.HandleCheckRequest)
 	muxer.HandleFunc("/auth", e.HandleCheckRequest)
@@ -81,9 +79,5 @@ func (e *Env) BuildRouter() http.Handler {
 
 	sessionMiddleware := session.NewMiddleware(muxer, e.Database)
 
-	csrfMiddleware := csrf.Protect(salt.GenerateCSRFKey(),
-		csrf.FieldName("csrf_token"),
-		csrf.CookieName("auththingie2_csrf"))
-
-	return skipper(csrfMiddleware(sessionMiddleware))
+	return sessionMiddleware
 }

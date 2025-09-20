@@ -1,10 +1,7 @@
-async function beginRegistration(csrfToken) {
+async function beginRegistration() {
     setEnrollButtonLoading();
     const response = await fetch("/webauthn/register", {
-        method: "POST",
-        headers: {
-            "X-CSRF-Token": csrfToken,
-        }
+        method: "POST"
     });
     const params = await response.json();
 
@@ -60,7 +57,6 @@ async function beginRegistration(csrfToken) {
     const createResponse = await fetch("/webauthn/finishregister", {
         method:"POST",
         headers: {
-            "X-CSRF-Token": csrfToken,
             "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
@@ -119,14 +115,11 @@ function hideWebAuthnError() {
     elem.style.display = 'none';
 }
 
-async function handleDiscoverLogin(csrfToken) {
+async function handleDiscoverLogin() {
     hideWebAuthnError();
     setLoginButtonLoading();
     const response = await fetch("/webauthn/discover", {
-        method: "POST",
-        headers: {
-            "X-CSRF-Token": csrfToken,
-        }
+        method: "POST"
     })
     const params = await response.json();
 
@@ -170,7 +163,6 @@ async function handleDiscoverLogin(csrfToken) {
     const loginResponse = await fetch("/webauthn/finishdiscover", {
         method:"POST",
         headers: {
-            "X-CSRF-Token": csrfToken,
             "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)

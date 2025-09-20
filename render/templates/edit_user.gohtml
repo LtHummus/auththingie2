@@ -12,7 +12,7 @@
                     <li>Editing <strong>{{ .User.Username }}</strong></li>
                 </ul>
             </nav>
-            <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+            <div>
                 <h3>Edit Roles</h3>
                 <div id="tag-edit-table">
                     {{template "tagtableinternal.gohtml" . }}
@@ -30,7 +30,6 @@
                 <h4>Change Password</h4>
 
                 <form action="/admin/users/{{ .User.Id }}" method="post">
-                    {{ .CSRFField }}
                     <label for="new-pwd">Change Password</label> <input type="password" name="new-pwd" id="new-pwd" />
                     <input type="submit" value="Change Password" />
                 </form>
@@ -40,7 +39,6 @@
                 {{ if not .IsSelf }}
                     {{ if .User.TOTPEnabled }}
                         <form action="/admin/users/{{ .User.Id }}/totp_unenroll" method="post">
-                            {{ .CSRFField }}
                             <input type="submit" value="Unenroll User From TOTP" class="danger-button" />
                         </form>
                     {{ else }}
@@ -48,7 +46,6 @@
                     {{ end }}
 
                 <form action="/admin/users/{{ .User.Id }}/delete" method="post">
-                    {{ .CSRFField }}
                     <input type="submit" value="Delete this User" class="danger-button" />
                 </form>
                 {{ end }}

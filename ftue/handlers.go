@@ -2,15 +2,12 @@ package ftue
 
 import (
 	"encoding/json"
-	"html/template"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
 
@@ -19,7 +16,6 @@ import (
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util/csrfskip"
 )
 
 var importCache *ttlcache.Cache[string, *importer.Results]
@@ -34,24 +30,17 @@ type ftueEnv struct {
 }
 
 type ftueParams struct {
-	CSRFField template.HTML
-	Error     string
+	Error string
 }
 
 type ftueImportConfirmParams struct {
 	Rules     []*rules.DisplayableRule
 	Users     []user.User
 	ImportKey string
-	CSRFField template.HTML
 }
 
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
-	csrfMiddleware := csrf.Protect(securecookie.GenerateRandomKey(32),
-		csrf.FieldName("csrf_token"),
-		csrf.CookieName("auththingie2_ftue_csrf"),
-	)
-
-	skip := csrfskip.NewSkipper([]string{"/ftue/path"})
+	//skip := csrfskip.NewSkipper([]string{"/ftue/path"})
 
 	m := mux.NewRouter()
 
@@ -97,7 +86,7 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	m.PathPrefix("/static/").Handler(render.StaticFSHandler())
 
-	return skip(csrfMiddleware(m))
+	return m
 }
 
 func HandlePathComplete(w http.ResponseWriter, r *http.Request) {

@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"net/http"
 	"strings"
-
-	"github.com/gorilla/csrf"
 )
 
 var (
@@ -16,20 +14,6 @@ var (
 
 func P[T any](x T) *T {
 	return &x
-}
-
-func ExemptFromCSRF(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nr := csrf.UnsafeSkipCheck(r)
-		h.ServeHTTP(w, nr)
-	})
-}
-
-func ExemptFromCSRFFunc(f http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		nr := csrf.UnsafeSkipCheck(r)
-		f(w, nr)
-	}
 }
 
 func FindTrueIP(r *http.Request) string {

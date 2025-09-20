@@ -28,7 +28,6 @@
             {{ end }}
 
             <form action="/ftue/restart" method="post">
-                {{ .CSRFField }}
 
                 {{ if .ShowRestart }}
                     <input type="submit" name="restart-button" value="Restart" />

@@ -1,13 +1,11 @@
 package ftue
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
 
-	"github.com/gorilla/csrf"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/config"
@@ -18,12 +16,10 @@ import (
 type restartParams struct {
 	IsDocker    bool
 	ShowRestart bool
-	CSRFField   template.HTML
 }
 
 func HandleRestartPage(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, "ftue_restart.gohtml", &restartParams{
-		CSRFField:   csrf.TemplateField(r),
 		ShowRestart: !config.IsDocker() && runtime.GOOS != "windows",
 		IsDocker:    config.IsDocker(),
 	})
@@ -47,7 +43,6 @@ func HandleRestartPost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Debug().Msg("neither shutdown or restart pressed")
 		render.Render(w, "ftue_restart.gohtml", &restartParams{
-			CSRFField:   csrf.TemplateField(r),
 			IsDocker:    config.IsDocker(),
 			ShowRestart: !config.IsDocker() && runtime.GOOS != "windows",
 		})

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/csrf"
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog/log"
 	"github.com/skip2/go-qrcode"
@@ -26,14 +25,12 @@ const (
 )
 
 type totpEnrollmentPageParams struct {
-	CSRFField        template.HTML
 	QRCodeDataURL    template.URL
 	Error            string
 	EnrollmentTicket string
 }
 
 type totpPromptParams struct {
-	CSRFField   template.HTML
 	Error       string
 	LoginTicket string
 }
@@ -71,7 +68,6 @@ func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTick
 	}
 
 	params := &totpPromptParams{
-		CSRFField:   csrf.TemplateField(r),
 		Error:       errorMessage,
 		LoginTicket: encodedTicket,
 	}
@@ -286,8 +282,7 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 	log.Debug().Str("totp_secret", seed.Secret()).Msg("generated secret")
 
 	render.Render(w, "totp_enrollment.gohtml", &totpEnrollmentPageParams{
-		Error:     errorMessage,
-		CSRFField: csrf.TemplateField(r),
+		Error: errorMessage,
 		//#nosec G203 -- contents are entirely generated server side
 		QRCodeDataURL:    template.URL(qrDataURL),
 		EnrollmentTicket: encoded,

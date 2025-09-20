@@ -32,8 +32,8 @@ func TestEnv_HandleLogout(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "/", redirectURL.Path)
 
-		// check for two cookies -- CSRF and session
-		assert.Len(t, resp.Cookies(), 2)
+		// check for two cookies -- session
+		assert.Len(t, resp.Cookies(), 1)
 
 		sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
 		var sessionCookieData string

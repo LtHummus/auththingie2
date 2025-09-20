@@ -7,7 +7,6 @@
             </p>
         {{ end }}
         <form action="/enable_totp" method="post">
-            {{ .CSRFField }}
             <img src="{{ .QRCodeDataURL }}" alt="QR Code for TOTP Enrollment" />
             <div id="totp-code-container">
                 <label for="totp-code-field">TOTP Code: </label> <input type="text" name="totp-code" id="totp-code-field" />

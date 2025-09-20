@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 
@@ -85,8 +83,6 @@ type editUserParams struct {
 	IsSelf       bool
 	User         *user.User
 	MissingRoles []string
-	CSRFField    template.HTML
-	CSRFToken    string
 }
 
 func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +128,6 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 	render.Render(w, "tagtableinternal.gohtml", &editUserParams{
 		User:         u,
 		MissingRoles: e.buildMissingRoles(u),
-		CSRFField:    csrf.TemplateField(r),
 	})
 
 }
@@ -176,7 +171,6 @@ func (e *Env) HandleUserTagDelete(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, "tagtableinternal.gohtml", &editUserParams{
 		User:         u,
 		MissingRoles: e.buildMissingRoles(u),
-		CSRFField:    csrf.TemplateField(r),
 	})
 }
 
@@ -212,8 +206,6 @@ func (e *Env) RenderUserEditPage(w http.ResponseWriter, r *http.Request) {
 		User:         u,
 		IsSelf:       u.Id == logged.Id,
 		MissingRoles: e.buildMissingRoles(u),
-		CSRFField:    csrf.TemplateField(r),
-		CSRFToken:    csrf.Token(r),
 	})
 }
 
@@ -286,9 +278,8 @@ func (e *Env) HandleAdminPage(w http.ResponseWriter, r *http.Request) {
 }
 
 type createUserPageParams struct {
-	Username  string
-	Error     string
-	CSRFField template.HTML
+	Username string
+	Error    string
 }
 
 func (e *Env) HandleCreateUserPage(w http.ResponseWriter, r *http.Request) {
@@ -298,9 +289,7 @@ func (e *Env) HandleCreateUserPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-		CSRFField: csrf.TemplateField(r),
-	})
+	render.Render(w, "create_user_page.gohtml", &createUserPageParams{})
 }
 
 func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
@@ -313,8 +302,7 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	if username == "" {
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Username may not be blank",
-			CSRFField: csrf.TemplateField(r),
+			Error: "Username may not be blank",
 		})
 		return
 	}
@@ -324,18 +312,16 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 
 	if pw1 == "" {
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Password may not be blank",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Password may not be blank",
+			Username: username,
 		})
 		return
 	}
 
 	if pw1 != pw2 {
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Passwords do not match",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Passwords do not match",
+			Username: username,
 		})
 		return
 	}
@@ -344,18 +330,16 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Str("username", username).Msg("could not query for existing user")
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Could not query for username",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Could not query for username",
+			Username: username,
 		})
 		return
 	}
 
 	if eu != nil {
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Username already exists",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Username already exists",
+			Username: username,
 		})
 		return
 	}
@@ -367,9 +351,8 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Msg("could not set password")
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Could not hash password",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Could not hash password",
+			Username: username,
 		})
 		return
 	}
@@ -378,9 +361,8 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Str("username", username).Msg("could not create user in database")
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
-			Error:     "Could not create user in database",
-			Username:  username,
-			CSRFField: csrf.TemplateField(r),
+			Error:    "Could not create user in database",
+			Username: username,
 		})
 		return
 	}

@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/descope/virtualwebauthn"
 	"github.com/go-webauthn/webauthn/protocol"
@@ -487,7 +488,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<button id="passkey-enroll-button" onclick="beginRegistration('')">Enroll New Key</button>`)
+		assert.Contains(t, w.Body.String(), `<button id="passkey-enroll-button" onclick="beginRegistration()">Enroll New Key</button>`)
 	})
 
 	t.Run("work if user has some keys", func(t *testing.T) {
@@ -500,7 +501,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<button id="passkey-enroll-button" onclick="beginRegistration('')">Enroll New Key</button>`)
+		assert.Contains(t, w.Body.String(), `<button id="passkey-enroll-button" onclick="beginRegistration()">Enroll New Key</button>`)
 		assert.Contains(t, w.Body.String(), `<td>VgeUYW5GwThRS74X02aJRw</td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-delete="/webauthn/keys/VgeUYW5GwThRS74X02aJRw" hx-on:click="clearWebauthnError()" hx-confirm="Are you sure?" class="contrast">Delete Key</button></td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-get="/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>`)

@@ -3,7 +3,6 @@ package ftue
 import (
 	"net/http"
 
-	"github.com/gorilla/csrf"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/render"
@@ -11,17 +10,14 @@ import (
 )
 
 func (fe *ftueEnv) HandleFTUEScratchRenderPage(w http.ResponseWriter, r *http.Request) {
-	render.Render(w, "ftuescratch.gohtml", &ftueParams{
-		CSRFField: csrf.TemplateField(r),
-	})
+	render.Render(w, "ftuescratch.gohtml", &ftueParams{})
 }
 
 func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	if username == "" {
 		render.Render(w, "ftuescratch.gohtml", &ftueParams{
-			CSRFField: csrf.TemplateField(r),
-			Error:     "username must be specified",
+			Error: "username must be specified",
 		})
 		return
 	}
@@ -31,8 +27,7 @@ func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Re
 
 	if password == "" || password != password2 {
 		render.Render(w, "ftuescratch.gohtml", &ftueParams{
-			CSRFField: csrf.TemplateField(r),
-			Error:     "password mismatch or is blank!",
+			Error: "password mismatch or is blank!",
 		})
 		return
 	}
