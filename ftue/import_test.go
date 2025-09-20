@@ -94,7 +94,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	t.Run("empty config file test", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", nil))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", nil)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -111,7 +111,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		v := url.Values{}
 		v.Add("config_file_text", contents)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -127,7 +127,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -160,7 +160,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v := url.Values{}
 		v.Add("import_key", "")
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -176,7 +176,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v := url.Values{}
 		v.Add("import_key", "thisimportkeydoesnotexist")
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -192,7 +192,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -203,7 +203,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v2 := url.Values{}
 		v2.Add("import_key", importKey)
 
-		r2 := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode())))
+		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w2 := httptest.NewRecorder()
 
@@ -222,7 +222,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -233,7 +233,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v2 := url.Values{}
 		v2.Add("import_key", importKey)
 
-		r2 := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode())))
+		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w2 := httptest.NewRecorder()
 
@@ -257,7 +257,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
 
-		r := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode())))
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -268,7 +268,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v2 := url.Values{}
 		v2.Add("import_key", importKey)
 
-		r2 := bypassCSRF(httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode())))
+		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w2 := httptest.NewRecorder()
 

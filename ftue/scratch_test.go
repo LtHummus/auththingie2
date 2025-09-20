@@ -49,7 +49,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "ERROR: username must be specified")
@@ -67,7 +67,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "ERROR: password mismatch or is blank!")
@@ -85,7 +85,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "ERROR: password mismatch or is blank!")
@@ -105,7 +105,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "could not create admin user")
@@ -125,7 +125,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
