@@ -69,7 +69,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		mux := e.BuildRouter()
 
 		// call out to request a challenge for a new key
-		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleNonAdminUser, db))
 		w1 := httptest.NewRecorder()
 
 		mux.ServeHTTP(w1, r1)
@@ -97,7 +97,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		db.On("SaveCredentialForUser", mock.Anything, sampleNonAdminUser.Id, mock.AnythingOfType("*webauthn.Credential")).Return(nil)
 
 		// finish up the registration
-		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), passesCSRF(), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
+		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session.Session) {
 			s.CustomData = sess.CustomData
 		}))
 		r2.AddCookie(w1.Result().Cookies()[0])
@@ -122,7 +122,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		})
 
 		// attempt to log in -- get our challenge
-		r3 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		r3 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
 		w3 := httptest.NewRecorder()
 
 		mux.ServeHTTP(w3, r3)
@@ -142,7 +142,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		db.On("FindUserByCredentialInfo", mock.Anything, mock.AnythingOfType("[]uint8"), mock.AnythingOfType("[]uint8")).Return(&userWithCredential, nil)
 		db.On("UpdateCredentialOnLogin", mock.Anything, mock.AnythingOfType("*webauthn.Credential")).Return(nil)
 
-		r4 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), passesCSRF(), withCustomSession(func(s *session.Session) {
+		r4 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), withCustomSession(func(s *session.Session) {
 			s.CustomData = sess.CustomData
 		}))
 		w4 := httptest.NewRecorder()
@@ -170,7 +170,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		mux := e.BuildRouter()
 
 		// call out to request a challenge for a new key
-		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, passesCSRF(), withUser(sampleDisabledUser, db))
+		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleDisabledUser, db))
 		w1 := httptest.NewRecorder()
 
 		mux.ServeHTTP(w1, r1)
@@ -198,7 +198,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		db.On("SaveCredentialForUser", mock.Anything, sampleDisabledUser.Id, mock.AnythingOfType("*webauthn.Credential")).Return(nil)
 
 		// finish up the registration
-		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), passesCSRF(), withUser(sampleDisabledUser, db), withCustomSession(func(s *session.Session) {
+		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), withUser(sampleDisabledUser, db), withCustomSession(func(s *session.Session) {
 			s.CustomData = sess.CustomData
 		}))
 		r2.AddCookie(w1.Result().Cookies()[0])
@@ -223,7 +223,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		})
 
 		// attempt to log in -- get our challenge
-		r3 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		r3 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
 		w3 := httptest.NewRecorder()
 
 		mux.ServeHTTP(w3, r3)
@@ -243,7 +243,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		db.On("FindUserByCredentialInfo", mock.Anything, mock.AnythingOfType("[]uint8"), mock.AnythingOfType("[]uint8")).Return(&userWithCredential, nil)
 		db.On("UpdateCredentialOnLogin", mock.Anything, mock.AnythingOfType("*webauthn.Credential")).Return(nil)
 
-		r4 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), passesCSRF(), withCustomSession(func(s *session.Session) {
+		r4 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), withCustomSession(func(s *session.Session) {
 			s.CustomData = sess.CustomData
 		}))
 		w4 := httptest.NewRecorder()
@@ -258,7 +258,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
 		w1 := httptest.NewRecorder()
 
 		mux.ServeHTTP(w1, r1)
@@ -280,7 +280,7 @@ func TestWebAuthnFlow(t *testing.T) {
 
 		assertionResponse := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *assertOptions)
 
-		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), passesCSRF(), withCustomSession(func(s *session.Session) {
+		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), withCustomSession(func(s *session.Session) {
 			s.CustomData = sess.CustomData
 		}))
 		w2 := httptest.NewRecorder()
@@ -318,7 +318,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -331,7 +331,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -344,7 +344,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -396,7 +396,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -409,7 +409,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -422,7 +422,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -456,7 +456,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -469,7 +469,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil)
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -482,7 +482,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -495,7 +495,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db))
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(sampleNonAdminWithCredentials, db))
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -516,7 +516,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -531,7 +531,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, passesCSRF(), withUser(sampleNonAdminUser, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -545,7 +545,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/aaaaaaa", nil, passesCSRF(), withUser(sampleNonAdminUser, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/aaaaaaa", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -563,7 +563,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 			Credential: sampleCredential,
 		}, nil)
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -581,7 +581,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 			Credential: sampleCredential,
 		}, nil)
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -600,7 +600,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		}, nil)
 		db.On("DeleteKey", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(nil)
 
-		r := makeTestRequest(t, http.MethodDelete, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -617,7 +617,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		}, nil)
 		db.On("DeleteKey", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(errors.New("nope not allowed"))
 
-		r := makeTestRequest(t, http.MethodDelete, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -639,7 +639,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		v := url.Values{}
 		v.Add("name", name)
 
-		r := makeTestRequest(t, http.MethodPut, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodPut, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", strings.NewReader(v.Encode()), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -661,7 +661,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		v := url.Values{}
 		v.Add("name", name)
 
-		r := makeTestRequest(t, http.MethodPut, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodPut, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", strings.NewReader(v.Encode()), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -681,7 +681,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -702,7 +702,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), withUser(sampleNonAdminWithMultiplePasskeys, db), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, withUser(sampleNonAdminWithMultiplePasskeys, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)
@@ -724,7 +724,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
-		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		mux.ServeHTTP(w, r)

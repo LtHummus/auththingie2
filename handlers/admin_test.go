@@ -201,7 +201,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -218,7 +218,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -237,7 +237,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -256,7 +256,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -278,7 +278,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 
 		v := url.Values{}
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -301,7 +301,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "a")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -325,7 +325,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "a")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -355,7 +355,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		v := url.Values{}
 		v.Add("new-tag", "a")
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -374,7 +374,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -386,7 +386,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleNonAdminUser, db), passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -400,7 +400,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, errors.New("oh no!"))
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -414,7 +414,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, nil)
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -437,7 +437,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 			Roles:    []string{"aaa", "bbb"},
 		}).Return(errors.New("whoops"))
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -461,7 +461,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 		}).Return(nil)
 		a.On("KnownRoles", mock.Anything).Return([]string{"a", "b"})
 
-		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), passesCSRF(), isHTMXRequest())
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -492,7 +492,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -504,7 +504,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	t.Run("fail if non-admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -518,7 +518,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("noooo"))
 
-		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -532,7 +532,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
-		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -552,7 +552,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 			Admin:    false,
 		}, nil)
 
-		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -569,7 +569,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -581,7 +581,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -595,7 +595,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("womp womp"))
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -612,7 +612,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -634,7 +634,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 		}, nil)
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("whoopsies"))
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -656,7 +656,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 		}, nil)
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -718,7 +718,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -730,7 +730,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -746,7 +746,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -764,7 +764,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -782,7 +782,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass1")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -802,7 +802,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -822,7 +822,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -843,7 +843,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -864,7 +864,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 		v.Add("pw1", "apass")
 		v.Add("pw2", "apass")
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -889,7 +889,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -901,7 +901,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -913,7 +913,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	t.Run("fail if attempting to unenroll self", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/totp_unenroll", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/totp_unenroll", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -927,7 +927,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("whe"))
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -941,7 +941,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -960,7 +960,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 		}, nil)
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("could not save"))
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -979,7 +979,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 		}, nil)
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/totp_unenroll", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1001,7 +1001,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1013,7 +1013,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1025,7 +1025,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	t.Run("attempt to delete self", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/delete", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/delete", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1039,7 +1039,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(errors.New("no delete for you"))
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1053,7 +1053,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1072,7 +1072,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1084,7 +1084,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	t.Run("fail if not admin", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1096,7 +1096,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	t.Run("attempt to modify self", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPatch, fmt.Sprintf("/admin/users/%s/disable", sampleAdminUser.Id), nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, fmt.Sprintf("/admin/users/%s/disable", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1110,7 +1110,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 
 		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(errors.New("no modify for you"))
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1124,7 +1124,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 
 		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -1141,7 +1141,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 
 		db.On("SetUserEnabled", mock.Anything, "myuser", true).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleAdminUser, db))
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 

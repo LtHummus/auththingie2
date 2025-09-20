@@ -12,7 +12,6 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -198,11 +197,6 @@ var (
 type connectionOption func(cd *testConnectionData)
 
 var (
-	passesCSRF = func() connectionOption {
-		return func(cd *testConnectionData) {
-			cd.req = csrf.UnsafeSkipCheck(cd.req)
-		}
-	}
 	withUser = func(u *user.User, db *mocks.MockDB) connectionOption {
 		return func(cd *testConnectionData) {
 			copiedUser := &user.User{
