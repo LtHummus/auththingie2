@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/lthummus/auththingie2/loginlimit"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
 
+	"github.com/lthummus/auththingie2/loginlimit"
+
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
-	"github.com/lthummus/auththingie2/ainit"
 	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/db/sqlite"
 	"github.com/lthummus/auththingie2/ftue"
@@ -26,7 +26,6 @@ import (
 )
 
 func RunServer() {
-	ainit.InitLogger(true)
 	render.Init()
 
 	err := config.Init()
