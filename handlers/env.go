@@ -27,13 +27,6 @@ func (e *Env) BuildRouter() http.Handler {
 
 	muxer := mux.NewRouter()
 
-	//skipper := csrfskip.NewSkipper([]string{
-	//	"/forward",
-	//	"/auth",
-	//	"/forbidden",
-	//	"/disabled",
-	//})
-
 	muxer.HandleFunc("/forward", e.HandleCheckRequest)
 	muxer.HandleFunc("/auth", e.HandleCheckRequest)
 	muxer.HandleFunc("/forbidden", e.HandleNotAllowed)
@@ -79,5 +72,11 @@ func (e *Env) BuildRouter() http.Handler {
 
 	sessionMiddleware := session.NewMiddleware(muxer, e.Database)
 
-	return sessionMiddleware
+	cop := http.NewCrossOriginProtection()
+	cop.AddInsecureBypassPattern("/forward")
+	cop.AddInsecureBypassPattern("/auth")
+	cop.AddInsecureBypassPattern("/forbidden")
+	cop.AddInsecureBypassPattern("/disabled")
+
+	return cop.Handler(sessionMiddleware)
 }

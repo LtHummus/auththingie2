@@ -40,8 +40,6 @@ type ftueImportConfirmParams struct {
 }
 
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
-	//skip := csrfskip.NewSkipper([]string{"/ftue/path"})
-
 	m := mux.NewRouter()
 
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +84,10 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	m.PathPrefix("/static/").Handler(render.StaticFSHandler())
 
-	return m
+	cop := http.NewCrossOriginProtection()
+	cop.AddInsecureBypassPattern("/ftue/path")
+
+	return cop.Handler(m)
 }
 
 func HandlePathComplete(w http.ResponseWriter, r *http.Request) {
