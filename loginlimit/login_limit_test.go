@@ -9,7 +9,7 @@ import (
 )
 
 func TestInMemoryLoginLimiter_IsAccountLocked(t *testing.T) {
-	synctest.Run(func() {
+	synctest.Test(t, func(t *testing.T) {
 		l := constructLimiter(5, 15*time.Minute, 10*time.Minute)
 
 		l.accountLocks["test"] = time.Now().Add(10 * time.Minute)
@@ -50,7 +50,7 @@ func TestInMemoryLoginLimiter_MarkFailedAttempt(t *testing.T) {
 	})
 
 	t.Run("basic test with expiring failures", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			l := constructLimiter(5, 15*time.Minute, 15*time.Minute)
 
 			remain, err := l.MarkFailedAttempt("test")
@@ -87,7 +87,7 @@ func TestInMemoryLoginLimiter_MarkFailedAttempt(t *testing.T) {
 
 func TestInMemoryLoginLimiter_cleanupRoutine(t *testing.T) {
 	t.Run("basic test", func(t *testing.T) {
-		synctest.Run(func() {
+		synctest.Test(t, func(t *testing.T) {
 			l := constructLimiter(5, 15*time.Minute, 20*time.Minute)
 
 			l.MarkFailedAttempt("test")
