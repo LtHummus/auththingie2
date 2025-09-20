@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/lthummus/auththingie2/loginlimit"
 	"net/http"
 	"os"
 	"os/signal"
@@ -83,9 +84,10 @@ func RunServer() {
 	}
 
 	e := handlers.Env{
-		Analyzer: f,
-		Database: database,
-		WebAuthn: wan,
+		Analyzer:     f,
+		Database:     database,
+		WebAuthn:     wan,
+		LoginLimiter: loginlimit.NewInMemoryLimiter(),
 	}
 	log.Info().Msg("services initialized")
 

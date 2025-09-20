@@ -406,3 +406,22 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func (e *Env) GetEnrolledPasskeyKeyIDs(w http.ResponseWriter, r *http.Request) {
+	u := session.GetUserFromRequest(r)
+	if u == nil {
+		render.RenderHTMXCompatibleError(w, r, "You must be logged in to do this", "modify-error")
+		return
+	}
+
+	foundKeys := make([]string, 0)
+
+	for _, curr := range u.StoredCredentials {
+		foundKeys = append(foundKeys, base64.StdEncoding.EncodeToString(curr.ID))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"keys": foundKeys,
+	})
+}

@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.25.x'
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@latest
@@ -28,6 +28,8 @@ jobs:
 
       - name: Run Tests
         run: gotestsum --format github-actions
+        env:
+          GOEXPERIMENT: synctest
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master

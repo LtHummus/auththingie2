@@ -9,9 +9,9 @@ import (
 	"github.com/lthummus/auththingie2/mocks"
 )
 
-func makeTestEnv(t *testing.T) (*mocks.DB, *mocks.Analyzer, *ftueEnv) {
-	mockDB := mocks.NewDB(t)
-	mockAnalyzer := mocks.NewAnalyzer(t)
+func makeTestEnv(t *testing.T) (*mocks.MockDB, *mocks.MockAnalyzer, *ftueEnv) {
+	mockDB := mocks.NewMockDB(t)
+	mockAnalyzer := mocks.NewMockAnalyzer(t)
 
 	e := &ftueEnv{
 		database: mockDB,

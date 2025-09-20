@@ -98,7 +98,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("with logged in user from session", func(t *testing.T) {
 		u, _, r := generateMockUserSessionRequest(true, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		u2, source := GetUserFromRequestAllowFallback(r, db)
 		assert.Equal(t, u, u2)
@@ -107,7 +107,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("valid user from basic auth", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		r.SetBasicAuth("test", "test1")
 
@@ -128,7 +128,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("basic auth user does not exist", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		r.SetBasicAuth("baduser", "badpass")
 
@@ -141,7 +141,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("return invalid user if basic auth credentials are wrong", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		r.SetBasicAuth("test", "test2")
 
@@ -160,7 +160,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("return basic auth even if basic auth user has TOTP enabled", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		r.SetBasicAuth("test", "test1")
 
@@ -183,7 +183,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("return invalid user if user has passkeys enabled", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewDB(t)
+		db := mocks.NewMockDB(t)
 
 		r.SetBasicAuth("test", "test1")
 
@@ -245,8 +245,8 @@ func TestWriteSession(t *testing.T) {
 	})
 }
 
-func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.DB, *Middleware) {
-	db := mocks.NewDB(t)
+func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.MockDB, *Middleware) {
+	db := mocks.NewMockDB(t)
 	sc := securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
 
 	return sc, db, &Middleware{
