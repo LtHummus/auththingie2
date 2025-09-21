@@ -229,6 +229,21 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "You must be logged in as admin to do this")
 	})
 
+	t.Run("check CSRF protection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+		v := url.Values{}
+		v.Add("new-tag", "test-tag")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()))
+		r.Header.Add("Sec-Fetch-Site", "cross-site")
+
+		w := httptest.NewRecorder()
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Equal(t, "cross-origin request detected from Sec-Fetch-Site header\n", w.Body.String())
+	})
+
 	t.Run("database error", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
@@ -370,6 +385,19 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 func TestEnv_HandleUserTagDelete(t *testing.T) {
 	setupSalts(t)
 	render.Init()
+
+	t.Run("detect CSRF detection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, isHTMXRequest())
+		r.Header.Set("Sec-Fetch-Site", "badvalue")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
@@ -566,6 +594,22 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	setupSalts(t)
 	render.Init()
 
+	t.Run("detect CSRF protection", func(t *testing.T) {
+		t.Run("fail if not logged in", func(t *testing.T) {
+			_, _, _, e := makeTestEnv(t)
+
+			r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil)
+			r.Header.Set("Sec-Fetch-Site", "foo")
+
+			w := httptest.NewRecorder()
+
+			e.BuildRouter().ServeHTTP(w, r)
+
+			assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+			assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+		})
+	})
+
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
@@ -714,6 +758,20 @@ func TestEnv_HandleCreateUserPage(t *testing.T) {
 func TestEnv_HandleCreateUserPost(t *testing.T) {
 	setupSalts(t)
 	render.Init()
+
+	t.Run("check CSRF detection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil)
+		r.Header.Set("Origin", "https://bad.example.com")
+		r.Header.Set("Host", "example.com")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected, and/or browser is out of date: Sec-Fetch-Site is missing, and Origin does not match Host")
+	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
@@ -886,6 +944,19 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	render.Init()
 	seed := "sampletotpseed"
 
+	t.Run("detect CSRF protection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil)
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
+
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
@@ -998,6 +1069,19 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	setupSalts(t)
 	render.Init()
 
+	t.Run("detect CSRF protection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil)
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
+
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
@@ -1068,6 +1152,19 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	setupSalts(t)
 	render.Init()
+
+	t.Run("CSRF protection detect", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil)
+		r.Header.Set("Sec-Fetch-Site", "askdjasdfkjsdfkjdsf")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)

@@ -39,6 +39,24 @@ func TestFtueEnv_HandleFTUEScratchRenderPage(t *testing.T) {
 func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	render.Init()
 
+	t.Run("CSRF detection", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("username", "test")
+		v.Add("password", "test1")
+		v.Add("password2", "test1")
+
+		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+	})
+
 	t.Run("missing username", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 

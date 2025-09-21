@@ -91,6 +91,19 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	render.Init()
 	initCache()
 
+	t.Run("CSRF protection", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", nil)
+		r.Header.Set("Sec-Fetch-Site", "cross-origin")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
+
 	t.Run("empty config file test", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 
@@ -153,6 +166,23 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	render.Init()
 	initCache()
+
+	t.Run("CSRF protection", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("import_key", "")
+
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
 
 	t.Run("import key missing", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)

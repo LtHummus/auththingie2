@@ -97,6 +97,24 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 	// begin POST tests
 
+	t.Run("CSRF detection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("username", "test")
+		v.Add("password", "test1")
+
+		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Sec-Fetch-Site", "cross-origin")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
+
 	t.Run("gracefully handle database error", func(t *testing.T) {
 		_, db, ll, e := makeTestEnv(t)
 

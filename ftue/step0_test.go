@@ -58,6 +58,39 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 	render.Init()
 
+	t.Run("CSRF detection", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+			viper.Reset()
+		})
+
+		configFilePath := filepath.Join(tmpDir, "auththingie2.yaml")
+		dbPath := filepath.Join(tmpDir, "at2.db")
+
+		v := url.Values{}
+		v.Add("port", "9000")
+		v.Add("domain", "example.com")
+		v.Add("auth_url", "auth.example.com")
+		v.Add("config_file_preset", "custom")
+		v.Add("config_path", configFilePath)
+		v.Add("db_path", dbPath)
+
+		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+		require.NoError(t, err)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("Sec-Fetch-Site", "cross-origin")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+	})
+
 	t.Run("a case with everything", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 

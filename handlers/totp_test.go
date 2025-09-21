@@ -266,6 +266,19 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	setupSalts(t)
 	render.Init()
 
+	t.Run("CSRF detection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil)
+		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected from Sec-Fetch-Site header")
+	})
+
 	t.Run("not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
@@ -407,6 +420,20 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
+	})
+
+	t.Run("post -- csrf detection", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil)
+		r.Header.Set("Origin", "https://bad.example.com")
+		r.Header.Set("Host", "example.com")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "cross-origin request detected, and/or browser is out of date: Sec-Fetch-Site is missing, and Origin does not match Host")
 	})
 
 	t.Run("post -- invalid session data", func(t *testing.T) {
