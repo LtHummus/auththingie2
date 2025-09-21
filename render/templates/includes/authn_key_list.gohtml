@@ -10,7 +10,7 @@
             <th></th>
         </tr>
     </thead>
-    <tbody hx-target="closest tr" hx-swap="outerHTML" hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+    <tbody hx-target="closest tr" hx-swap="outerHTML">
         {{ range .Keys }}
             {{ template "authn_key_row.gohtml" . }}
         {{ end }}

@@ -78,7 +78,6 @@
             </div>
             <div>
                 <form action="/ftue/import/confirm" method="post">
-                    {{ .CSRFField }}
                     <input type="hidden" name="import_key" value="{{ .ImportKey }}" />
                     <button type="submit" class="contrast">Looks Good! Import!</button>
                 </form>

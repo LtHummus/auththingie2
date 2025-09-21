@@ -19,7 +19,6 @@
         <form action="/enable_totp" method="post">
 
         <div class="grid">
-            {{ .CSRFField }}
                     <div>
                         <img src="{{ .QRCodeDataURL }}" alt="QR Code for TOTP Enrollment" />
                     </div>

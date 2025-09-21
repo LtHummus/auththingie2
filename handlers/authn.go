@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
@@ -263,8 +262,7 @@ type keyInfo struct {
 }
 
 type manageWebAuthnParams struct {
-	CSRFToken string
-	Keys      []keyInfo
+	Keys []keyInfo
 }
 
 func toKeyInfo(cred user.Passkey) keyInfo {
@@ -310,8 +308,7 @@ func (e *Env) HandleRenderWebAuthnManage(w http.ResponseWriter, r *http.Request)
 	}
 
 	render.Render(w, "webauthn_manage.gohtml", &manageWebAuthnParams{
-		CSRFToken: csrf.Token(r),
-		Keys:      keys,
+		Keys: keys,
 	})
 }
 

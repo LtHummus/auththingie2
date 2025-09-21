@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"net/http"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
@@ -15,9 +14,7 @@ import (
 )
 
 func (fe *ftueEnv) HandleRenderImportPage(w http.ResponseWriter, r *http.Request) {
-	render.Render(w, "ftue_import.gohtml", &ftueParams{
-		CSRFField: csrf.TemplateField(r),
-	})
+	render.Render(w, "ftue_import.gohtml", &ftueParams{})
 }
 
 func (fe *ftueEnv) HandlerImportPageUpload(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +61,6 @@ func (fe *ftueEnv) HandlerImportPageUpload(w http.ResponseWriter, r *http.Reques
 	p := &ftueImportConfirmParams{
 		Rules:     dr,
 		Users:     data.Users,
-		CSRFField: csrf.TemplateField(r),
 		ImportKey: importKeyString,
 	}
 

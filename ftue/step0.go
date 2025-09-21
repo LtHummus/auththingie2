@@ -2,7 +2,6 @@ package ftue
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -29,7 +27,6 @@ const (
 )
 
 type step0Params struct {
-	CSRFField          template.HTML
 	Port               int
 	ServerDomain       string
 	AuthURL            string
@@ -54,7 +51,6 @@ func getCwd() string {
 func (fe *ftueEnv) HandleFTUEStep0GET(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, "ftue_step0.gohtml", &step0Params{
-		CSRFField:          csrf.TemplateField(r),
 		ServerDomain:       GetRootDomain(r.URL),
 		AuthURL:            r.Host,
 		DefaultSlashConfig: config.IsDocker(),
@@ -134,7 +130,6 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 
 	if len(errors) > 0 {
 		render.Render(w, "ftue_step0.gohtml", &step0Params{
-			CSRFField:          csrf.TemplateField(r),
 			ServerDomain:       domain,
 			AuthURL:            authURL,
 			Port:               int(port),

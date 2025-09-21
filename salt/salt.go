@@ -76,15 +76,10 @@ func createSalt(path string) {
 		log.Fatal().Msg("could not generate encryption salt")
 	}
 
-	csrfSalt := securecookie.GenerateRandomKey(saltLength)
-	if csrfSalt == nil {
-		log.Fatal().Msg("could not generate CSRF salt")
-	}
 	p := &payload{
 		Version:    version,
 		Signing:    signingSalt,
 		Encryption: encryptionSalt,
-		CSRF:       csrfSalt,
 	}
 
 	encoded, _ := json.Marshal(p)
@@ -132,9 +127,4 @@ func GenerateSigningKey() []byte {
 func GenerateEncryptionKey() []byte {
 	CheckOrMakeSalt()
 	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, 15, 32, sha256.New)
-}
-
-func GenerateCSRFKey() []byte {
-	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.CSRF, 15, 32, sha256.New)
 }

@@ -19,7 +19,6 @@
             </div>
         {{ end }}
         <form action="/admin/users/create" method="post">
-            {{ .CSRFField }}
             <label for="username">Username</label> <input type="text" id="username" name="username" required/>
             <div class="grid">
                 <label for="pw1">Password <input type="password" name="pw1" id="pw1" required/></label>

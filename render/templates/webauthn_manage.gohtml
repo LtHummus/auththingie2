@@ -15,7 +15,7 @@
             {{ template "authn_key_list.gohtml" . }}
 
             <div id="enroll_error" class="error-box no-error"></div>
-            <button id="passkey-enroll-button" onclick="beginRegistration('{{ .CSRFToken }}')">Enroll New Key</button>
+            <button id="passkey-enroll-button" onclick="beginRegistration()">Enroll New Key</button>
         </div>
 
     <script src="/static/js/webauthn.js"></script>

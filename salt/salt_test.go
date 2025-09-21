@@ -74,7 +74,6 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		err = json.NewDecoder(f).Decode(&saltData)
 		assert.NoError(t, err)
 
-		assert.NotEmpty(t, saltData.CSRF)
 		assert.NotEmpty(t, saltData.Signing)
 		assert.NotEmpty(t, saltData.Encryption)
 		assert.Equal(t, 1, saltData.Version)
@@ -89,7 +88,7 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		saltFile := filepath.Join(saltDir, "at2testsalt.json")
 		t.Setenv("SALT_FILE", saltFile)
 
-		data := `{"version":1,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y","csrf":"rfMB_QJW1D4ceVQq-SZoVLHb2yMuAEbSrMP8Zz2Kln4"}`
+		data := `{"version":1,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y"}`
 		err = os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 
@@ -101,7 +100,6 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		})
 
 		assert.Equal(t, "297a0fa07e6b51111c25d01b51ea359bf7b81544eb0e79361b3f979cbc21fd3c", hex.EncodeToString(GenerateSigningKey()))
-		assert.Equal(t, "1b35bb894cfffd8128840444a15840d29c72deeb2a0d6bd24b497fe8c3a39cf2", hex.EncodeToString(GenerateCSRFKey()))
 		assert.Equal(t, "41a1f86617b05c33bdff87b2504873cdc2db58d576d6ca846f88201bda9ba796", hex.EncodeToString(GenerateEncryptionKey()))
 	})
 
@@ -114,7 +112,7 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		saltFile := filepath.Join(saltDir, "at2testsalt.json")
 		t.Setenv("SALT_FILE", saltFile)
 
-		data := `{"version":0,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y","csrf":"rfMB_QJW1D4ceVQq-SZoVLHb2yMuAEbSrMP8Zz2Kln4"}`
+		data := `{"version":0,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y"}`
 		err = os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 

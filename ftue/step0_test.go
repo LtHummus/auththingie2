@@ -85,7 +85,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
-		e.buildMux(StepStartFromBeginning).ServeHTTP(w, bypassCSRF(r))
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()

@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/lthummus/auththingie2/loginlimit"
-	"html/template"
 	"net/http"
 
-	"github.com/gorilla/csrf"
+	"github.com/lthummus/auththingie2/loginlimit"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
@@ -35,8 +34,6 @@ func init() {
 }
 
 type loginPageParams struct {
-	CSRFField      template.HTML
-	CSRFToken      string
 	RedirectURI    string
 	Error          string
 	Message        string
@@ -77,8 +74,6 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if r.Method == http.MethodGet {
 		render.Render(w, "login.gohtml", &loginPageParams{
-			CSRFField:      csrf.TemplateField(r),
-			CSRFToken:      csrf.Token(r),
 			RedirectURI:    getRedirectURIFromRequest(r),
 			Message:        getMessageFromRequest(r),
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
@@ -95,8 +90,6 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 	if e.LoginLimiter.IsAccountLocked(username) {
 		render.Render(w, "login.gohtml", &loginPageParams{
-			CSRFField:      csrf.TemplateField(r),
-			CSRFToken:      csrf.Token(r),
 			Error:          "This account is temporarily locked",
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
@@ -131,8 +124,6 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		}
 
 		render.Render(w, "login.gohtml", &loginPageParams{
-			CSRFField:      csrf.TemplateField(r),
-			CSRFToken:      csrf.Token(r),
 			Error:          errorMessage,
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
@@ -157,8 +148,6 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		}
 
 		render.Render(w, "login.gohtml", &loginPageParams{
-			CSRFField:      csrf.TemplateField(r),
-			CSRFToken:      csrf.Token(r),
 			Error:          errorMessage,
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
@@ -181,8 +170,6 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	if u.Disabled {
 		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", u.Username).Msg("login of disabled account")
 		render.Render(w, "login.gohtml", &loginPageParams{
-			CSRFField:      csrf.TemplateField(r),
-			CSRFToken:      csrf.Token(r),
 			Error:          "Account is disabled",
 			RedirectURI:    redirectURL,
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),

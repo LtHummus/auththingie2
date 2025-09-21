@@ -108,7 +108,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 		v.Add("pw1", "password2")
 		v.Add("pw2", "password2")
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -126,7 +126,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 		v.Add("pw1", "password2")
 		v.Add("pw2", "password2")
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -144,7 +144,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 		v.Add("pw1", "password1")
 		v.Add("pw2", "password2")
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -162,7 +162,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 		v.Add("pw1", "")
 		v.Add("pw2", "")
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -182,7 +182,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("nope"))
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -202,7 +202,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 

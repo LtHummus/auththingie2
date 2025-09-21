@@ -86,7 +86,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -105,7 +105,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -128,7 +128,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add("totp-code", "000000")
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -151,7 +151,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -180,7 +180,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", correctTOTP)
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -216,7 +216,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add("totp-code", correctTOTP)
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
@@ -244,7 +244,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		v.Add("totp-code", correctTOTP)
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "https://test.example.com/something", time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -269,7 +269,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	t.Run("not logged in", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -281,7 +281,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	t.Run("already has totp disabled", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -295,7 +295,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("30 rock is a pretty good show"))
 
-		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminWithTOTP, db))
+		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -309,7 +309,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
-		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, passesCSRF(), withUser(sampleNonAdminWithTOTP, db))
+		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -355,7 +355,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	t.Run("enrollment data generated", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -401,7 +401,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	t.Run("patch -- return a 404", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPatch, "/enable_totp", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPatch, "/enable_totp", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -412,7 +412,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	t.Run("post -- invalid session data", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil, passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -427,7 +427,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, "abcdefghijklmnopqrstuvwxyz")
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF())
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -443,7 +443,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(-5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -474,7 +474,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, "invalid-id", sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 		q.Set("totp-code", code)
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -490,7 +490,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(q.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -518,7 +518,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		v.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(5*time.Minute)))
 		v.Add("totp-code", "000000")
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -540,7 +540,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		v.Add("totp-code", code)
 		v.Add(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -562,7 +562,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 		v.Add("totp-code", code)
 		v.Add(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
 
-		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), passesCSRF(), withUser(sampleNonAdminUser, db))
+		r := makeTestRequest(t, http.MethodPost, "/enable_totp", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 

@@ -25,7 +25,7 @@
         <div class="grid">
             <div>
                 <h3>TOTP Status</h3>
-                <div hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}' id="totp_setup_container">
+                <div id="totp_setup_container">
                     {{ template "totp_status_fragment.gohtml" . }}
                 </div>
             </div>
