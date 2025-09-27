@@ -51,10 +51,13 @@ func CheckOrMakeSalt() {
 	}
 
 	saltPath := getSaltPath()
-	_, err := os.Stat(saltPath)
+	saltStats, err := os.Stat(saltPath)
 	if errors.Is(err, os.ErrNotExist) {
 		createSalt(saltPath)
 	} else {
+		if saltStats.Mode().Perm() != 0600 {
+			log.Warn().Msg("salt file has improper permissions -- should be 0600")
+		}
 		readSalt(saltPath)
 	}
 	saltFile = saltPath

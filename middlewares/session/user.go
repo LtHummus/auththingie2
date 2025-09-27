@@ -69,7 +69,7 @@ func NewMiddleware(next http.Handler, db db.DB) *Middleware {
 func GetSessionIDFromRequest(r *http.Request) string {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).id
@@ -78,7 +78,7 @@ func GetSessionIDFromRequest(r *http.Request) string {
 func GetSessionFromRequest(r *http.Request) Session {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).session
@@ -87,7 +87,7 @@ func GetSessionFromRequest(r *http.Request) Session {
 func GetUserFromRequest(r *http.Request) *user.User {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).user
@@ -155,7 +155,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
 	// TODO: check for old versions of the cookie first
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	sd := info.(*sessionData)
