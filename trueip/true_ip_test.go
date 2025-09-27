@@ -79,7 +79,6 @@ func TestFindTrueIP(t *testing.T) {
 	})
 
 	t.Run("ignore x-real-ip if not enabled", func(t *testing.T) {
-		viper.Set(enableXRealIPConfigKey, false)
 		t.Cleanup(func() {
 			viper.Reset()
 		})
@@ -93,7 +92,7 @@ func TestFindTrueIP(t *testing.T) {
 	})
 
 	t.Run("x-real-ip only trusted if enabled", func(t *testing.T) {
-		viper.Set(enableXRealIPConfigKey, true)
+		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
 		t.Cleanup(func() {
 			viper.Reset()
 		})
@@ -107,7 +106,7 @@ func TestFindTrueIP(t *testing.T) {
 	})
 
 	t.Run("fallback order", func(t *testing.T) {
-		viper.Set(enableXRealIPConfigKey, true)
+		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
 		t.Cleanup(func() {
 			viper.Reset()
 		})
