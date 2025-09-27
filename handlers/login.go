@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/lthummus/auththingie2/loginlimit"
+	"github.com/lthummus/auththingie2/trueip"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -17,7 +18,6 @@ import (
 	"github.com/lthummus/auththingie2/pwmigrate"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/totp"
-	"github.com/lthummus/auththingie2/util"
 )
 
 // fakeArgonHash is a hash of an arbitrary string that we can check against later when logging in with a user that does
@@ -105,7 +105,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if u == nil {
-		log.Error().Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+		log.Error().Str("ip", trueip.Find(r)).Msg("invalid login")
 
 		// do an argon validation even though it won't work because we want to consume some time so the existence of a user can't
 		// be detected via timing
@@ -133,7 +133,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 	err = u.CheckPassword(password)
 	if err != nil {
-		log.Error().Str("ip", util.FindTrueIP(r)).Err(err).Msg("invalid login")
+		log.Error().Str("ip", trueip.Find(r)).Err(err).Msg("invalid login")
 
 		errorMessage := "Invalid Username or Password"
 
@@ -168,7 +168,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if u.Disabled {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", u.Username).Msg("login of disabled account")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("login of disabled account")
 		render.Render(w, "login.gohtml", &loginPageParams{
 			Error:          "Account is disabled",
 			RedirectURI:    redirectURL,
@@ -187,7 +187,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().Str("ip", util.FindTrueIP(r)).Str("username", u.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("successful login")
 
 	if redirectURL == "" {
 		redirectURL = "/"

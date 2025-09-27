@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lthummus/auththingie2/loginlimit"
+	"github.com/lthummus/auththingie2/trueip"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/rs/zerolog/log"
@@ -49,6 +50,7 @@ func RunServer() {
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
+	trueip.Initialize()
 
 	config.Lock.RLock()
 	port := viper.GetInt("server.port")

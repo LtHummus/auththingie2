@@ -17,8 +17,8 @@ import (
 	"github.com/lthummus/auththingie2/db"
 	"github.com/lthummus/auththingie2/pwmigrate"
 	"github.com/lthummus/auththingie2/salt"
+	"github.com/lthummus/auththingie2/trueip"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util"
 )
 
 type userContextKeyType string
@@ -110,17 +110,17 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 		return nil, UserSourceInvalidUser
 	}
 	if dbu == nil {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid login")
 		return nil, UserSourceInvalidUser
 	}
 
 	err = dbu.CheckPassword(pass)
 	if err != nil {
 		if errors.Is(err, user.ErrIncorrectPassword) {
-			log.Warn().Str("username", username).Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+			log.Warn().Str("username", username).Str("ip", trueip.Find(r)).Msg("invalid login")
 			return nil, UserSourceInvalidUser
 		}
-		log.Warn().Err(err).Str("username", username).Str("ip", util.FindTrueIP(r)).Msg("could not validate password")
+		log.Warn().Err(err).Str("username", username).Str("ip", trueip.Find(r)).Msg("could not validate password")
 		return nil, UserSourceInvalidUser
 	}
 

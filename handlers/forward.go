@@ -14,8 +14,8 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
+	"github.com/lthummus/auththingie2/trueip"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util"
 )
 
 const (
@@ -37,7 +37,7 @@ func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
 		Protocol:   r.Header.Get(protocolHeader),
 		Host:       r.Header.Get(hostHeader),
 		RequestURI: r.Header.Get(requestURIHeader),
-		SourceIP:   net.ParseIP(util.FindTrueIP(r)),
+		SourceIP:   net.ParseIP(trueip.Find(r)),
 	}
 }
 
@@ -131,19 +131,19 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == session.UserSourceBasicAuth && user.TOTPEnabled() {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
 		http.Error(w, "Can not use basic auth with TOTP enabled", http.StatusForbidden)
 		return
 	}
 
 	if source == session.UserSourceBasicAuth && len(user.StoredCredentials) > 0 {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
 		http.Error(w, "Can not use basic auth with passkeys enabled", http.StatusForbidden)
 		return
 	}
 
 	if user.Disabled {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("account disabled, forwarding to message")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("account disabled, forwarding to message")
 		http.Redirect(w, r, fmt.Sprintf("%s/disabled", viper.GetString("server.auth_url")), http.StatusFound)
 		return
 	}
