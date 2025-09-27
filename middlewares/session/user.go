@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/securecookie"
@@ -47,7 +48,7 @@ type sessionData struct {
 	session    Session
 	user       *user.User
 	sc         *securecookie.SecureCookie
-	writeCount int
+	writeCount atomic.Int64
 }
 
 func init() {
@@ -159,11 +160,11 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
 
 	sd := info.(*sessionData)
 
-	if sd.writeCount > 0 {
-		log.Warn().Int("write_count", sd.writeCount).Caller(1).Msg("more than one WriteSessionCalled")
+	if wc := sd.writeCount.Load(); wc > 0 {
+		log.Warn().Int64("write_count", wc).Caller(1).Msg("more than one WriteSessionCalled")
 	}
 
-	sd.writeCount++
+	sd.writeCount.Add(1)
 
 	encoded, err := sd.sc.Encode(SessionCookieName, s)
 	if err != nil {
