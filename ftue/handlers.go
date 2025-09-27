@@ -92,9 +92,10 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	handler := cop.Handler(m)
 
-	if viper.GetBool(config.DisableSecurityHeaders) {
-		log.Warn().Msg("not enabling security headers")
+	if !viper.GetBool(config.DisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
+	} else {
+		log.Warn().Msg("not enabling security headers")
 	}
 
 	return handler
