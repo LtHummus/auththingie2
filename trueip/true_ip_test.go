@@ -3,6 +3,7 @@ package trueip
 import (
 	"net"
 	"net/http"
+	"net/textproto"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -63,6 +64,22 @@ func TestFindTrueIP(t *testing.T) {
 		r.Header.Set("X-Forwarded-For", "192.168.2.1")
 
 		assert.Equal(t, "192.168.2.1", Find(r))
+	})
+
+	t.Run("always take last XFF header", func(t *testing.T) {
+		trustedProxyCIDRs = nil
+		trustedProxyIPs = []net.IP{net.ParseIP("127.0.0.1")}
+		r := &http.Request{
+			RemoteAddr: "127.0.0.1:5892",
+			Header: map[string][]string{
+				textproto.CanonicalMIMEHeaderKey("X-Forwarded-For"): {
+					"1.2.3.4",
+					"4.5.6.7",
+				},
+			},
+		}
+
+		assert.Equal(t, "4.5.6.7", Find(r))
 	})
 
 	t.Run("trust XFF is proxy CIDR is trusted", func(t *testing.T) {
