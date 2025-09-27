@@ -37,4 +37,20 @@ func TestEnv_HandleIndex(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `You are logged in as <strong>adminuser</strong>. You can <a href="/logout">log out if you wish</a>.`)
 	})
+
+	t.Run("make sure we've installed the security headers", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		r := makeTestRequest(t, http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `You are currently logged out. You can <a href="/login">log in here</a>.`)
+		assert.Equal(t, "DENY", w.Result().Header.Get("X-Frame-Options"))
+		assert.Equal(t, "nosniff", w.Result().Header.Get("X-Content-Type-Options"))
+		assert.Equal(t, "strict-origin-when-cross-origin", w.Result().Header.Get("Referrer-Policy"))
+		assert.Equal(t, "default-src 'self'", w.Result().Header.Get("Content-Security-Policy"))
+	})
 }

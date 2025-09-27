@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/lthummus/auththingie2/loginlimit"
+	"github.com/lthummus/auththingie2/middlewares/securityheaders"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
@@ -78,5 +79,6 @@ func (e *Env) BuildRouter() http.Handler {
 	cop.AddInsecureBypassPattern("/forbidden")
 	cop.AddInsecureBypassPattern("/disabled")
 
-	return cop.Handler(sessionMiddleware)
+	securityHeadersMiddleware := securityheaders.NewSecurityHeadersMiddleware(cop.Handler(sessionMiddleware))
+	return securityHeadersMiddleware
 }
