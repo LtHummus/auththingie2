@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,7 +78,25 @@ func TestFindTrueIP(t *testing.T) {
 		assert.Equal(t, "192.168.2.1", Find(r))
 	})
 
-	t.Run("x-real-ip", func(t *testing.T) {
+	t.Run("ignore x-real-ip if not enabled", func(t *testing.T) {
+		viper.Set(enableXRealIPConfigKey, false)
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+		r := &http.Request{
+			RemoteAddr: "1.2.3.4:5892",
+			Header:     map[string][]string{},
+		}
+		r.Header.Set("X-Real-Ip", "192.195.199.199")
+
+		assert.Equal(t, "1.2.3.4", Find(r))
+	})
+
+	t.Run("x-real-ip only trusted if enabled", func(t *testing.T) {
+		viper.Set(enableXRealIPConfigKey, true)
+		t.Cleanup(func() {
+			viper.Reset()
+		})
 		r := &http.Request{
 			RemoteAddr: "1.2.3.4:5892",
 			Header:     map[string][]string{},
@@ -88,6 +107,10 @@ func TestFindTrueIP(t *testing.T) {
 	})
 
 	t.Run("fallback order", func(t *testing.T) {
+		viper.Set(enableXRealIPConfigKey, true)
+		t.Cleanup(func() {
+			viper.Reset()
+		})
 		r := &http.Request{
 			RemoteAddr: "1.2.3.4:5892",
 			Header:     map[string][]string{},

@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	configKey          = "security.trusted_proxies"
-	updateDebounceTime = 100 * time.Millisecond
+	trustedProxyHeadersConfigKey = "security.trusted_proxies"
+	enableXRealIPConfigKey       = "security.enable_x_real_ip"
+	updateDebounceTime           = 100 * time.Millisecond
 )
 
 var (
@@ -43,7 +44,7 @@ func updateTrustedProxies() {
 	var newTrustedIPs []net.IP
 	var newTrustedCIDRs []*net.IPNet
 
-	for _, curr := range viper.GetStringSlice(configKey) {
+	for _, curr := range viper.GetStringSlice(trustedProxyHeadersConfigKey) {
 		_, ipnet, err := net.ParseCIDR(curr)
 		// note opposite of normal error check!
 		if err == nil {
@@ -109,7 +110,10 @@ func isTrustedProxy(remote string) bool {
 
 func Find(r *http.Request) string {
 	if xrip := r.Header.Get("X-Real-Ip"); xrip != "" {
-		return xrip
+		if viper.GetBool(enableXRealIPConfigKey) {
+			return xrip
+		}
+		log.Warn().Str("x-real-ip", xrip).Msg("X-Real-Ip is set in request, but not enabled (`security.enable_x_real_ip`). ignoring")
 	}
 
 	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && isTrustedProxy(r.RemoteAddr) {
