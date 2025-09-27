@@ -10,9 +10,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/db"
 	"github.com/lthummus/auththingie2/importer"
+	"github.com/lthummus/auththingie2/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
 	"github.com/lthummus/auththingie2/user"
@@ -87,7 +90,15 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	cop := http.NewCrossOriginProtection()
 	cop.AddInsecureBypassPattern("/ftue/path")
 
-	return cop.Handler(m)
+	handler := cop.Handler(m)
+
+	if !viper.GetBool(config.DisableSecurityHeaders) {
+		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
+	} else {
+		log.Warn().Msg("not enabling security headers")
+	}
+
+	return handler
 }
 
 func HandlePathComplete(w http.ResponseWriter, r *http.Request) {

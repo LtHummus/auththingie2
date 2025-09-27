@@ -25,7 +25,7 @@ func safeCastUint32(x int) (uint32, error) {
 	}
 
 	if x > math.MaxUint32 {
-		return 0, fmt.Errorf("argon2: can not %d to uint32", x)
+		return 0, fmt.Errorf("argon2: can not cast %d to uint32", x)
 	}
 
 	return uint32(x), nil

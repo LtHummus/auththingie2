@@ -53,6 +53,23 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 
 	})
+
+	t.Run("make sure we've attached security headers", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		t.Setenv("AT2_MODE", "docker")
+
+		r := httptest.NewRequest(http.MethodGet, "https://auth.example.com/ftue/step0", nil)
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Equal(t, "DENY", w.Result().Header.Get("X-Frame-Options"))
+		assert.Equal(t, "nosniff", w.Result().Header.Get("X-Content-Type-Options"))
+		assert.Equal(t, "strict-origin-when-cross-origin", w.Result().Header.Get("Referrer-Policy"))
+		assert.Equal(t, "default-src 'self'", w.Result().Header.Get("Content-Security-Policy"))
+	})
 }
 
 func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {

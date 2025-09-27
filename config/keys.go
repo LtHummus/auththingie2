@@ -7,4 +7,6 @@ const (
 
 	AttachUsernameAuthResponseHeader = "auth.attach_username_header"
 	AttachUserIDAuthResponseHeader   = "auth.attach_userid_header"
+
+	DisableSecurityHeaders = "security.disable_headers"
 )

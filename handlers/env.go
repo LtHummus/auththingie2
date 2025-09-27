@@ -3,7 +3,11 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/loginlimit"
+	"github.com/lthummus/auththingie2/middlewares/securityheaders"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/mux"
@@ -78,5 +82,13 @@ func (e *Env) BuildRouter() http.Handler {
 	cop.AddInsecureBypassPattern("/forbidden")
 	cop.AddInsecureBypassPattern("/disabled")
 
-	return cop.Handler(sessionMiddleware)
+	handler := cop.Handler(sessionMiddleware)
+
+	if !viper.GetBool(config.DisableSecurityHeaders) {
+		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
+	} else {
+		log.Warn().Msg("not enabling security headers")
+	}
+
+	return handler
 }

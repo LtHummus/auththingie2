@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/securecookie"
@@ -16,8 +17,8 @@ import (
 	"github.com/lthummus/auththingie2/db"
 	"github.com/lthummus/auththingie2/pwmigrate"
 	"github.com/lthummus/auththingie2/salt"
+	"github.com/lthummus/auththingie2/trueip"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util"
 )
 
 type userContextKeyType string
@@ -47,7 +48,7 @@ type sessionData struct {
 	session    Session
 	user       *user.User
 	sc         *securecookie.SecureCookie
-	writeCount int
+	writeCount atomic.Int64
 }
 
 func init() {
@@ -68,7 +69,7 @@ func NewMiddleware(next http.Handler, db db.DB) *Middleware {
 func GetSessionIDFromRequest(r *http.Request) string {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).id
@@ -77,7 +78,7 @@ func GetSessionIDFromRequest(r *http.Request) string {
 func GetSessionFromRequest(r *http.Request) Session {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).session
@@ -86,7 +87,7 @@ func GetSessionFromRequest(r *http.Request) Session {
 func GetUserFromRequest(r *http.Request) *user.User {
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	return info.(*sessionData).user
@@ -109,17 +110,17 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 		return nil, UserSourceInvalidUser
 	}
 	if dbu == nil {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid login")
 		return nil, UserSourceInvalidUser
 	}
 
 	err = dbu.CheckPassword(pass)
 	if err != nil {
 		if errors.Is(err, user.ErrIncorrectPassword) {
-			log.Warn().Str("username", username).Str("ip", util.FindTrueIP(r)).Msg("invalid login")
+			log.Warn().Str("username", username).Str("ip", trueip.Find(r)).Msg("invalid login")
 			return nil, UserSourceInvalidUser
 		}
-		log.Warn().Err(err).Str("username", username).Str("ip", util.FindTrueIP(r)).Msg("could not validate password")
+		log.Warn().Err(err).Str("username", username).Str("ip", trueip.Find(r)).Msg("could not validate password")
 		return nil, UserSourceInvalidUser
 	}
 
@@ -154,16 +155,16 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
 	// TODO: check for old versions of the cookie first
 	info := r.Context().Value(sessionContextKey)
 	if info == nil {
-		panic("no session info in request, is middleware configured properly?")
+		log.Panic().Msg("no session info in request, is middleware configured properly?")
 	}
 
 	sd := info.(*sessionData)
 
-	if sd.writeCount > 0 {
-		log.Warn().Int("write_count", sd.writeCount).Caller(1).Msg("more than one WriteSessionCalled")
+	if wc := sd.writeCount.Load(); wc > 0 {
+		log.Warn().Int64("write_count", wc).Caller(1).Msg("more than one WriteSessionCalled")
 	}
 
-	sd.writeCount++
+	sd.writeCount.Add(1)
 
 	encoded, err := sd.sc.Encode(SessionCookieName, s)
 	if err != nil {

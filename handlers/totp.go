@@ -16,7 +16,7 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	enrollment "github.com/lthummus/auththingie2/totp"
-	"github.com/lthummus/auththingie2/util"
+	"github.com/lthummus/auththingie2/trueip"
 )
 
 const (
@@ -105,7 +105,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data en
 	}
 
 	if user.Disabled {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("attempted login of disabled account")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted login of disabled account")
 		e.handleTotpPrompt(w, r, data, "Account is disabled")
 		return
 	}
@@ -120,7 +120,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data en
 		return
 	}
 
-	log.Info().Str("ip", util.FindTrueIP(r)).Str("username", user.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("successful login")
 	if redirectURI == "" {
 		redirectURI = "/"
 	}
@@ -278,8 +278,6 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 	}
 
 	qrDataURL := fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(pngBytes))
-
-	log.Debug().Str("totp_secret", seed.Secret()).Msg("generated secret")
 
 	render.Render(w, "totp_enrollment.gohtml", &totpEnrollmentPageParams{
 		Error: errorMessage,

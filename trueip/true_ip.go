@@ -1,0 +1,129 @@
+package trueip
+
+import (
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
+)
+
+const (
+	configKey          = "security.trusted_proxies"
+	updateDebounceTime = 100 * time.Millisecond
+)
+
+var (
+	updateLock     sync.RWMutex
+	lastUpdateTime time.Time
+
+	trustedProxyIPs   []net.IP
+	trustedProxyCIDRs []*net.IPNet
+)
+
+func Initialize() {
+	updateTrustedProxies()
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		updateTrustedProxies()
+	})
+}
+
+func updateTrustedProxies() {
+	updateLock.Lock()
+	defer updateLock.Unlock()
+
+	if time.Since(lastUpdateTime) < updateDebounceTime {
+		return
+	}
+
+	var newTrustedIPs []net.IP
+	var newTrustedCIDRs []*net.IPNet
+
+	for _, curr := range viper.GetStringSlice(configKey) {
+		_, ipnet, err := net.ParseCIDR(curr)
+		// note opposite of normal error check!
+		if err == nil {
+			log.Debug().IPPrefix("cidr", *ipnet).Msg("adding CIDR as trusted proxy")
+			newTrustedCIDRs = append(newTrustedCIDRs, ipnet)
+			continue
+		}
+
+		ip := net.ParseIP(curr)
+		if ip != nil {
+			log.Warn().Str("input", curr).Msg("could not parse trusted proxy as CIDR or IP")
+			continue
+		}
+		log.Debug().IPAddr("ip", ip).Msg("adding IP as trusted proxy")
+		newTrustedIPs = append(newTrustedIPs, ip)
+	}
+
+	log.Info().Int("trusted_ip_count", len(newTrustedIPs)).Int("trusted_cidr_count", len(newTrustedCIDRs)).Msg("loaded trusted proxies")
+	trustedProxyIPs = newTrustedIPs
+	trustedProxyCIDRs = newTrustedCIDRs
+	lastUpdateTime = time.Now()
+	if len(trustedProxyCIDRs) == 0 && len(trustedProxyIPs) == 0 {
+		log.Warn().Msg("security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies to be a list of trusted IPs/CIDRs to ignore this message")
+	}
+}
+
+func isTrustedProxy(remote string) bool {
+	updateLock.RLock()
+	defer updateLock.RUnlock()
+
+	if len(trustedProxyCIDRs) == 0 && len(trustedProxyIPs) == 0 {
+		log.Warn().Msg("security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies to be a list of trusted IPs/CIDRs to ignore this message")
+		return true
+	}
+
+	remoteIPStr, _, err := net.SplitHostPort(remote)
+	if err != nil {
+		log.Warn().Str("remote_addr", remote).Err(err).Msg("could find remote address for testing trusted proxy")
+		return false
+	}
+
+	remoteIP := net.ParseIP(remoteIPStr)
+	if remoteIP == nil {
+		log.Warn().Str("remote_ip", remoteIPStr).Msg("could not parse remote as IP")
+		return false
+	}
+
+	for _, curr := range trustedProxyIPs {
+		if curr.Equal(remoteIP) {
+			return true
+		}
+	}
+
+	for _, curr := range trustedProxyCIDRs {
+		if curr.Contains(remoteIP) {
+			return true
+		}
+	}
+
+	log.Warn().IPAddr("remote_ip", remoteIP).Msg("not trusting XFF header from unknown proxy")
+	return false
+}
+
+func Find(r *http.Request) string {
+	if xrip := r.Header.Get("X-Real-Ip"); xrip != "" {
+		return xrip
+	}
+
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && isTrustedProxy(r.RemoteAddr) {
+		s := strings.Index(fwd, ", ")
+		if s == -1 {
+			s = len(fwd)
+		}
+		return fwd[:s]
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Warn().Str("remote_addr", r.RemoteAddr).Err(err).Msg("could find remote address")
+	}
+
+	return host
+}

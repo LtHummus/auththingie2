@@ -18,7 +18,7 @@ import (
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/salt"
-	"github.com/lthummus/auththingie2/util"
+	"github.com/lthummus/auththingie2/trueip"
 )
 
 type debugPageInfo struct {
@@ -101,7 +101,8 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"X-Forwarded-For", r.Header.Get("X-Forwarded-For")},
 		{"X-Forwarded-Host", r.Header.Get("X-Forwarded-Host")},
 		{"X-Real-Ip", r.Header.Get("X-Real-Ip")},
-		{"util.FindTrueIP", util.FindTrueIP(r)},
+		{"X-Forwarded-Server", r.Header.Get("X-Forwarded-Server")},
+		{"trueip.Find", trueip.Find(r)},
 	})
 
 	userTable := table.NewWriter()

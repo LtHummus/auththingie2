@@ -19,6 +19,7 @@ import (
 	"github.com/lthummus/auththingie2/config"
 	"github.com/lthummus/auththingie2/middlewares/session"
 	"github.com/lthummus/auththingie2/render"
+	"github.com/lthummus/auththingie2/trueip"
 	"github.com/lthummus/auththingie2/user"
 	"github.com/lthummus/auththingie2/util"
 )
@@ -207,17 +208,17 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	if err != nil {
 		// TODO: maybe refactor this error handling logic
 		if strings.Contains(err.Error(), "no rows in result set") {
-			log.Warn().Str("ip", util.FindTrueIP(r)).Msg("bad passkey attempt")
+			log.Warn().Str("ip", trueip.Find(r)).Msg("bad passkey attempt")
 			render.RenderJSONError(w, "Key not registered to any user", "authn.login.unrecognized_key", http.StatusForbidden)
 			return
 		}
-		log.Warn().Err(err).Str("ip", util.FindTrueIP(r)).Msg("could not validate credential")
+		log.Warn().Err(err).Str("ip", trueip.Find(r)).Msg("could not validate credential")
 		render.RenderJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusInternalServerError)
 		return
 	}
 
 	if foundUser == nil {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Msg("could not find user with that key")
+		log.Warn().Str("ip", trueip.Find(r)).Msg("could not find user with that key")
 		http.Error(w, "could not find user with that key", http.StatusForbidden)
 		return
 	}
@@ -230,7 +231,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	}
 
 	if foundUser.Disabled {
-		log.Warn().Str("ip", util.FindTrueIP(r)).Str("username", foundUser.Username).Msg("user is disabled")
+		log.Warn().Str("ip", trueip.Find(r)).Str("username", foundUser.Username).Msg("user is disabled")
 		render.RenderJSONError(w, "Account is disabled", "authn.login.disabled", http.StatusForbidden)
 		return
 	}
@@ -238,7 +239,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(foundUser)
 
-	log.Info().Str("username", foundUser.Username).Str("ip", util.FindTrueIP(r)).Msg("successful passkey auth")
+	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r)).Msg("successful passkey auth")
 
 	err = session.WriteSession(w, r, sess)
 	if err != nil {

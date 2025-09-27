@@ -304,6 +304,52 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "Tag can not be blank")
 	})
 
+	t.Run("very long tag name", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"a"},
+		}, nil)
+
+		v := url.Values{}
+		v.Add("new-tag", "thisisaverylongtagnamethisisaverylongtagnamethisisaverylongtagnamethisisaverylongtagnamethisisaverylongtagnamethisisaverylongtagname")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Tag is too long")
+	})
+
+	t.Run("tag contains invalid characters", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+
+		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
+			Id:       "test",
+			Username: "testname",
+			Roles:    []string{"a"},
+		}, nil)
+
+		v := url.Values{}
+		v.Add("new-tag", "hello [] hello")
+
+		r := makeTestRequest(t, http.MethodPatch, "/admin/users/test/tags", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Tag is in an invalid format")
+	})
+
 	t.Run("tag already exists specified", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 

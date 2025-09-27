@@ -2,10 +2,11 @@ package loginlimit
 
 import (
 	"errors"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 type LoginLimiter interface {
@@ -126,51 +127,51 @@ func (iml *InMemoryLoginLimiter) cleanupRoutine() {
 	iml.failureLock.Unlock()
 }
 
-func (inl *InMemoryLoginLimiter) IsAccountLocked(key string) bool {
-	inl.lockLock.Lock()
-	defer inl.lockLock.Unlock()
+func (iml *InMemoryLoginLimiter) IsAccountLocked(key string) bool {
+	iml.lockLock.Lock()
+	defer iml.lockLock.Unlock()
 
-	unlockTime := inl.accountLocks[key]
+	unlockTime := iml.accountLocks[key]
 
 	if unlockTime.Before(time.Now()) {
-		delete(inl.accountLocks, key)
+		delete(iml.accountLocks, key)
 	}
 
 	return unlockTime.After(time.Now())
 }
 
-func (inl *InMemoryLoginLimiter) lockAccount(key string) {
-	inl.lockLock.Lock()
-	defer inl.lockLock.Unlock()
+func (iml *InMemoryLoginLimiter) lockAccount(key string) {
+	iml.lockLock.Lock()
+	defer iml.lockLock.Unlock()
 
-	inl.accountLocks[key] = time.Now().Add(inl.accountLockDuration)
+	iml.accountLocks[key] = time.Now().Add(iml.accountLockDuration)
 }
 
-func (inl *InMemoryLoginLimiter) MarkFailedAttempt(key string) (int, error) {
-	if inl.IsAccountLocked(key) {
+func (iml *InMemoryLoginLimiter) MarkFailedAttempt(key string) (int, error) {
+	if iml.IsAccountLocked(key) {
 		return 0, ErrAccountLocked
 	}
 
-	inl.failureLock.Lock()
-	defer inl.failureLock.Unlock()
+	iml.failureLock.Lock()
+	defer iml.failureLock.Unlock()
 
 	var cleanedAccountFailures []time.Time
-	for _, curr := range inl.loginFailures[key] {
+	for _, curr := range iml.loginFailures[key] {
 		if curr.After(time.Now()) {
 			cleanedAccountFailures = append(cleanedAccountFailures, curr)
 		}
 	}
 
-	cleanedAccountFailures = append(cleanedAccountFailures, time.Now().Add(inl.failureLookbackTime))
-	if len(cleanedAccountFailures) >= inl.maxFailures {
+	cleanedAccountFailures = append(cleanedAccountFailures, time.Now().Add(iml.failureLookbackTime))
+	if len(cleanedAccountFailures) >= iml.maxFailures {
 		// delete failures and lock account
-		delete(inl.loginFailures, key)
-		inl.lockAccount(key)
+		delete(iml.loginFailures, key)
+		iml.lockAccount(key)
 
 		return 0, ErrAccountLocked
 	}
 
-	inl.loginFailures[key] = cleanedAccountFailures
+	iml.loginFailures[key] = cleanedAccountFailures
 
-	return inl.maxFailures - len(cleanedAccountFailures), nil
+	return iml.maxFailures - len(cleanedAccountFailures), nil
 }
