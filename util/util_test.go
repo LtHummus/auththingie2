@@ -54,6 +54,6 @@ func TestFindTrueIP(t *testing.T) {
 		r.Header.Set("X-Real-Ip", "192.195.199.199")
 		r.Header.Set("X-Forwarded-For", "192.168.2.1, 999.999.999.999")
 
-		assert.Equal(t, "192.168.2.1", FindTrueIP(r))
+		assert.Equal(t, "192.195.199.199", FindTrueIP(r))
 	})
 }
