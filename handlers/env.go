@@ -84,7 +84,7 @@ func (e *Env) BuildRouter() http.Handler {
 
 	handler := cop.Handler(sessionMiddleware)
 
-	if !viper.GetBool(config.DisableSecurityHeaders) {
+	if viper.GetBool(config.DisableSecurityHeaders) {
 		log.Warn().Msg("not enabling security headers")
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
 	}

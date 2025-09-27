@@ -101,6 +101,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"X-Forwarded-For", r.Header.Get("X-Forwarded-For")},
 		{"X-Forwarded-Host", r.Header.Get("X-Forwarded-Host")},
 		{"X-Real-Ip", r.Header.Get("X-Real-Ip")},
+		{"X-Forwarded-Server", r.Header.Get("X-Forwarded-Server")},
 		{"util.FindTrueIP", util.FindTrueIP(r)},
 	})
 
