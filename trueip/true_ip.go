@@ -14,7 +14,7 @@ import (
 
 const (
 	trustedProxyHeadersConfigKey = "security.trusted_proxies"
-	enableXRealIPConfigKey       = "security.enable_x_real_ip"
+	trustedIpHeaderConfigKey     = "security.real_ip_header"
 	updateDebounceTime           = 100 * time.Millisecond
 )
 
@@ -71,7 +71,7 @@ func updateTrustedProxies() {
 	}
 }
 
-func isTrustedProxy(remote string) bool {
+func isTrustedProxy(r *http.Request) bool {
 	updateLock.RLock()
 	defer updateLock.RUnlock()
 
@@ -80,9 +80,9 @@ func isTrustedProxy(remote string) bool {
 		return true
 	}
 
-	remoteIPStr, _, err := net.SplitHostPort(remote)
+	remoteIPStr, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		log.Warn().Str("remote_addr", remote).Err(err).Msg("could find remote address for testing trusted proxy")
+		log.Warn().Str("remote_addr", r.RemoteAddr).Err(err).Msg("could find remote address for testing trusted proxy")
 		return false
 	}
 
@@ -108,20 +108,33 @@ func isTrustedProxy(remote string) bool {
 	return false
 }
 
+// safeGetXForwardedFor safely gets the XFF header contents (or emptystring if no such header exists). We do things this
+// way because we can only trust the LAST instance of XFF and `Header.Get("X-Forwarded-For")` will return the first instance
+func safeGetXForwardedFor(r *http.Request) string {
+	headers := r.Header.Values("X-Forwarded-For")
+	if len(headers) == 0 {
+		return ""
+	}
+	return headers[len(headers)-1]
+}
+
 func Find(r *http.Request) string {
-	if xrip := r.Header.Get("X-Real-Ip"); xrip != "" {
-		if viper.GetBool(enableXRealIPConfigKey) {
-			return xrip
+	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); trustedHeaderName != "" {
+		if trustedContents := r.Header.Get(trustedHeaderName); trustedContents != "" {
+			return trustedContents
+		} else {
+			log.Warn().Str("trusted_header_name", trustedHeaderName).Msg("security.trusted_header_name is set, but that header isn't in the request")
 		}
-		log.Warn().Str("x-real-ip", xrip).Msg("X-Real-Ip is set in request, but not enabled (`security.enable_x_real_ip`). ignoring")
 	}
 
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && isTrustedProxy(r.RemoteAddr) {
-		s := strings.Index(fwd, ", ")
-		if s == -1 {
-			s = len(fwd)
+	if fwd := safeGetXForwardedFor(r); fwd != "" {
+		if isTrustedProxy(r) {
+			s := strings.Index(fwd, ",")
+			if s == -1 {
+				s = len(fwd)
+			}
+			return strings.TrimSpace(fwd[:s])
 		}
-		return fwd[:s]
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
