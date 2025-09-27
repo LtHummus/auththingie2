@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -25,6 +26,10 @@ type ruleTestParams struct {
 	Rule  *rules.Rule
 	Error string
 }
+
+const MaxTagNameLength = 64
+
+var roleValidationRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 func (e *Env) HandleTestRule(w http.ResponseWriter, r *http.Request) {
 	u := session.GetUserFromRequest(r)
@@ -107,6 +112,16 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 	tagName := r.FormValue("new-tag")
 	if strings.TrimSpace(tagName) == "" {
 		render.RenderHTMXCompatibleError(w, r, "Tag can not be blank", "tag-error")
+		return
+	}
+
+	if len(tagName) > MaxTagNameLength {
+		render.RenderHTMXCompatibleError(w, r, "Tag is too long", "tag-error")
+		return
+	}
+
+	if !roleValidationRegex.MatchString(tagName) {
+		render.RenderHTMXCompatibleError(w, r, "Tag is in an invalid format. May only be alphanumeric with - and _", "tag-error")
 		return
 	}
 

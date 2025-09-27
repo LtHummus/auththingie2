@@ -278,9 +278,7 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 	}
 
 	qrDataURL := fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(pngBytes))
-
-	log.Debug().Str("totp_secret", seed.Secret()).Msg("generated secret")
-
+	
 	render.Render(w, "totp_enrollment.gohtml", &totpEnrollmentPageParams{
 		Error: errorMessage,
 		//#nosec G203 -- contents are entirely generated server side
