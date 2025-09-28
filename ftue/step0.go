@@ -1,6 +1,7 @@
 package ftue
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,7 +18,6 @@ import (
 	"github.com/lthummus/auththingie2/db/sqlite"
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/rules"
-	"github.com/lthummus/auththingie2/util"
 )
 
 const (
@@ -151,7 +151,7 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	viper.Set("db.file", dbFilePath)
 	viper.Set("db.kind", "sqlite")
 	viper.Set("server.port", port)
-	viper.Set("server.secret_key", util.Base64Encoder.EncodeToString(securecookie.GenerateRandomKey(32)))
+	viper.Set("server.secret_key", base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
 	viper.Set("server.auth_url", authURL)
 	viper.Set("server.domain", domain)
 	err = viper.WriteConfig()

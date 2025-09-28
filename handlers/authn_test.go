@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -27,7 +28,6 @@ import (
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/salt"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util"
 )
 
 var sampleCredential = webauthn.Credential{
@@ -360,13 +360,13 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		assert.Equal(t, sampleNonAdminUser.Username, createResponse.Response.User.Name)
 		assert.Equal(t, sampleNonAdminUser.Username, createResponse.Response.User.DisplayName)
 
-		decodedID, err := util.Base64Encoder.DecodeString(createResponse.Response.User.ID.(string))
+		decodedID, err := base64.RawURLEncoding.DecodeString(createResponse.Response.User.ID.(string))
 		assert.NoError(t, err)
 
 		idFromResponse, err := uuid.FromBytes(decodedID)
 		assert.NoError(t, err)
 
-		decodedChallenge, err := util.Base64Encoder.DecodeString(createResponse.Response.Challenge.String())
+		decodedChallenge, err := base64.RawURLEncoding.DecodeString(createResponse.Response.Challenge.String())
 		assert.NoError(t, err)
 
 		assert.Len(t, decodedChallenge, 32)
@@ -436,7 +436,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		assert.Equal(t, "example.com", challengeData.Response.RelyingPartyID)
 		assert.Equal(t, protocol.VerificationPreferred, challengeData.Response.UserVerification)
 
-		decodedChallenge, err := util.Base64Encoder.DecodeString(challengeData.Response.Challenge.String())
+		decodedChallenge, err := base64.RawURLEncoding.DecodeString(challengeData.Response.Challenge.String())
 		assert.NoError(t, err)
 
 		assert.Len(t, decodedChallenge, 32)

@@ -21,7 +21,6 @@ import (
 	"github.com/lthummus/auththingie2/render"
 	"github.com/lthummus/auththingie2/trueip"
 	"github.com/lthummus/auththingie2/user"
-	"github.com/lthummus/auththingie2/util"
 )
 
 const (
@@ -278,7 +277,7 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 	}
 
 	return keyInfo{
-		ID:           util.Base64Encoder.EncodeToString(cred.ID),
+		ID:           base64.RawURLEncoding.EncodeToString(cred.ID),
 		FriendlyName: fName,
 		LastUsed:     lu,
 	}
@@ -299,7 +298,7 @@ func (e *Env) HandleRenderWebAuthnManage(w http.ResponseWriter, r *http.Request)
 
 	keyIDs := make([]string, len(u.StoredCredentials))
 	for i := range u.StoredCredentials {
-		id := util.Base64Encoder.EncodeToString(u.StoredCredentials[i].ID)
+		id := base64.RawURLEncoding.EncodeToString(u.StoredCredentials[i].ID)
 		keyIDs[i] = id
 	}
 
@@ -345,7 +344,7 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 
 	ownsKey := false
 	for _, curr := range u.StoredCredentials {
-		idStr := util.Base64Encoder.EncodeToString(curr.ID)
+		idStr := base64.RawURLEncoding.EncodeToString(curr.ID)
 		if idStr == kID {
 			ownsKey = true
 			break
