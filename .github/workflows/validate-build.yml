@@ -32,8 +32,6 @@ jobs:
 
       - name: Run Tests
         run: gotestsum --format github-actions
-        env:
-          GOEXPERIMENT: synctest
 
 
   security:

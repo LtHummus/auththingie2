@@ -28,8 +28,6 @@ jobs:
 
       - name: Run Tests
         run: gotestsum --format github-actions
-        env:
-          GOEXPERIMENT: synctest
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
