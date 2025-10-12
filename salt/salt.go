@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"testing"
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,9 @@ import (
 const (
 	saltLength = 32
 	version    = 1
+
+	defaultIterations     = 600000
+	defaultIterationsTest = 15
 )
 
 func getSaltPath() string {
@@ -122,12 +126,19 @@ func readSalt(path string) {
 	salt = &read
 }
 
+func getIterationCount() int {
+	if testing.Testing() {
+		return defaultIterationsTest
+	}
+	return defaultIterations
+}
+
 func GenerateSigningKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, 15, 32, sha256.New)
+	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, getIterationCount(), 32, sha256.New)
 }
 
 func GenerateEncryptionKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, 15, 32, sha256.New)
+	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, getIterationCount(), 32, sha256.New)
 }
