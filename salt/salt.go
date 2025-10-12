@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
@@ -69,8 +70,13 @@ func CheckOrMakeSalt() {
 	}
 	saltFile = saltPath
 
-	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, getIterationCount(), 32, sha256.New)
-	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, getIterationCount(), 32, sha256.New)
+	iterationCount := getIterationCount()
+
+	start := time.Now()
+	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, iterationCount, 32, sha256.New)
+	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, iterationCount, 32, sha256.New)
+
+	log.Info().Int("iteration_count", iterationCount).Dur("key_generation_time", time.Since(start)).Msg("generated signing and encryption keys")
 }
 
 func GetSaltPath() string {
