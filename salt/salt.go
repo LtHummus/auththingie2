@@ -44,6 +44,9 @@ var (
 	salt     *payload
 	saltFile string
 
+	signingKey    []byte
+	encryptionKey []byte
+
 	lock sync.Mutex
 )
 
@@ -65,6 +68,9 @@ func CheckOrMakeSalt() {
 		readSalt(saltPath)
 	}
 	saltFile = saltPath
+
+	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, getIterationCount(), 32, sha256.New)
+	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, getIterationCount(), 32, sha256.New)
 }
 
 func GetSaltPath() string {
@@ -135,10 +141,10 @@ func getIterationCount() int {
 
 func GenerateSigningKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, getIterationCount(), 32, sha256.New)
+	return signingKey
 }
 
 func GenerateEncryptionKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, getIterationCount(), 32, sha256.New)
+	return encryptionKey
 }
