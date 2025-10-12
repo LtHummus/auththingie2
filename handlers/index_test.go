@@ -51,6 +51,6 @@ func TestEnv_HandleIndex(t *testing.T) {
 		assert.Equal(t, "DENY", w.Result().Header.Get("X-Frame-Options"))
 		assert.Equal(t, "nosniff", w.Result().Header.Get("X-Content-Type-Options"))
 		assert.Equal(t, "strict-origin-when-cross-origin", w.Result().Header.Get("Referrer-Policy"))
-		assert.Equal(t, "default-src 'self'", w.Result().Header.Get("Content-Security-Policy"))
+		assert.Equal(t, "default-src 'self'; img-src 'self' data:;", w.Result().Header.Get("Content-Security-Policy"))
 	})
 }

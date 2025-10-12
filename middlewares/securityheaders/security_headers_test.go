@@ -32,5 +32,5 @@ func TestMiddleware_ServeHTTP(t *testing.T) {
 	assert.Equal(t, "DENY", resp.Header.Get("X-Frame-Options"))
 	assert.Equal(t, "nosniff", resp.Header.Get("X-Content-Type-Options"))
 	assert.Equal(t, "strict-origin-when-cross-origin", resp.Header.Get("Referrer-Policy"))
-	assert.Equal(t, "default-src 'self'", resp.Header.Get("Content-Security-Policy"))
+	assert.Equal(t, "default-src 'self'; img-src 'self' data:;", resp.Header.Get("Content-Security-Policy"))
 }
