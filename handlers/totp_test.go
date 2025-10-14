@@ -138,6 +138,26 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "tried to validate totp for user that does not have it enabled")
 	})
 
+	t.Run("expired TOTP ticket", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(-5*time.Minute)))
+		v.Add("totp-code", "000000")
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "expired")
+
+		// make sure no session data was written
+		assert.Len(t, w.Result().Cookies(), 0)
+	})
+
 	t.Run("wrong TOTP given", func(t *testing.T) {
 		_, db, _, e := makeTestEnv(t)
 

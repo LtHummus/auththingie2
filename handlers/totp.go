@@ -50,6 +50,11 @@ func (e *Env) HandleTOTPValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if ticket.Expiration.Before(time.Now()) {
+		http.Error(w, "login has expired -- please try logging in again", http.StatusForbidden)
+		return
+	}
+
 	if r.Method == http.MethodGet {
 		e.handleTotpPrompt(w, r, ticket, "")
 	} else if r.Method == http.MethodPost {
