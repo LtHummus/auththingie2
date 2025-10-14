@@ -27,7 +27,7 @@ const (
 	authenticationIDSessionKey = "web_authn_registration_id"
 )
 
-var sessionCache = ttlcache.New[string, *webauthn.SessionData]()
+var sessionCache = ttlcache.New[string, *webauthn.SessionData](ttlcache.WithTTL[string, *webauthn.SessionData](10 * time.Minute))
 
 func init() {
 	log.Info().Msg("starting AuthN TTL cache cleanup thread")
