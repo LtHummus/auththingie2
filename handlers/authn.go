@@ -29,6 +29,11 @@ const (
 
 var sessionCache = ttlcache.New[string, *webauthn.SessionData]()
 
+func init() {
+	log.Info().Msg("starting AuthN TTL cache cleanup thread")
+	go sessionCache.Start()
+}
+
 func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Request) {
 	if viper.GetBool(config.KeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to begin passkey registration when passkeys disabled")
