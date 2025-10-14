@@ -20,6 +20,10 @@ var (
 	)
 )
 
+func init() {
+	go lockCache.Start()
+}
+
 func attemptLockUser(id string) bool {
 	item := lockCache.Get(id)
 
