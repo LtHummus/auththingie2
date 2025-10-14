@@ -25,11 +25,11 @@ AuthThingie 2 is a modern authentication gateway designed for home labs and smal
 
 **The Solution:** AuthThingie 2 sits between your reverse proxy (like Traefik) and your services, providing:
 
-✅ **Single Sign-On** - Log in once, access all your services
-✅ **Modern Auth** - Passkeys (biometrics), TOTP 2FA, traditional passwords
-✅ **Lightweight** - One small Docker container (vs. heavyweight solutions like Keycloak)
-✅ **5-Minute Setup** - Guided web UI configuration, no YAML wrestling required
-✅ **Flexible Rules** - Control access by domain, path, IP address, or user role
+- ✅ **Single Sign-On** - Log in once, access all your services
+- ✅ **Modern Auth** - Passkeys (biometrics), TOTP 2FA, traditional passwords
+- ✅ **Lightweight** - One small Docker container (vs. heavyweight solutions like Keycloak)
+- ✅ **5-Minute Setup** - Guided web UI configuration, no YAML wrestling required
+- ✅ **Flexible Rules** - Control access by domain, path, IP address, or user role
 
 **Perfect for:** Home lab enthusiasts, small teams, anyone who wants secure access without enterprise complexity.
 
