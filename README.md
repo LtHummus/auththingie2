@@ -1,98 +1,186 @@
 # AuthThingie 2
 
-AuthThingie2 (names are still hard) is a simple web server to be used with Traefik (and probably others) [Forward Authentication](https://doc.traefik.io/traefik/middlewares/http/forwardauth/). I originally wrote AuthThingie because I have a home server running a variety of services and I wanted one consistent authentication system (and Basic Auth is pretty cumbersome). 
+> **Simple, lightweight forward authentication for your self-hosted services**
 
-Other applications such as [Keycloak](https://www.keycloak.org/) or [Authelia](https://www.authelia.com/) are good, but they are pretty heavy for just myself and a few friends. 
+AuthThingie 2 is a modern authentication gateway designed for home labs and small teams. Protect your web services with a single sign-on system featuring passkey support, TOTP, and fine-grained access rules—all with a simple web UI setup.
 
-## What's New
-AuthThingie2 improves on the original in a bunch of ways
+---
 
-1. **Passkey support**! AuthThingie supports passkeys for authenticating via biometrics on your mobile device without even having to type your username.
-2. **User management via UI**! Users can be managed via webui instead of a configuration file and restarting the service.
-3. **Rule hot-reloading**! Rules are still done via config file, but the configuration is hot-reloaded so when you change the rules, the config is instantly applied without restarting.
-4. **A new First Time User Experience**! Instead of having to write your config file from the ground up the first time out, you can set everything up via web ui. You can also **import your AuthThingie 1 config file** so you can easily migrate.
-5. **Smaller and faster**. AuthThingie2 was rewritten from the ground up.
+## 📋 Table of Contents
 
-## Setup and Installation
+- [Why AuthThingie 2?](#-why-auththingie-2)
+- [Key Features](#-key-features)
+- [Quick Start](#-quick-start)
+- [Documentation](#-documentation)
+- [What's New in v2](#-whats-new-in-v2)
+- [Requirements](#-requirements)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-### Docker Setup
-AuthThingie 2 is distributed as a Docker image. All you need to do is add a block to your `docker-compose.yaml` file and set up Forward Auth in Traefik.
+---
 
-An example Docker Compose block would look something like:
+## 🎯 Why AuthThingie 2?
+
+**The Problem:** You're running multiple web services (Sonarr, Radarr, Grafana, etc.) on your home server. Setting up authentication for each one individually is tedious, and Basic Auth gets old fast. You want one centralized login that protects everything.
+
+**The Solution:** AuthThingie 2 sits between your reverse proxy (like Traefik) and your services, providing:
+
+✅ **Single Sign-On** - Log in once, access all your services
+✅ **Modern Auth** - Passkeys (biometrics), TOTP 2FA, traditional passwords
+✅ **Lightweight** - One small Docker container (vs. heavyweight solutions like Keycloak)
+✅ **5-Minute Setup** - Guided web UI configuration, no YAML wrestling required
+✅ **Flexible Rules** - Control access by domain, path, IP address, or user role
+
+**Perfect for:** Home lab enthusiasts, small teams, anyone who wants secure access without enterprise complexity.
+
+**Not ideal for:** Large organizations needing OAuth/SAML/LDAP integration, or services requiring federated identity.
+
+---
+
+## ✨ Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Passkey Support** | Sign in with biometrics—no passwords needed |
+| 👥 **Web-Based User Management** | Add/remove users through the UI, no config file editing |
+| 🔄 **Hot-Reload Rules** | Update access rules instantly without restarting |
+| 🎨 **First-Time Setup Wizard** | Guided configuration on first launch |
+| 📦 **Import AuthThingie 1 Configs** | Migrate seamlessly from v1 |
+| 🚀 **Fast & Tiny** | Written in Go, minimal resource footprint |
+| 🛡️ **Flexible Access Control** | Rule-based authorization by host, path, IP, or role |
+
+---
+
+## 🚀 Quick Start
+
+**Prerequisites:**
+- Docker & Docker Compose installed
+- A reverse proxy (Traefik recommended)
+- A domain name pointing to your server
+
+### Step 1: Add to Docker Compose
 
 ```yaml
-  auth2:
+services:
+  auth:
     container_name: auth
     image: lthummus/auththingie2
     restart: unless-stopped
     volumes:
-       - /path/to/your/config/auththingie2:/config
+      - ./auththingie-config:/config
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TIMEZONE}
+      - TZ=America/New_York  # Your timezone
     labels:
       - traefik.enable=true
       - traefik.http.services.auth.loadbalancer.server.port=9000
       - traefik.http.routers.auth.rule=Host(`auth.example.com`)
       - traefik.http.routers.auth.entrypoints=websecure
+      - traefik.http.routers.auth.tls=true
 ```
 
-### Initial Configuration
-By default, AuthThingie listens on port `9000`. Once you have this up and running, go to the site you've set up and you should be automatically forwarded to the setup flow. There, you'll be able to import your AuthThingie 1 file or start from scratch.
+### Step 2: Configure Traefik Forward Auth
 
-AuthThingie 2 will expect its configuration to be mounted at `/config` in the container, so make sure that is a mounted volume.
-
-### Traefik Configuration
-
-Once you've completed setup, you will have to create the Traefik Forward Auth config file, which will look like:
+Create `traefik-config/dynamic/auththingie.yml`:
 
 ```yaml
 http:
   middlewares:
     auththingie:
       forwardAuth:
-        address: "http://auth:9000/auth"
+        address: "http://auth:9000/forward"
 ```
-And then tag every service you want to protect with 
+
+### Step 3: Protect Your Services
+
+Add this label to any service you want to protect:
 
 ```yaml
-- traefik.http.routers.example.middlewares=auththingie@file
+labels:
+  - traefik.http.routers.myservice.middlewares=auththingie@file
 ```
 
-If you're not using Traefik, you'll have to figure this bit out on your own.
+### Step 4: Complete Setup
 
-## Config File Structure
+1. Start the container: `docker-compose up -d auth`
+2. Visit `https://auth.example.com`
+3. Follow the setup wizard to create your admin account
+4. Start protecting your services!
 
-The config file should be named `auththingie2.yaml` and in the config directory (probably `/config`). The structure looks something like this:
+**Next Steps:** See the [📚 Getting Started Guide](docs/getting-started.md) for detailed instructions.
 
-```yaml
-db:
-  file: /config/at2.db
-  kind: sqlite
-rules:
-  - name: /css* on test.example.com
-    host_pattern: test.example.com
-    path_pattern: /css*
-    public: true
-  - name: /colors* on test.example.com
-    host_pattern: test.example.com
-    path_pattern: /colors*
-    permitted_roles:
-      - color_role
-server:
-  auth_url: https://example.com
-  domain: example.com
-  port: 9000
-```
+---
 
-* The `db` section describes your backing database. Right now the only `kind` we support is `sqlite` and `file` should point to your SQLite database.
-* The `rules` section describes rules. Each rule should have a name. You also should have some matching like `host_pattern`, `path_pattern` (`*` wildcards supported!) or `source_ip` (which should be a CIDR)
-* The `server` section has some server configuration. The `auth_url` should be the URL that AuthThingie 2 lives at. `domain` should be the root domain (for example if you are protecting `a.example.com` and `b.example.com`, you should put `example.com`). `port` should be self-explanatory
+## 📚 Documentation
 
-#### Hidden Options
+### For Beginners
+- **[Getting Started Guide](docs/getting-started.md)** - Step-by-step setup from scratch
+- **[Core Concepts](docs/architecture.md#core-concepts)** - Understand how forward auth works
+- **[FAQ](docs/faq.md)** - Common questions answered
 
-These exist, document later (including the secret debugging commands).
+### For Intermediate Users
+- **[Configuration Reference](docs/configuration.md)** - Complete YAML schema documentation
+- **[Access Rules Guide](docs/configuration.md#access-rules)** - Control who can access what
+- **[Troubleshooting](docs/troubleshooting.md)** - Fix common issues
 
+### For Advanced Users
+- **[Architecture Overview](docs/architecture.md)** - How AuthThingie 2 works internally
+- **[Advanced Scenarios](docs/advanced.md)** - Multiple domains, IP whitelisting, etc.
+- **[Development Guide](docs/advanced.md#development)** - Build from source, contribute
 
+---
 
+## 🎉 What's New in v2
+
+AuthThingie 2 is a complete rewrite with major improvements:
+
+1. **Passkey Support** - Authenticate via biometrics on your phone without typing usernames
+2. **Web-Based User Management** - No more editing config files to add users
+3. **Hot-Reload Rules** - Change access rules without restarting the service
+4. **Guided Setup Wizard** - No YAML editing required on first run
+5. **Migration Tool** - Import AuthThingie 1 configs automatically
+6. **Smaller & Faster** - Rewritten for better performance
+
+[See full changelog →](https://github.com/lthummus/auththingie2/releases)
+
+---
+
+## 📦 Requirements
+
+| Component | Requirement | Notes |
+|-----------|-------------|-------|
+| **Docker** | 20.10+ | Required for running the container |
+| **Reverse Proxy** | Traefik 2.0+ | Or any proxy supporting forward auth |
+| **Domain** | At least one | Can use a subdomain (auth.yourdomain.com) |
+| **TLS Certificate** | Recommended | Required for passkeys; use Let's Encrypt |
+
+**Knowledge Prerequisites:**
+- Basic Docker Compose usage
+- Basic understanding of reverse proxies
+- Ability to edit YAML files
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see the [Development Guidelines](AGENTS.md) for details.
+
+**Found a bug?** [Open an issue](https://github.com/lthummus/auththingie2/issues)
+**Have a question?** Check the [FAQ](docs/faq.md) first, then open a discussion
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [MIT License](LICENSE) for the full text.
+
+---
+
+## 🔗 Links
+
+- **Docker Hub:** [lthummus/auththingie2](https://hub.docker.com/r/lthummus/auththingie2)
+- **Example Setup:** Browse the [example directory](example/)
+- **Traefik Docs:** [Forward auth middleware](https://doc.traefik.io/traefik/middlewares/http/forwardauth/)
+
+---
+
+**Need help?** Start with the [Getting Started Guide](docs/getting-started.md) or check the [FAQ](docs/faq.md).
