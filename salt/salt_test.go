@@ -92,12 +92,12 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		err = os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 
-		CheckOrMakeSalt()
-
 		viper.Set("server.secret_key", "test")
 		t.Cleanup(func() {
 			viper.Set("server.secret_key", "")
 		})
+
+		CheckOrMakeSalt()
 
 		assert.Equal(t, "297a0fa07e6b51111c25d01b51ea359bf7b81544eb0e79361b3f979cbc21fd3c", hex.EncodeToString(GenerateSigningKey()))
 		assert.Equal(t, "41a1f86617b05c33bdff87b2504873cdc2db58d576d6ca846f88201bda9ba796", hex.EncodeToString(GenerateEncryptionKey()))

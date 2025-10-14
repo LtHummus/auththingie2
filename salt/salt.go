@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"testing"
+	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
@@ -17,6 +19,9 @@ import (
 const (
 	saltLength = 32
 	version    = 1
+
+	defaultIterations     = 600000
+	defaultIterationsTest = 15
 )
 
 func getSaltPath() string {
@@ -40,6 +45,9 @@ var (
 	salt     *payload
 	saltFile string
 
+	signingKey    []byte
+	encryptionKey []byte
+
 	lock sync.Mutex
 )
 
@@ -61,6 +69,14 @@ func CheckOrMakeSalt() {
 		readSalt(saltPath)
 	}
 	saltFile = saltPath
+
+	iterationCount := getIterationCount()
+
+	start := time.Now()
+	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, iterationCount, 32, sha256.New)
+	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, iterationCount, 32, sha256.New)
+
+	log.Info().Int("iteration_count", iterationCount).Dur("key_generation_time", time.Since(start)).Msg("generated signing and encryption keys")
 }
 
 func GetSaltPath() string {
@@ -122,12 +138,19 @@ func readSalt(path string) {
 	salt = &read
 }
 
+func getIterationCount() int {
+	if testing.Testing() {
+		return defaultIterationsTest
+	}
+	return defaultIterations
+}
+
 func GenerateSigningKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, 15, 32, sha256.New)
+	return signingKey
 }
 
 func GenerateEncryptionKey() []byte {
 	CheckOrMakeSalt()
-	return pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, 15, 32, sha256.New)
+	return encryptionKey
 }
