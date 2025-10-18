@@ -15,8 +15,9 @@
             {{ template "authn_key_list.gohtml" . }}
 
             <div id="enroll_error" class="error-box no-error"></div>
-            <button id="passkey-enroll-button" onclick="beginRegistration()">Enroll New Key</button>
+            <button id="passkey-enroll-button">Enroll New Key</button>
         </div>
 
     <script src="/static/js/webauthn.js"></script>
+    <script src="/static/js/webauthn_manage.js"></script>
 {{ end }}
