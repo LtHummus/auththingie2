@@ -31,8 +31,8 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="port" id="port-field" required aria-label="Server Port" value="9000" />`)
-		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  checked  onclick="showCustomFields()" />`)
-		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  onclick="showCustomFields()"  />`)
+		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  checked  />`)
+		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 	})
@@ -47,8 +47,8 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="port" id="port-field" required aria-label="Server Port" value="9000" />`)
-		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  onclick="showCustomFields()" />`)
-		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  checked  onclick="showCustomFields()"  />`)
+		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  />`)
+		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  checked  />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 

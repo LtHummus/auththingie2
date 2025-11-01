@@ -29,13 +29,14 @@
                 {{ if .EnablePasskeys }}
                     <hr class="passkey-line" />
                     <div id="authn_login_error" class="error-box no-error"></div>
-                    <button onclick="handleDiscoverLogin()" id="passkey-login-button">
+                    <button id="passkey-login-button">
                         <img src="/static/images/fido-passkey-white.svg" alt="Passkey Logo" class="passkey-logo" />
                         Login with Passkey
                     </button>
                 {{ end }}
         </div>
     <script src="/static/js/webauthn.js"></script>
+    <script src="/static/js/login.js"></script>
 </div>
 
 {{end}}

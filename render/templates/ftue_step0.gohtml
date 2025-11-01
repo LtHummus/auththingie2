@@ -39,15 +39,15 @@
                     </p>
                     <fieldset>
                         <label for="slash-config-radio">
-                            <input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig" {{ if .DefaultSlashConfig }} checked {{ end }} onclick="showCustomFields()" />
+                            <input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig" {{ if .DefaultSlashConfig }} checked {{ end }} />
                             <code>/config</code> (This is a good choice if you're using Docker)
                         </label>
                         <label for="cwd-radio">
-                            <input type="radio" id="cwd-radio" name="config_file_preset" value="pwd" {{ if .DefaultPWD }} checked {{ end }} onclick="showCustomFields()"  />
+                            <input type="radio" id="cwd-radio" name="config_file_preset" value="pwd" {{ if .DefaultPWD }} checked {{ end }} />
                             <code>{{ .PWD }}</code> This is the current working directory. This is good if you're running outside of docker.
                         </label>
                         <label for="custom-radio">
-                            <input type="radio" id="custom-radio" name="config_file_preset" value="custom" onclick="showCustomFields()"  />
+                            <input type="radio" id="custom-radio" name="config_file_preset" value="custom" />
                             Custom paths. Only pick this if you absolutely know what you are doing.
                         </label>
                         <div id="custom-path-fields">
@@ -91,4 +91,5 @@
     </div>
 
     <script src="/static/js/ftue.js"></script>
+    <script src="/static/js/ftue0.js"></script>
 {{end}}
