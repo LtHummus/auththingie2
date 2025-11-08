@@ -18,9 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/salt"
 	"github.com/lthummus/auththingie2/internal/user"
-	"github.com/lthummus/auththingie2/mocks"
 )
 
 var (

@@ -8,9 +8,8 @@ import (
 	"context"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	mock "github.com/stretchr/testify/mock"
-
 	"github.com/lthummus/auththingie2/internal/user"
+	mock "github.com/stretchr/testify/mock"
 )
 
 // NewMockDB creates a new instance of MockDB. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

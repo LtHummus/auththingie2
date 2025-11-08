@@ -3,7 +3,7 @@ package ftue
 import (
 	"testing"
 
-	"github.com/lthummus/auththingie2/mocks"
+	"github.com/lthummus/auththingie2/internal/mocks"
 )
 
 func makeTestEnv(t *testing.T) (*mocks.MockDB, *mocks.MockAnalyzer, *ftueEnv) {

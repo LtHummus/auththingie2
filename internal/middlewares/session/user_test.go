@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/user"
-	"github.com/lthummus/auththingie2/mocks"
 )
 
 var (
