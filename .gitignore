@@ -7,3 +7,4 @@ auththingie2.yaml.old
 tls/*
 .DS_Store
 at2.db
+main.db

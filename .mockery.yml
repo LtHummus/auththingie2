@@ -1,13 +1,15 @@
-dir: mocks
+all: false
+dir: internal/mocks
 filename: "{{.InterfaceName}}.go"
 pkgname: "mocks"
+template: testify
 packages:
-  github.com/lthummus/auththingie2/db:
+  github.com/lthummus/auththingie2/internal/db:
     config:
       all: true
-  github.com/lthummus/auththingie2/rules:
+  github.com/lthummus/auththingie2/internal/rules:
     config:
       all: true
-  github.com/lthummus/auththingie2/loginlimit:
+  github.com/lthummus/auththingie2/internal/loginlimit:
     config:
       all: true
