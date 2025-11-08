@@ -5,8 +5,9 @@
 package mocks
 
 import (
-	"github.com/lthummus/auththingie2/rules"
 	mock "github.com/stretchr/testify/mock"
+
+	"github.com/lthummus/auththingie2/internal/rules"
 )
 
 // NewMockAnalyzer creates a new instance of MockAnalyzer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
