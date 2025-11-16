@@ -13,7 +13,6 @@ import (
 	"github.com/lthummus/auththingie2/internal/render"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/internal/rules"
@@ -29,52 +28,52 @@ type Env struct {
 func (e *Env) BuildRouter() http.Handler {
 	log.Info().Msg("setting up listeners")
 
-	muxer := mux.NewRouter()
+	mux := http.NewServeMux()
 
-	muxer.HandleFunc("/forward", e.HandleCheckRequest)
-	muxer.HandleFunc("/auth", e.HandleCheckRequest)
-	muxer.HandleFunc("/forbidden", e.HandleNotAllowed)
-	muxer.HandleFunc("/disabled", e.HandleAccountDisabled)
+	mux.HandleFunc("/forward", e.HandleCheckRequest)
+	mux.HandleFunc("/auth", e.HandleCheckRequest)
+	mux.HandleFunc("/forbidden", e.HandleNotAllowed)
+	mux.HandleFunc("/disabled", e.HandleAccountDisabled)
 
-	muxer.HandleFunc("/debug", e.HandleDebug)
+	mux.HandleFunc("/debug", e.HandleDebug)
 
-	muxer.HandleFunc("/login", e.HandleLoginPage)
-	muxer.HandleFunc("/logout", e.HandleLogout)
+	mux.HandleFunc("/login", e.HandleLoginPage)
+	mux.HandleFunc("/logout", e.HandleLogout)
 
-	muxer.HandleFunc("/", e.HandleIndex).Methods(http.MethodGet)
+	mux.HandleFunc("/totp", e.HandleTOTPValidation)
+	mux.HandleFunc("/enable_totp", e.HandleTOTPSetup)
+	mux.HandleFunc("/disable_totp", e.HandleTOTPDisable)
 
-	muxer.HandleFunc("/totp", e.HandleTOTPValidation)
-	muxer.HandleFunc("/enable_totp", e.HandleTOTPSetup)
-	muxer.HandleFunc("/disable_totp", e.HandleTOTPDisable)
+	mux.HandleFunc("GET /admin/users/create", e.HandleCreateUserPage)
+	mux.HandleFunc("POST /admin/users/create", e.HandleCreateUserPost)
+	mux.HandleFunc("GET /admin/users/{userId}", e.RenderUserEditPage)
+	mux.HandleFunc("POST /admin/users/{userId}", e.HandleEditUserSubmission)
+	mux.HandleFunc("POST /admin/users/{userId}/totp_unenroll", e.HandleAdminUnenrollTOTP)
+	mux.HandleFunc("POST /admin/users/{userId}/delete", e.HandleUserDelete)
+	mux.HandleFunc("PATCH /admin/users/{userId}/tags", e.HandleUserPatchTagsModification)
+	mux.HandleFunc("DELETE /admin/users/{userId}/tags/{tag}", e.HandleUserTagDelete)
+	mux.HandleFunc("PATCH /admin/users/{userId}/disable", e.HandleUserDisableEnable)
+	mux.HandleFunc("GET /admin/ruletest", e.HandleTestRule)
+	mux.HandleFunc("GET /admin", e.HandleAdminPage)
 
-	muxer.HandleFunc("/admin/users/create", e.HandleCreateUserPage).Methods(http.MethodGet)
-	muxer.HandleFunc("/admin/users/create", e.HandleCreateUserPost).Methods(http.MethodPost)
-	muxer.HandleFunc("/admin/users/{userId}", e.RenderUserEditPage).Methods(http.MethodGet)
-	muxer.HandleFunc("/admin/users/{userId}", e.HandleEditUserSubmission).Methods(http.MethodPost)
-	muxer.HandleFunc("/admin/users/{userId}/totp_unenroll", e.HandleAdminUnenrollTOTP).Methods(http.MethodPost)
-	muxer.HandleFunc("/admin/users/{userId}/delete", e.HandleUserDelete).Methods(http.MethodPost)
-	muxer.HandleFunc("/admin/users/{userId}/tags", e.HandleUserPatchTagsModification).Methods(http.MethodPatch)
-	muxer.HandleFunc("/admin/users/{userId}/tags/{tag}", e.HandleUserTagDelete).Methods(http.MethodDelete)
-	muxer.HandleFunc("/admin/users/{userId}/disable", e.HandleUserDisableEnable).Methods(http.MethodPatch)
-	muxer.HandleFunc("/admin/ruletest", e.HandleTestRule).Methods(http.MethodGet)
-	muxer.HandleFunc("/admin", e.HandleAdminPage).Methods(http.MethodGet)
+	mux.HandleFunc("GET /edit_self", e.HandleSelfConfigGet)
+	mux.HandleFunc("GET /edit_self/password", e.HandleSelfConfigPasswordGet)
+	mux.HandleFunc("POST /edit_self/password", e.HandleSelfConfigPasswordPost)
 
-	muxer.HandleFunc("/edit_self", e.HandleSelfConfigGet).Methods(http.MethodGet)
-	muxer.HandleFunc("/edit_self/password", e.HandleSelfConfigPasswordGet).Methods(http.MethodGet)
-	muxer.HandleFunc("/edit_self/password", e.HandleSelfConfigPasswordPost).Methods(http.MethodPost)
+	mux.HandleFunc("/webauthn/manage", e.HandleRenderWebAuthnManage)
+	mux.HandleFunc("/webauthn/register", e.HandleWebAuthnBeginRegistration)
+	mux.HandleFunc("/webauthn/finishregister", e.HandleWebAuthnFinishRegistration)
+	mux.HandleFunc("/webauthn/discover", e.HandleWebAuthnBeginDiscoverableLogin)
+	mux.HandleFunc("/webauthn/finishdiscover", e.HandleWebAuthnFinishDiscoverableLogin)
+	mux.HandleFunc("/webauthn/keys/{keyId}", e.HandleWebAuthnEditKey)
+	mux.HandleFunc("/webauthn/keys/{keyId}/edit", e.HandleWebAuthnEditKey)
+	mux.HandleFunc("/webauthn/keys", e.GetEnrolledPasskeyKeyIDs)
 
-	muxer.HandleFunc("/webauthn/manage", e.HandleRenderWebAuthnManage)
-	muxer.HandleFunc("/webauthn/register", e.HandleWebAuthnBeginRegistration)
-	muxer.HandleFunc("/webauthn/finishregister", e.HandleWebAuthnFinishRegistration)
-	muxer.HandleFunc("/webauthn/discover", e.HandleWebAuthnBeginDiscoverableLogin)
-	muxer.HandleFunc("/webauthn/finishdiscover", e.HandleWebAuthnFinishDiscoverableLogin)
-	muxer.HandleFunc("/webauthn/keys/{keyId}", e.HandleWebAuthnEditKey)
-	muxer.HandleFunc("/webauthn/keys/{keyId}/edit", e.HandleWebAuthnEditKey)
-	muxer.HandleFunc("/webauthn/keys", e.GetEnrolledPasskeyKeyIDs)
+	mux.Handle("/static/", render.StaticFSHandler())
 
-	muxer.PathPrefix("/static/").Handler(render.StaticFSHandler())
+	mux.HandleFunc("/", e.HandleIndex)
 
-	sessionMiddleware := session.NewMiddleware(muxer, e.Database)
+	sessionMiddleware := session.NewMiddleware(mux, e.Database)
 
 	cop := http.NewCrossOriginProtection()
 	cop.AddInsecureBypassPattern("/forward")

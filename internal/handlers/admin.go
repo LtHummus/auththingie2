@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -96,7 +95,7 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userId).Msg("could not get user from database")
@@ -153,9 +152,8 @@ func (e *Env) HandleUserTagDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	tagToDelete := vars["tag"]
-	userId := vars["userId"]
+	tagToDelete := r.PathValue("tag")
+	userId := r.PathValue("userId")
 
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
@@ -206,7 +204,7 @@ func (e *Env) RenderUserEditPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userId).Msg("could not get user info")
@@ -230,7 +228,7 @@ func (e *Env) HandleEditUserSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 	u, err := e.Database.GetUserByGuid(r.Context(), userId)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", userId).Msg("could not get user")
@@ -392,7 +390,7 @@ func (e *Env) HandleAdminUnenrollTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 	if u.Id == userId {
 		log.Warn().Str("user_id", userId).Msg("tried to admin uneroll self")
 		http.Error(w, "to unenroll yourself, you must use the normal method", http.StatusUnprocessableEntity)
@@ -429,7 +427,7 @@ func (e *Env) HandleUserDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 
 	if u.Id == userId {
 		log.Warn().Str("user_id", userId).Msg("tried to delete self")
@@ -455,7 +453,7 @@ func (e *Env) HandleUserDisableEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := mux.Vars(r)["userId"]
+	userId := r.PathValue("userId")
 
 	if u.Id == userId {
 		log.Warn().Str("user_id", userId).Msg("tried to delete self")

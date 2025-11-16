@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -44,18 +43,17 @@ type ftueImportConfirmParams struct {
 }
 
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
-	m := mux.NewRouter()
+	mux := http.NewServeMux()
 
-	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if step == StepConfigExists {
 			http.Redirect(w, r, "/ftue/step1", http.StatusFound)
 			return
 		}
-
 		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
 	})
 
-	m.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		requestHost := r.Header.Get("X-Forwarded-Host")
 		allowHost := os.Getenv("FTUE_ALLOW_HOST")
 
@@ -69,29 +67,29 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	})
 
 	// TODO: remove CSRF exemption here
-	m.HandleFunc("/ftue/path", HandlePathComplete)
+	mux.HandleFunc("/ftue/path", HandlePathComplete)
 
-	m.HandleFunc("/ftue/step0", fe.HandleFTUEStep0GET).Methods(http.MethodGet)
-	m.HandleFunc("/ftue/step0", fe.HandleFTUEStep0POST).Methods(http.MethodPost)
+	mux.HandleFunc("GET /ftue/step0", fe.HandleFTUEStep0GET)
+	mux.HandleFunc("POST /ftue/step0", fe.HandleFTUEStep0POST)
 
-	m.HandleFunc("/ftue/step1", fe.HandleFTUEStep1).Methods(http.MethodGet)
+	mux.HandleFunc("GET /ftue/step1", fe.HandleFTUEStep1)
 
-	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPage).Methods(http.MethodGet)
-	m.HandleFunc("/ftue/scratch", fe.HandleFTUEScratchRenderPOST).Methods(http.MethodPost)
+	mux.HandleFunc("GET /ftue/scratch", fe.HandleFTUEScratchRenderPage)
+	mux.HandleFunc("POST /ftue/scratch", fe.HandleFTUEScratchRenderPOST)
 
-	m.HandleFunc("/ftue/import", fe.HandleRenderImportPage).Methods(http.MethodGet)
-	m.HandleFunc("/ftue/import", fe.HandlerImportPageUpload).Methods(http.MethodPost)
-	m.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)
+	mux.HandleFunc("GET /ftue/import", fe.HandleRenderImportPage)
+	mux.HandleFunc("POST /ftue/import", fe.HandlerImportPageUpload)
+	mux.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)
 
-	m.HandleFunc("/ftue/restart", HandleRestartPage).Methods(http.MethodGet)
-	m.HandleFunc("/ftue/restart", HandleRestartPost).Methods(http.MethodPost)
+	mux.HandleFunc("GET /ftue/restart", HandleRestartPage)
+	mux.HandleFunc("POST /ftue/restart", HandleRestartPost)
 
-	m.PathPrefix("/static/").Handler(render.StaticFSHandler())
+	mux.Handle("/static/", render.StaticFSHandler())
 
 	cop := http.NewCrossOriginProtection()
 	cop.AddInsecureBypassPattern("/ftue/path")
 
-	handler := cop.Handler(m)
+	handler := cop.Handler(mux)
 
 	if !viper.GetBool(config.DisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
