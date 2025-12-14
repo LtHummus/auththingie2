@@ -145,3 +145,43 @@ func (_c *MockLoginLimiter_MarkFailedAttempt_Call) RunAndReturn(run func(key str
 	_c.Call.Return(run)
 	return _c
 }
+
+// MarkSuccessfulAttempt provides a mock function for the type MockLoginLimiter
+func (_mock *MockLoginLimiter) MarkSuccessfulAttempt(key string) {
+	_mock.Called(key)
+	return
+}
+
+// MockLoginLimiter_MarkSuccessfulAttempt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkSuccessfulAttempt'
+type MockLoginLimiter_MarkSuccessfulAttempt_Call struct {
+	*mock.Call
+}
+
+// MarkSuccessfulAttempt is a helper method to define mock.On call
+//   - key string
+func (_e *MockLoginLimiter_Expecter) MarkSuccessfulAttempt(key interface{}) *MockLoginLimiter_MarkSuccessfulAttempt_Call {
+	return &MockLoginLimiter_MarkSuccessfulAttempt_Call{Call: _e.mock.On("MarkSuccessfulAttempt", key)}
+}
+
+func (_c *MockLoginLimiter_MarkSuccessfulAttempt_Call) Run(run func(key string)) *MockLoginLimiter_MarkSuccessfulAttempt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLoginLimiter_MarkSuccessfulAttempt_Call) Return() *MockLoginLimiter_MarkSuccessfulAttempt_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockLoginLimiter_MarkSuccessfulAttempt_Call) RunAndReturn(run func(key string)) *MockLoginLimiter_MarkSuccessfulAttempt_Call {
+	_c.Run(run)
+	return _c
+}

@@ -238,6 +238,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		_, db, ll, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("MarkSuccessfulAttempt", "totp_ip|192.0.2.1")
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -275,6 +276,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		_, db, ll, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("MarkSuccessfulAttempt", "totp_ip|192.0.2.1")
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -305,6 +307,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		_, db, ll, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("MarkSuccessfulAttempt", "totp_ip|192.0.2.1")
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",

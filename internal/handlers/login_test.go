@@ -313,6 +313,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|regularuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "username|regularuser")
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
 		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -336,6 +338,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|regularuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|regularuser")
 		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUserWithTOTP, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -365,6 +369,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|regularuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|regularuser")
 		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -399,6 +405,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|regularuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|regularuser")
 		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -430,6 +438,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|sampletotp").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|sampletotp")
 		db.On("GetUserByUsername", mock.Anything, "sampletotp").Return(sampleNonAdminWithTOTP, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -461,6 +471,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "username|oldpwuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|oldpwuser")
 		db.On("GetUserByUsername", mock.Anything, "oldpwuser").Return(sampleNonAdminWithOldArgonParams, nil)
 		db.On("UpdatePassword", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 

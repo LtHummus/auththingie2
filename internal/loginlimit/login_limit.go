@@ -12,6 +12,7 @@ import (
 type LoginLimiter interface {
 	IsAccountLocked(key string) bool
 	MarkFailedAttempt(key string) (int, error)
+	MarkSuccessfulAttempt(key string)
 }
 
 var (
@@ -68,14 +69,12 @@ func NewInMemoryLimiter() *InMemoryLoginLimiter {
 	imll := constructLimiter(failureLimit, lookbackTime, lockDuration)
 
 	go func() {
+		sleepDuration := min(lookbackTime, lockDuration) / 2
+
 		for {
-			sleepDuration := 2 * min(lookbackTime, lockDuration)
+			time.Sleep(sleepDuration)
 
-			for {
-				time.Sleep(sleepDuration)
-
-				imll.cleanupRoutine()
-			}
+			imll.cleanupRoutine()
 		}
 	}()
 
@@ -136,13 +135,15 @@ func (iml *InMemoryLoginLimiter) IsAccountLocked(key string) bool {
 	iml.lockLock.Lock()
 	defer iml.lockLock.Unlock()
 
+	now := time.Now()
+
 	unlockTime := iml.accountLocks[key]
 
-	if unlockTime.Before(time.Now()) {
+	if !unlockTime.After(now) {
 		delete(iml.accountLocks, key)
 	}
 
-	return unlockTime.After(time.Now())
+	return unlockTime.After(now)
 }
 
 func (iml *InMemoryLoginLimiter) lockAccount(key string) {
@@ -160,14 +161,16 @@ func (iml *InMemoryLoginLimiter) MarkFailedAttempt(key string) (int, error) {
 	iml.failureLock.Lock()
 	defer iml.failureLock.Unlock()
 
+	now := time.Now()
+
 	var cleanedAccountFailures []time.Time
 	for _, curr := range iml.loginFailures[key] {
-		if curr.After(time.Now()) {
+		if curr.After(now) {
 			cleanedAccountFailures = append(cleanedAccountFailures, curr)
 		}
 	}
 
-	cleanedAccountFailures = append(cleanedAccountFailures, time.Now().Add(iml.failureLookbackTime))
+	cleanedAccountFailures = append(cleanedAccountFailures, now.Add(iml.failureLookbackTime))
 	if len(cleanedAccountFailures) >= iml.maxFailures {
 		// delete failures and lock account
 		delete(iml.loginFailures, key)
@@ -179,4 +182,14 @@ func (iml *InMemoryLoginLimiter) MarkFailedAttempt(key string) (int, error) {
 	iml.loginFailures[key] = cleanedAccountFailures
 
 	return iml.maxFailures - len(cleanedAccountFailures), nil
+}
+
+func (iml *InMemoryLoginLimiter) MarkSuccessfulAttempt(key string) {
+	iml.failureLock.Lock()
+	delete(iml.loginFailures, key)
+	iml.failureLock.Unlock()
+
+	iml.lockLock.Lock()
+	delete(iml.accountLocks, key)
+	iml.lockLock.Unlock()
 }
