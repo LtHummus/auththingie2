@@ -116,3 +116,38 @@ func TestInMemoryLoginLimiter_cleanupRoutine(t *testing.T) {
 
 	})
 }
+
+func TestInMemoryLoginLimiter_MarkSuccessfulAttempt(t *testing.T) {
+	t.Run("basic test (failures only)", func(t *testing.T) {
+		l := constructLimiter(5, 15*time.Minute, 20*time.Minute)
+
+		l.MarkFailedAttempt("test")
+		l.MarkFailedAttempt("test")
+		l.MarkFailedAttempt("test")
+
+		assert.Equal(t, 3, len(l.loginFailures["test"]))
+
+		l.MarkSuccessfulAttempt("test")
+
+		assert.Nil(t, l.loginFailures["test"])
+	})
+
+	t.Run("basic test (account locked)", func(t *testing.T) {
+		// i'm not sure how this can possibly happen because logging in (e.g. a "success") can't possibly happen
+		// if the account is locked, but we'll test anyway
+
+		l := constructLimiter(3, 15*time.Minute, 20*time.Minute)
+
+		l.MarkFailedAttempt("test")
+		l.MarkFailedAttempt("test")
+		remain, err := l.MarkFailedAttempt("test")
+		assert.Equal(t, 0, remain)
+		assert.ErrorIs(t, err, ErrAccountLocked)
+
+		assert.True(t, l.IsAccountLocked("test"))
+
+		l.MarkSuccessfulAttempt("test")
+
+		assert.False(t, l.IsAccountLocked("test"))
+	})
+}

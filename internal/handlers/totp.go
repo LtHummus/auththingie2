@@ -125,6 +125,8 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 		return
 	}
 
+	e.LoginLimiter.MarkSuccessfulAttempt(sourceIPKey)
+
 	if user.Disabled {
 		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted login of disabled account")
 		e.handleTotpPrompt(w, r, data, "Account is disabled")

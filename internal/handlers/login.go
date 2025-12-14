@@ -180,6 +180,9 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
+	e.LoginLimiter.MarkSuccessfulAttempt(sourceIPKey)
+	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
+
 	if u.TOTPEnabled() {
 		loginTicket := totp.GenerateLoginTicket(u.Id, redirectURL)
 		e.handleTotpPrompt(w, r, loginTicket, "")
