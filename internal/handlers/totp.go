@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/base32"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/skip2/go-qrcode"
 
+	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/render"
 	totp2 "github.com/lthummus/auththingie2/internal/totp"
@@ -81,8 +83,15 @@ func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTick
 }
 
 func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data totp2.LoginTicket) {
+	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r))
+
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
 	redirectURI := data.RedirectURI
+
+	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
+		e.handleTotpPrompt(w, r, data, "This IP address has failed TOTP validation too many times. Try again later.")
+		return
+	}
 
 	user, err := e.Database.GetUserByGuid(r.Context(), data.UserID)
 	if err != nil {
@@ -105,6 +114,13 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 
 	codeOK := totp.Validate(totpCode, *user.TOTPSeed)
 	if !codeOK {
+		_, err = e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
+		if errors.Is(err, loginlimit.ErrAccountLocked) {
+			e.handleTotpPrompt(w, r, data, "Incorrect TOTP Code. This IP address has failed TOTP validation too many times")
+			return
+		} else if err != nil {
+			log.Error().Str("source_ip_key", sourceIPKey).Err(err).Msg("could not mark source IP failed")
+		}
 		e.handleTotpPrompt(w, r, data, "Incorrect TOTP Code")
 		return
 	}

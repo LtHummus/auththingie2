@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/loginlimit"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -78,8 +79,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("database error", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, errors.New("whoops"))
 
 		v := url.Values{}
@@ -97,8 +99,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("user not found error", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, nil)
 
 		v := url.Values{}
@@ -116,8 +119,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("no TOTP set", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -158,9 +162,55 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		assert.Len(t, w.Result().Cookies(), 0)
 	})
 
-	t.Run("wrong TOTP given", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+	t.Run("IP is banned at outset", func(t *testing.T) {
+		_, _, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(true)
+
+		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
+		v.Add("totp-code", "000000")
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "This IP address has failed TOTP validation too many times")
+	})
+
+	t.Run("IP becomes banned after bad TOTP", func(t *testing.T) {
+		_, db, ll, e := makeTestEnv(t)
+
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("MarkFailedAttempt", "totp_ip|192.0.2.1").Return(0, loginlimit.ErrAccountLocked)
+		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
+			Id:       "test-user",
+			Username: "testuser",
+			TOTPSeed: &sampleTOTPSeed,
+		}, nil)
+
+		v := url.Values{}
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
+		v.Add("totp-code", "000000")
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "This IP address has failed TOTP validation too many times")
+	})
+
+	t.Run("wrong TOTP given", func(t *testing.T) {
+		_, db, ll, e := makeTestEnv(t)
+
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("MarkFailedAttempt", "totp_ip|192.0.2.1").Return(4, nil)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -185,8 +235,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -221,7 +272,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("can't proceed if account is disabled", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
+
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",
@@ -249,8 +302,9 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code with redirect", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, ll, e := makeTestEnv(t)
 
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
 			Id:       "test-user",
 			Username: "testuser",

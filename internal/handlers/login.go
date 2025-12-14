@@ -82,12 +82,52 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (e *Env) handleLoginFailureAndGetError(accountKey string, sourceIPKey string) string {
+	errorMessage := "Invalid Username or Password"
+
+	accountLocked := false
+
+	remaining, err := e.LoginLimiter.MarkFailedAttempt(accountKey)
+	if errors.Is(err, loginlimit.ErrAccountLocked) {
+		accountLocked = true
+		errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
+	} else if err != nil {
+		log.Warn().Err(err).Str("account_key", accountKey).Msg("error when marking login failure")
+		errorMessage = "An error happened attempting to log you in"
+	} else {
+		errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
+	}
+
+	// mark IP address as failed as well, but slightly different semantics for errors
+	remaining, err = e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
+	if errors.Is(err, loginlimit.ErrAccountLocked) && !accountLocked {
+		errorMessage = "Invalid Username or Password. This IP address has failed login too many times. Try again later"
+	} else if err != nil && !errors.Is(err, loginlimit.ErrAccountLocked) {
+		log.Warn().Err(err).Str("source_ip_key", sourceIPKey).Msg("error when marking login failure")
+		errorMessage = "An error happened attempting to log you in"
+	}
+
+	return errorMessage
+}
+
 func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
-	if e.LoginLimiter.IsAccountLocked(username) {
+	sourceIPKey := fmt.Sprintf("ip|%s", trueip.Find(r))
+	accountKey := fmt.Sprintf("username|%s", username)
+
+	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
+		render.Render(w, "login.gohtml", &loginPageParams{
+			Error:          "This IP has had too many login failures recently. Try again later",
+			RedirectURI:    redirectURL,
+			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		})
+		return
+	}
+
+	if e.LoginLimiter.IsAccountLocked(accountKey) {
 		render.Render(w, "login.gohtml", &loginPageParams{
 			Error:          "This account is temporarily locked",
 			RedirectURI:    redirectURL,
@@ -110,17 +150,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		// be detected via timing
 		_ = argon.ValidatePassword("aaaaaaaaaa", fakeArgonHash)
 
-		errorMessage := "Invalid Username or Password"
-
-		remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
-		if errors.Is(err, loginlimit.ErrAccountLocked) {
-			errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-		} else if err != nil {
-			log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
-			errorMessage = "An error happened attempting to log you in"
-		} else {
-			errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-		}
+		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
 
 		render.Render(w, "login.gohtml", &loginPageParams{
 			Error:          errorMessage,
@@ -134,17 +164,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Str("ip", trueip.Find(r)).Err(err).Msg("invalid login")
 
-		errorMessage := "Invalid Username or Password"
-
-		remaining, err := e.LoginLimiter.MarkFailedAttempt(username)
-		if errors.Is(err, loginlimit.ErrAccountLocked) {
-			errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-		} else if err != nil {
-			log.Warn().Err(err).Str("username", username).Msg("error when marking login failure")
-			errorMessage = "An error happened attempting to log you in"
-		} else {
-			errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-		}
+		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
 
 		render.Render(w, "login.gohtml", &loginPageParams{
 			Error:          errorMessage,
