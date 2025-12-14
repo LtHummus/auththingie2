@@ -84,12 +84,18 @@ func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTick
 
 func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data totp2.LoginTicket) {
 	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r))
+	accountKey := fmt.Sprintf("totp_user_guid|%s", data.UserID)
 
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
 	redirectURI := data.RedirectURI
 
 	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
 		e.handleTotpPrompt(w, r, data, "This IP address has failed TOTP validation too many times. Try again later.")
+		return
+	}
+
+	if e.LoginLimiter.IsAccountLocked(accountKey) {
+		e.handleTotpPrompt(w, r, data, "This account is temporarily locked due to too many TOTP failures.")
 		return
 	}
 
@@ -114,11 +120,20 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 
 	codeOK := totp.Validate(totpCode, *user.TOTPSeed)
 	if !codeOK {
-		_, err = e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
-		if errors.Is(err, loginlimit.ErrAccountLocked) {
+		_, accountErr := e.LoginLimiter.MarkFailedAttempt(accountKey)
+		_, ipErr := e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
+
+		if errors.Is(accountErr, loginlimit.ErrAccountLocked) {
+			e.handleTotpPrompt(w, r, data, "Incorrect TOTP Code. This account has been temporarily locked due to too many TOTP failures")
+			return
+		} else if accountErr != nil {
+			log.Error().Str("account_key", accountKey).Err(err).Msg("could not mark user guid as totp failed")
+		}
+
+		if errors.Is(ipErr, loginlimit.ErrAccountLocked) {
 			e.handleTotpPrompt(w, r, data, "Incorrect TOTP Code. This IP address has failed TOTP validation too many times")
 			return
-		} else if err != nil {
+		} else if ipErr != nil {
 			log.Error().Str("source_ip_key", sourceIPKey).Err(err).Msg("could not mark source IP failed")
 		}
 		e.handleTotpPrompt(w, r, data, "Incorrect TOTP Code")
@@ -126,6 +141,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	}
 
 	e.LoginLimiter.MarkSuccessfulAttempt(sourceIPKey)
+	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
 
 	if user.Disabled {
 		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted login of disabled account")
