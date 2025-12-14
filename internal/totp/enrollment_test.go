@@ -1,7 +1,6 @@
 package totp
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -12,12 +11,7 @@ import (
 )
 
 func setupSalts(t *testing.T) {
-	saltDir, err := os.MkdirTemp("", "attestsalt")
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.RemoveAll(saltDir)
-	})
+	saltDir := t.TempDir()
 
 	t.Setenv("SALT_FILE", filepath.Join(saltDir, "attestsalt"))
 
