@@ -62,12 +62,14 @@ func CheckOrMakeSalt() {
 	saltStats, err := os.Stat(saltPath)
 	if errors.Is(err, os.ErrNotExist) {
 		createSalt(saltPath)
-	} else {
-		if saltStats.Mode().Perm() != 0600 {
-			log.Warn().Msg("salt file has improper permissions -- should be 0600")
-		}
-		readSalt(saltPath)
+	} else if err != nil {
+		log.Warn().Str("salt_path", saltPath).Msg("could not stat salt file. trying to regenerate")
+		createSalt(saltPath)
+	} else if saltStats.Mode().Perm() != 0600 {
+		log.Warn().Str("salt_path", saltPath).Msg("salt file has improper permissions -- should be 0600")
 	}
+	readSalt(saltPath)
+
 	saltFile = saltPath
 
 	iterationCount := getIterationCount()
@@ -103,12 +105,17 @@ func createSalt(path string) {
 
 	encoded, _ := json.Marshal(p)
 
-	err := os.WriteFile(path, encoded, 0600)
+	err := os.MkdirAll(filepath.Dir(path), 0700)
 	if err != nil {
-		log.Fatal().Err(err).Str("salt_path", path).Msg("could not write salt file")
+		log.Warn().Err(err).Str("salt_directory", filepath.Dir(path)).Str("salt_path", path).Msg("could not create parent directories for salt file. Continuing anyway, but this will make sessions not work across restarts")
 	}
 
-	log.Info().Str("salt_path", path).Msg("generated and wrote salt")
+	err = os.WriteFile(path, encoded, 0600)
+	if err != nil {
+		log.Warn().Err(err).Str("salt_path", path).Msg("could not write salt file. Continuing anyway, but this will make sessions not work across restarts")
+	} else {
+		log.Info().Str("salt_path", path).Msg("generated and wrote salt")
+	}
 
 	salt = p
 }
@@ -118,6 +125,7 @@ func readSalt(path string) {
 	if err != nil {
 		log.Warn().Err(err).Str("salt_path", path).Msg("could not read salt, generating new one")
 		createSalt(path)
+		return
 	}
 
 	var read payload
@@ -125,12 +133,14 @@ func readSalt(path string) {
 	if err != nil {
 		log.Warn().Err(err).Msg("could not unmarshal salt")
 		createSalt(path)
+		return
 	}
 
 	if read.Version != version {
 		log.Warn().Int("version", read.Version).Int("expected_version", version).Msg("version mismatch")
 		// in the future, we should upgrade in place
 		createSalt(path)
+		return
 	}
 
 	log.Debug().Str("salt_path", path).Msg("loaded salt")

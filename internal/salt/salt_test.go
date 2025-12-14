@@ -34,9 +34,7 @@ func TestGetSaltPath(t *testing.T) {
 	})
 
 	t.Run("fallback to config file path", func(t *testing.T) {
-		dir, err := os.MkdirTemp("", "at2testconfig")
-		require.NoError(t, err)
-		defer os.RemoveAll(dir)
+		dir := t.TempDir()
 
 		cfgFile := filepath.Join(dir, "at2.yaml")
 		viper.SetConfigFile(cfgFile)
@@ -51,14 +49,12 @@ func TestGetSaltPath(t *testing.T) {
 func TestCheckOrMakeSalt(t *testing.T) {
 	t.Run("create new salt file if doesn't exist", func(t *testing.T) {
 		salt = nil
-		saltDir, err := os.MkdirTemp("", "at2salttest")
-		require.NoError(t, err)
-		defer os.RemoveAll(saltDir)
+		saltDir := t.TempDir()
 
 		saltFile := filepath.Join(saltDir, "at2testsalt.json")
 		t.Setenv("SALT_FILE", saltFile)
 
-		_, err = os.Stat(saltFile)
+		_, err := os.Stat(saltFile)
 		assert.ErrorIs(t, err, os.ErrNotExist)
 
 		CheckOrMakeSalt()
@@ -81,15 +77,13 @@ func TestCheckOrMakeSalt(t *testing.T) {
 
 	t.Run("read salt from file that exists", func(t *testing.T) {
 		salt = nil
-		saltDir, err := os.MkdirTemp("", "at2salttest")
-		require.NoError(t, err)
-		defer os.RemoveAll(saltDir)
+		saltDir := t.TempDir()
 
 		saltFile := filepath.Join(saltDir, "at2testsalt.json")
 		t.Setenv("SALT_FILE", saltFile)
 
 		data := `{"version":1,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y"}`
-		err = os.WriteFile(saltFile, []byte(data), 0600)
+		err := os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 
 		viper.Set("server.secret_key", "test")
@@ -105,15 +99,13 @@ func TestCheckOrMakeSalt(t *testing.T) {
 
 	t.Run("recreate salt file on wrong version", func(t *testing.T) {
 		salt = nil
-		saltDir, err := os.MkdirTemp("", "at2salttest")
-		require.NoError(t, err)
-		defer os.RemoveAll(saltDir)
+		saltDir := t.TempDir()
 
 		saltFile := filepath.Join(saltDir, "at2testsalt.json")
 		t.Setenv("SALT_FILE", saltFile)
 
 		data := `{"version":0,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y"}`
-		err = os.WriteFile(saltFile, []byte(data), 0600)
+		err := os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 
 		CheckOrMakeSalt()
@@ -128,7 +120,23 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, payload.Version)
-
 	})
 
+	t.Run("handle read errors gracefully", func(t *testing.T) {
+		salt = nil
+		saltDir := t.TempDir()
+		saltFile := filepath.Join(saltDir, "at2testsalt.json")
+		t.Setenv("SALT_FILE", saltFile)
+		data := `{"version":0,"signing":"sO6neG1lW_mYqH6jLaq3uBHsTxaH2ig201UEYXOIHJo","encryption":"JI1__-bfAy52ieVtSYRK9R8qpVo8MvU7P6uPrG5Wa0Y"}`
+		err := os.WriteFile(saltFile, []byte(data), 0600)
+		require.NoError(t, err)
+
+		// set permissions to be unreadable so we fail to read to test that branch
+		err = os.Chmod(saltFile, 0077)
+		require.NoError(t, err)
+		CheckOrMakeSalt()
+
+		assert.NotNil(t, salt.Signing)
+		assert.NotNil(t, salt.Encryption)
+	})
 }

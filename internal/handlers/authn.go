@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
@@ -345,7 +344,7 @@ func (e *Env) HandleWebAuthnEditKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	kID := mux.Vars(r)["keyId"]
+	kID := r.PathValue("keyId")
 
 	ownsKey := false
 	for _, curr := range u.StoredCredentials {

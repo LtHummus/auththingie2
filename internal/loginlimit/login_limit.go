@@ -58,7 +58,12 @@ func NewInMemoryLimiter() *InMemoryLoginLimiter {
 		lockDuration = DefaultAccountLockDuration
 	}
 
-	log.Info().Int("failure_limit", failureLimit).Dur("lookback_time", lookbackTime).Dur("lock_duration", lockDuration).Msg("initializing account login failure locker")
+	log.
+		Info().
+		Int("failure_limit", failureLimit).
+		Float64("lookback_time_minutes", lookbackTime.Minutes()).
+		Float64("lock_duration_minutes", lockDuration.Minutes()).
+		Msg("initializing account login failure locker")
 
 	imll := constructLimiter(failureLimit, lookbackTime, lockDuration)
 
