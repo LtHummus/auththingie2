@@ -29,11 +29,15 @@ func NiceDuration(dur time.Duration) string {
 			amt := int(dur / curr.val)
 			dur %= curr.val
 
-			part := fmt.Sprintf("%d %s", amt, curr.name)
+			var sb strings.Builder
+			sb.WriteString(fmt.Sprintf("%d", amt))
+			sb.WriteString(" ")
+			sb.WriteString(curr.name)
 			if amt != 1 {
-				part += "s"
+				sb.WriteString("s")
 			}
-			parts = append(parts, part)
+
+			parts = append(parts, sb.String())
 		}
 	}
 
