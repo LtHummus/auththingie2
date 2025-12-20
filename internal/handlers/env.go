@@ -54,6 +54,7 @@ func (e *Env) BuildRouter() http.Handler {
 	mux.HandleFunc("DELETE /admin/users/{userId}/tags/{tag}", e.HandleUserTagDelete)
 	mux.HandleFunc("PATCH /admin/users/{userId}/disable", e.HandleUserDisableEnable)
 	mux.HandleFunc("GET /admin/ruletest", e.HandleTestRule)
+	mux.HandleFunc("GET /admin/notices", e.ShowNotices)
 	mux.HandleFunc("GET /admin", e.HandleAdminPage)
 
 	mux.HandleFunc("GET /edit_self", e.HandleSelfConfigGet)

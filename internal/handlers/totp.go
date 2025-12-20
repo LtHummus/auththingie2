@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
 	totp2 "github.com/lthummus/auththingie2/internal/totp"
 	"github.com/lthummus/auththingie2/internal/trueip"
@@ -163,7 +165,14 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	if redirectURI == "" {
 		redirectURI = "/"
 	}
-	http.Redirect(w, r, redirectURI, http.StatusFound)
+
+	if user.Admin && len(notices.GetMessages()) > 0 {
+		v := url.Values{}
+		v.Set("redirect_uri", redirectURI)
+		http.Redirect(w, r, fmt.Sprintf("/admin/notices?%s", v.Encode()), http.StatusFound)
+	} else {
+		http.Redirect(w, r, redirectURI, http.StatusFound)
+	}
 }
 
 func (e *Env) HandleTOTPSetup(w http.ResponseWriter, r *http.Request) {
