@@ -19,7 +19,7 @@ var units = []unit{
 }
 
 func NiceDuration(dur time.Duration) string {
-	if dur == 0 {
+	if dur <= 0 {
 		return "0 seconds"
 	}
 
