@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -41,7 +42,7 @@ func RunErrorServer(errorsFound []string) {
 
 	go func() {
 		log.Warn().Int("port", port).Msg("starting error message server")
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Panic().Err(err).Msg("error starting server")
 		}
 	}()
