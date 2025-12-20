@@ -16,14 +16,13 @@ import (
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/render"
+	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/salt"
 	"github.com/lthummus/auththingie2/internal/trueip"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-
-	"github.com/lthummus/auththingie2/internal/rules"
 )
 
 func RunServer() {
