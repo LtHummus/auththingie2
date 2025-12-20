@@ -1,6 +1,7 @@
 package durations
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -23,6 +24,11 @@ func TestNiceDuration(t *testing.T) {
 	assert.Equal(t, "1 minute", NiceDuration(60*time.Second))
 	assert.Equal(t, "1 minute 1 second", NiceDuration(61*time.Second))
 	assert.Equal(t, "1 day 1 hour 1 minute 1 second", NiceDuration(25*time.Hour+1*time.Minute+1*time.Second))
+	assert.Equal(t, "0 seconds", NiceDuration(-10*time.Second))
+	assert.Equal(t, "1 day", NiceDuration(24*time.Hour))
+	assert.Equal(t, "106751 days 23 hours 47 minutes 16 seconds", NiceDuration(math.MaxInt64))
+	assert.Equal(t, "0 seconds", NiceDuration(math.MinInt64))
+	assert.Equal(t, "0 seconds", NiceDuration(999*time.Millisecond))
 
 	t.Run("test rounding down", func(t *testing.T) {
 		d := 2*time.Minute - 10*time.Millisecond

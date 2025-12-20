@@ -2,70 +2,48 @@ package durations
 
 import (
 	"fmt"
-	"math"
-	"strconv"
 	"strings"
 	"time"
 )
 
-func appendAmount(sb *strings.Builder, amt int, unitName string, written bool) {
-	if written {
-		sb.WriteString(" ")
-	}
+type unit struct {
+	name string
+	val  time.Duration
+}
 
-	sb.WriteString(strconv.Itoa(amt))
-	sb.WriteString(" ")
-	sb.WriteString(unitName)
-	if amt != 1 {
-		sb.WriteString("s")
-	}
+var units = []unit{
+	{"day", 24 * time.Hour},
+	{"hour", time.Hour},
+	{"minute", time.Minute},
+	{"second", time.Second},
 }
 
 func NiceDuration(dur time.Duration) string {
-	var sb strings.Builder
-
-	written := false
-
-	if dur >= 24*time.Hour {
-		d := int(dur.Hours() / 24)
-		dur -= time.Duration(d) * 24 * time.Hour
-
-		appendAmount(&sb, d, "day", written)
-		written = true
+	if dur <= 0 {
+		return "0 seconds"
 	}
 
-	if dur >= 1*time.Hour {
-		h := int(dur.Hours())
-		dur -= time.Duration(h) * time.Hour
+	var parts []string
+	for _, curr := range units {
+		if dur >= curr.val {
+			amt := int(dur / curr.val)
+			dur %= curr.val
 
-		appendAmount(&sb, h, "hour", written)
-		written = true
-	}
-
-	if dur >= 1*time.Minute {
-		m := int(dur.Minutes())
-		dur -= time.Duration(m) * time.Minute
-
-		appendAmount(&sb, m, "minute", written)
-		written = true
-	}
-
-	if dur > 0 || (!written && dur == 0) {
-		// special case for remaining seconds
-		if written {
+			var sb strings.Builder
+			sb.WriteString(fmt.Sprintf("%d", amt))
 			sb.WriteString(" ")
-		}
+			sb.WriteString(curr.name)
+			if amt != 1 {
+				sb.WriteString("s")
+			}
 
-		s := math.Trunc(dur.Seconds())
-
-		// use sprintf here because we get better control of precision
-		sb.WriteString(fmt.Sprintf("%.2g", s))
-		sb.WriteString(" ")
-		sb.WriteString("second")
-		if s != 1 {
-			sb.WriteString("s")
+			parts = append(parts, sb.String())
 		}
 	}
 
-	return sb.String()
+	if len(parts) == 0 {
+		return "0 seconds"
+	}
+
+	return strings.Join(parts, " ")
 }
