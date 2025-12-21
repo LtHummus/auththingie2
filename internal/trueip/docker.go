@@ -20,6 +20,8 @@ type dockerMonitor struct {
 	client    *docker.Client
 	endpoint  string
 	networkID string
+
+	activeContainers map[string]net.IP
 }
 
 func (dm *dockerMonitor) monitorThread() {
@@ -67,9 +69,10 @@ func startDockerMonitoringThread() {
 	}
 
 	dm := &dockerMonitor{
-		client:    client,
-		endpoint:  dockerEndpoint,
-		networkID: dockerNetwork,
+		client:           client,
+		endpoint:         dockerEndpoint,
+		networkID:        dockerNetwork,
+		activeContainers: map[string]net.IP{},
 	}
 
 	err = dm.findCurrentlyExistingTrustedProxies()
@@ -107,16 +110,18 @@ func (dm *dockerMonitor) findCurrentlyExistingTrustedProxies() error {
 		if err != nil {
 			log.Warn().Str("container_id", curr.ID).Str("target_network", dm.networkID).Msg("no IP found")
 		} else {
-			safeAddToTrustedProxy(ip)
+			dm.safeAddToTrustedProxy(curr.ID, ip)
 		}
 	}
 
 	return nil
 }
 
-func safeAddToTrustedProxy(ip net.IP) {
+func (dm *dockerMonitor) safeAddToTrustedProxy(containerID string, ip net.IP) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
+
+	dm.activeContainers[containerID] = ip
 
 	for _, curr := range trustedProxyIPs {
 		if curr.Equal(ip) {
@@ -127,9 +132,17 @@ func safeAddToTrustedProxy(ip net.IP) {
 	trustedProxyIPs = append(trustedProxyIPs, ip)
 }
 
-func safeRemoveFromTrustedProxy(ip net.IP) {
+func (dm *dockerMonitor) safeRemoveFromTrustedProxy(containerID string) {
 	updateLock.Lock()
 	defer updateLock.Unlock()
+
+	ip, exists := dm.activeContainers[containerID]
+	if !exists {
+		log.Warn().Str("container_id", containerID).Msg("could not find in mapping. ignoring")
+		return
+	}
+
+	delete(dm.activeContainers, containerID)
 
 	var cleanedIPs []net.IP
 	for _, curr := range trustedProxyIPs {
