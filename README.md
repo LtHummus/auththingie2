@@ -93,6 +93,7 @@ server:
 * The `db` section describes your backing database. Right now the only `kind` we support is `sqlite` and `file` should point to your SQLite database.
 * The `rules` section describes rules. Each rule should have a name. You also should have some matching like `host_pattern`, `path_pattern` (`*` wildcards supported!) or `source_ip` (which should be a CIDR)
 * The `server` section has some server configuration. The `auth_url` should be the URL that AuthThingie 2 lives at. `domain` should be the root domain (for example if you are protecting `a.example.com` and `b.example.com`, you should put `example.com`). `port` should be self-explanatory
+* The `security` section has some security configuration. The one you're probably most interested in is putting your proxy server in to the `trusted_proxies` section. For now, we only support IP addresses or CIDRs, but docker introspection is coming soon (TM) 
 
 #### Hidden Options
 
