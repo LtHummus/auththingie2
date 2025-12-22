@@ -1,0 +1,29 @@
+{{ template "base.gohtml" }}
+
+{{ define "title" }}A few messages for you...{{ end }}
+
+{{ define "content" }}
+
+    <h1>A few messages for you...</h1>
+
+    <ul>
+        {{ range .Messages }}
+            <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+
+
+    <article>
+            <p>
+                You're getting this screen because you are an admin and there are some warnings and messages that you
+                should probably be aware of. These will show up every time you log in until you fix it ... or if you set
+                <code>unsafe_hide_admin_messages</code> to be <code>true</code> in your config file. I don't recommend it, but hey,
+                it's your server.
+            </p>
+        </article>
+
+
+        <p>
+            <a href="{{ .Destination }}">And here's a link to go where you were going...</a>
+        </p>
+{{ end }}

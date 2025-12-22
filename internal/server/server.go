@@ -10,26 +10,25 @@ import (
 	"sync"
 	"time"
 
-	config2 "github.com/lthummus/auththingie2/internal/config"
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
 	"github.com/lthummus/auththingie2/internal/ftue"
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/render"
+	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/salt"
 	"github.com/lthummus/auththingie2/internal/trueip"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-
-	"github.com/lthummus/auththingie2/internal/rules"
 )
 
 func RunServer() {
 	render.Init()
 
-	err := config2.Init()
+	err := config.Init()
 	var fileNotFoundError viper.ConfigFileNotFoundError
 
 	if errors.As(err, &fileNotFoundError) {
@@ -40,10 +39,10 @@ func RunServer() {
 
 	salt.CheckOrMakeSalt()
 
-	configErrors := config2.ValidateConfig()
+	configErrors := config.ValidateConfig()
 	if configErrors != nil {
 		log.Error().Msg("invalid configuration")
-		config2.RunErrorServer(configErrors)
+		config.RunErrorServer(configErrors)
 		os.Exit(1)
 	}
 	f, err := rules.NewFromConfig()
@@ -52,13 +51,13 @@ func RunServer() {
 	}
 	trueip.Initialize()
 
-	config2.Lock.RLock()
+	config.Lock.RLock()
 	port := viper.GetInt("server.port")
 	if port == 0 {
 		log.Warn().Msg("no port specified, using port 9000")
 		port = 9000
 	}
-	config2.Lock.RUnlock()
+	config.Lock.RUnlock()
 
 	database, err := sqlite.NewSQLiteFromConfig()
 	if err != nil {

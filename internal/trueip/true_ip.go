@@ -10,10 +10,13 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/config"
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
-	trustedProxyHeadersConfigKey = "security.trusted_proxies"
+	trustedProxyHeadersConfigKey = "security.trusted_proxies.network"
 	trustedIpHeaderConfigKey     = "security.real_ip_header"
 	updateDebounceTime           = 100 * time.Millisecond
 )
@@ -28,9 +31,14 @@ var (
 
 func Initialize() {
 	updateTrustedProxies()
-	viper.OnConfigChange(func(in fsnotify.Event) {
+	config.RegisterForUpdates(func(event fsnotify.Event) {
 		updateTrustedProxies()
 	})
+}
+
+func setNoTrustedProxyWarning() {
+	notices.AddMessage("no-trusted-proxy", "security.trusted_proxies.network is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! To remove this message, configure security.trusted_proxies.network to be the IP address or CIDR of your reverse proxy. I reserve the right to make this a fatal error in future versions")
+	log.Warn().Msg("security.trusted_proxies.network is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies.network to be a list of trusted IPs/CIDRs to ignore this message")
 }
 
 func updateTrustedProxies() {
@@ -67,7 +75,7 @@ func updateTrustedProxies() {
 	trustedProxyCIDRs = newTrustedCIDRs
 	lastUpdateTime = time.Now()
 	if len(trustedProxyCIDRs) == 0 && len(trustedProxyIPs) == 0 {
-		log.Warn().Msg("security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies to be a list of trusted IPs/CIDRs to ignore this message")
+		setNoTrustedProxyWarning()
 	}
 }
 
@@ -76,7 +84,7 @@ func isTrustedProxy(r *http.Request) bool {
 	defer updateLock.RUnlock()
 
 	if len(trustedProxyCIDRs) == 0 && len(trustedProxyIPs) == 0 {
-		log.Warn().Msg("security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies to be a list of trusted IPs/CIDRs to ignore this message")
+		setNoTrustedProxyWarning()
 		return true
 	}
 
@@ -122,9 +130,9 @@ func Find(r *http.Request) string {
 	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); trustedHeaderName != "" {
 		if trustedContents := r.Header.Get(trustedHeaderName); trustedContents != "" {
 			return trustedContents
-		} else {
-			log.Warn().Str("trusted_header_name", trustedHeaderName).Msg("security.trusted_header_name is set, but that header isn't in the request")
 		}
+
+		log.Warn().Str("trusted_header_name", trustedHeaderName).Msg("security.trusted_header_name is set, but that header isn't in the request")
 	}
 
 	if fwd := safeGetXForwardedFor(r); fwd != "" {

@@ -17,6 +17,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/trueip"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -253,7 +254,16 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write([]byte(`{"failed":false}`))
+
+	respPayload := map[string]any{
+		"failed": false,
+	}
+
+	if foundUser.Admin && len(notices.GetMessages()) > 0 {
+		respPayload["admin_messages"] = true
+	}
+
+	err = json.NewEncoder(w).Encode(respPayload)
 	if err != nil {
 		log.Error().Caller(0).Err(err).Msg("could not write webauthn login finish to response")
 	}

@@ -16,12 +16,14 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/salt"
 	"github.com/lthummus/auththingie2/internal/trueip"
 )
 
 type debugPageInfo struct {
+	AdminNotices       []string
 	DependencyTemplate template.HTML
 	VarsTemplate       template.HTML
 	ConfigTemplate     template.HTML
@@ -132,6 +134,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	})
 
 	render.Render(w, "debug.gohtml", &debugPageInfo{
+		AdminNotices:       notices.GetMessages(),
 		DependencyTemplate: template.HTML(depTable.RenderHTML()),     // #nosec G203 -- table library handles escaping for us
 		VarsTemplate:       template.HTML(data.RenderHTML()),         // #nosec G203
 		BuildTemplate:      template.HTML(buildTable.RenderHTML()),   // #nosec G203

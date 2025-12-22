@@ -1,0 +1,51 @@
+package notices
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestAddMessage(t *testing.T) {
+	t.Cleanup(func() {
+		Reset()
+	})
+
+	assert.Empty(t, GetMessages())
+
+	AddMessage("foo", "hello world")
+	assert.Len(t, GetMessages(), 1)
+
+	AddMessage("bar", "hello world 2")
+	assert.Len(t, GetMessages(), 2)
+
+	msgs := GetMessages()
+
+	assert.Equal(t, "hello world", msgs[0])
+	assert.Equal(t, "hello world 2", msgs[1])
+
+	// make sure duplicate message IDs don't get added
+	AddMessage("foo", "hello world")
+	assert.Len(t, GetMessages(), 2)
+
+	// make sure messages can not be mutated from outside
+	msgs = append(msgs, "this should not be here")
+	assert.Len(t, GetMessages(), 2)
+}
+
+func TestReset(t *testing.T) {
+	t.Cleanup(func() {
+		Reset()
+	})
+
+	assert.Empty(t, GetMessages())
+	AddMessage("a", "a")
+	AddMessage("b", "b")
+	AddMessage("c", "c")
+
+	assert.Len(t, GetMessages(), 3)
+
+	Reset()
+
+	assert.Len(t, GetMessages(), 0)
+}

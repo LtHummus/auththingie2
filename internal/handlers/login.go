@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/pwmigrate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/totp"
@@ -215,5 +217,12 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		redirectURL = "/"
 	}
 
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	if u.Admin && len(notices.GetMessages()) > 0 {
+		v := url.Values{}
+		v.Set("redirect_uri", redirectURL)
+		http.Redirect(w, r, fmt.Sprintf("/admin/notices?%s", v.Encode()), http.StatusFound)
+	} else {
+		http.Redirect(w, r, redirectURL, http.StatusFound)
+	}
+
 }

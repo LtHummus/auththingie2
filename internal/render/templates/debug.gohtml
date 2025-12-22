@@ -6,6 +6,18 @@
     <div>
         <h1>AuthThingie 2 Debug</h1>
         <div>
+            <h2>Admin Notices</h2>
+            {{ if .AdminNotices }}
+                <ul>
+                    {{ range .AdminNotices }}
+                        <li>{{ . }}</li>
+                    {{ end }}
+                </ul>
+            {{ else }}
+                <p>No admin notices</p>
+            {{ end }}
+        </div>
+        <div>
             <h2>Request Information</h2>
             {{ .RequestTemplate }}
         </div>

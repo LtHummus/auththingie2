@@ -13,6 +13,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/salt"
 	enrollment "github.com/lthummus/auththingie2/internal/totp"
@@ -421,6 +422,87 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Equal(t, "", finalURL.Scheme)
 		assert.Equal(t, "", finalURL.Host)
 		assert.Equal(t, "/", finalURL.Path)
+	})
+
+	t.Run("valid username/password, has messages, not admin", func(t *testing.T) {
+		t.Cleanup(func() {
+			notices.Reset()
+		})
+		_, db, ll, e := makeTestEnv(t)
+
+		notices.AddMessage("test", "test message")
+
+		v := url.Values{}
+		v.Add("username", "regularuser")
+		v.Add("password", "test1")
+		v.Add("redirect_uri", "https://test.example.com/foo")
+
+		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
+		ll.On("IsAccountLocked", "username|regularuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|regularuser")
+		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		finalURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "https", finalURL.Scheme)
+		assert.Equal(t, "test.example.com", finalURL.Host)
+		assert.Equal(t, "/foo", finalURL.Path)
+
+		assert.Len(t, w.Result().Cookies(), 1)
+		var sess session2.Session
+		err = sc.Decode(session2.SessionCookieName, w.Result().Cookies()[0].Value, &sess)
+		assert.NoError(t, err)
+
+		assert.Equal(t, sampleNonAdminUser.Id, sess.UserID)
+		assert.WithinDuration(t, time.Now(), sess.LoginTime, 1*time.Second)
+	})
+
+	t.Run("valid username/password, has messages, is admin", func(t *testing.T) {
+		t.Cleanup(func() {
+			notices.Reset()
+		})
+		_, db, ll, e := makeTestEnv(t)
+
+		notices.AddMessage("test", "test message")
+
+		v := url.Values{}
+		v.Add("username", "adminuser")
+		v.Add("password", "test1")
+		v.Add("redirect_uri", "https://test.example.com/foo")
+
+		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
+		ll.On("IsAccountLocked", "username|adminuser").Return(false)
+		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "username|adminuser")
+		db.On("GetUserByUsername", mock.Anything, "adminuser").Return(sampleAdminUser, nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		finalURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin/notices", finalURL.Path)
+		assert.Equal(t, "redirect_uri=https%3A%2F%2Ftest.example.com%2Ffoo", finalURL.RawQuery)
+
+		assert.Len(t, w.Result().Cookies(), 1)
+		var sess session2.Session
+		err = sc.Decode(session2.SessionCookieName, w.Result().Cookies()[0].Value, &sess)
+		assert.NoError(t, err)
+
+		assert.Equal(t, sampleAdminUser.Id, sess.UserID)
+		assert.WithinDuration(t, time.Now(), sess.LoginTime, 1*time.Second)
 	})
 
 	t.Run("correct username/password with TOTP", func(t *testing.T) {

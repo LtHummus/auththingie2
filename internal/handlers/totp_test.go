@@ -25,6 +25,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/salt"
 	totp2 "github.com/lthummus/auththingie2/internal/totp"
@@ -373,6 +374,87 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		assert.Equal(t, "https", redirectURL.Scheme)
 		assert.Equal(t, "test.example.com", redirectURL.Host)
 		assert.Equal(t, "/something", redirectURL.Path)
+
+		assert.Len(t, w.Result().Cookies(), 1)
+	})
+
+	t.Run("correct TOTP, has messages, non admin", func(t *testing.T) {
+		t.Cleanup(func() {
+			notices.Reset()
+		})
+
+		notices.AddMessage("test", "this is a test message")
+		_, db, ll, e := makeTestEnv(t)
+
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
+		ll.On("MarkSuccessfulAttempt", "totp_ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "totp_user_guid|test-user")
+		db.On("GetUserByGuid", mock.Anything, "test-user").Return(&user.User{
+			Id:       "test-user",
+			Username: "testuser",
+			TOTPSeed: &sampleTOTPSeed,
+		}, nil)
+
+		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
+		require.NoError(t, err)
+
+		v := url.Values{}
+		v.Add("totp-code", correctTOTP)
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "https://test.example.com/something", time.Now().Add(5*time.Minute)))
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "https", redirectURL.Scheme)
+		assert.Equal(t, "test.example.com", redirectURL.Host)
+		assert.Equal(t, "/something", redirectURL.Path)
+
+		assert.Len(t, w.Result().Cookies(), 1)
+	})
+
+	t.Run("correct TOTP, has messages, yes admin", func(t *testing.T) {
+		t.Cleanup(func() {
+			notices.Reset()
+		})
+
+		notices.AddMessage("test", "this is a test message")
+		_, db, ll, e := makeTestEnv(t)
+
+		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
+		ll.On("IsAccountLocked", "totp_user_guid|sampleadmin").Return(false)
+		ll.On("MarkSuccessfulAttempt", "totp_ip|192.0.2.1")
+		ll.On("MarkSuccessfulAttempt", "totp_user_guid|sampleadmin")
+		db.On("GetUserByGuid", mock.Anything, "sampleadmin").Return(&user.User{
+			Id:       "sampleadmin",
+			Username: "sampleadmin",
+			TOTPSeed: &sampleTOTPSeed,
+			Admin:    true,
+		}, nil)
+
+		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
+		require.NoError(t, err)
+
+		v := url.Values{}
+		v.Add("totp-code", correctTOTP)
+		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "sampleadmin", "https://test.example.com/something", time.Now().Add(5*time.Minute)))
+
+		r := makeTestRequest(t, http.MethodPost, "/totp", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
+		redirectURL, err := w.Result().Location()
+		assert.NoError(t, err)
+		assert.Equal(t, "/admin/notices", redirectURL.Path)
 
 		assert.Len(t, w.Result().Cookies(), 1)
 	})

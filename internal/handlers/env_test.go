@@ -29,7 +29,7 @@ var (
 	sampleAdminUser = &user.User{
 		Id:                uuid.New().String(),
 		Username:          "adminuser",
-		PasswordHash:      "",
+		PasswordHash:      "$argon2id$v=19$m=65536,t=3,p=2$f5DrCPQlwRJ5q1fA4K+i/g$c8XhJISMUI3wjIUULHvn0HIJinvOBBb4KnvOcvuJ4e0", // test1
 		Roles:             []string{},
 		Admin:             true,
 		TOTPSeed:          nil,
