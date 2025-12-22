@@ -11,11 +11,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
-	trustedProxyHeadersConfigKey = "security.trusted_proxies"
+	trustedProxyHeadersConfigKey = "security.trusted_proxies.network"
 	trustedIpHeaderConfigKey     = "security.real_ip_header"
 	updateDebounceTime           = 100 * time.Millisecond
 )
@@ -30,14 +31,14 @@ var (
 
 func Initialize() {
 	updateTrustedProxies()
-	viper.OnConfigChange(func(in fsnotify.Event) {
+	config.RegisterForUpdates(func(event fsnotify.Event) {
 		updateTrustedProxies()
 	})
 }
 
 func setNoTrustedProxyWarning() {
-	notices.AddMessage("no-trusted-proxy", "security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! To remove this message, configure security.trusted_proxies to be the IP address or CIDR of your reverse proxy. I reserve the right to make this a fatal error in future versions")
-	log.Warn().Msg("security.trusted_proxies is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies to be a list of trusted IPs/CIDRs to ignore this message")
+	notices.AddMessage("no-trusted-proxy", "security.trusted_proxies.network is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! To remove this message, configure security.trusted_proxies.network to be the IP address or CIDR of your reverse proxy. I reserve the right to make this a fatal error in future versions")
+	log.Warn().Msg("security.trusted_proxies.network is not set. This will allow all X-Forwarded-For headers to be implicitly trusted! Set security.trusted_proxies.network to be a list of trusted IPs/CIDRs to ignore this message")
 }
 
 func updateTrustedProxies() {

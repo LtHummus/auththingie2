@@ -7,12 +7,15 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 )
+
+type UpdateListener func(event fsnotify.Event)
 
 var (
 	Lock sync.RWMutex
@@ -22,6 +25,9 @@ var (
 	initError error
 
 	DebugFlagOverride uint32
+
+	updateListenerLock sync.RWMutex
+	updateListeners    []UpdateListener
 )
 
 type WriteOverride struct {
@@ -91,7 +97,23 @@ func Init() error {
 	log.Info().Str("config_file_path", viper.ConfigFileUsed()).Msg("initialized configuration")
 	viper.WatchConfig()
 
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		updateListenerLock.RLock()
+		defer updateListenerLock.RUnlock()
+
+		for _, curr := range updateListeners {
+			go curr(in)
+		}
+	})
+
 	return nil
+}
+
+func RegisterForUpdates(listener UpdateListener) {
+	updateListenerLock.Lock()
+	defer updateListenerLock.Unlock()
+
+	updateListeners = append(updateListeners, listener)
 }
 
 func ValidateConfig() []string {

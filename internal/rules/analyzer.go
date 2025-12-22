@@ -71,7 +71,7 @@ func ruleConverter(r map[string]any) yaml.MapSlice {
 
 func NewFromConfig() (*ViperConfigAnalyzer, error) {
 	a := &ViperConfigAnalyzer{}
-	viper.OnConfigChange(func(in fsnotify.Event) {
+	config.RegisterForUpdates(func(event fsnotify.Event) {
 		log.Info().Msg("detected config file change")
 		err := a.UpdateFromConfigFile()
 		if err != nil {
