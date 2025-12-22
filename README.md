@@ -70,6 +70,10 @@ The config file should be named `auththingie2.yaml` and in the config directory 
 db:
   file: /config/at2.db
   kind: sqlite
+security:
+  trusted_proxies:
+    network:
+      - "172.18.0.0/16"
 rules:
   - name: /css* on test.example.com
     host_pattern: test.example.com
