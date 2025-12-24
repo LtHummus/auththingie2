@@ -185,37 +185,42 @@ func TestDockerProvider_eventListener(t *testing.T) {
 			activeIPs: map[string][]net.IP{},
 		}
 
-		eventStream := make(chan events.Message)
-		errorStream := make(chan error)
+		synctest.Test(t, func(t *testing.T) {
+			eventStream := make(chan events.Message)
+			errorStream := make(chan error)
 
-		mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
-			Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
-		mockDocker.On("ContainerInspect", mock.Anything, "test-container-id").Return(container.InspectResponse{
-			NetworkSettings: &container.NetworkSettings{
-				Networks: map[string]*network.EndpointSettings{
-					"sample-network": {
-						IPAddress: "127.0.0.1",
+			mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
+				Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
+			mockDocker.On("ContainerInspect", mock.Anything, "test-container-id").Return(container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
+					Networks: map[string]*network.EndpointSettings{
+						"sample-network": {
+							IPAddress: "127.0.0.1",
+						},
 					},
 				},
-			},
-		}, nil)
+			}, nil)
 
-		ctx, cancel := context.WithCancel(t.Context())
+			ctx, cancel := context.WithCancel(t.Context())
 
-		go dp.eventListener(ctx)
+			go dp.eventListener(ctx)
 
-		eventStream <- events.Message{
-			Action: events.ActionStart,
-			Actor: events.Actor{
-				ID: "test-container-id",
-			},
-		}
+			eventStream <- events.Message{
+				Action: events.ActionStart,
+				Actor: events.Actor{
+					ID: "test-container-id",
+				},
+			}
 
-		cancel()
+			synctest.Wait()
 
-		assert.Len(t, dp.activeIPs, 1)
-		assert.Len(t, dp.activeIPs["test-container-id"], 1)
-		assert.Equal(t, net.ParseIP("127.0.0.1"), dp.activeIPs["test-container-id"][0])
+			assert.Len(t, dp.activeIPs, 1)
+			assert.Len(t, dp.activeIPs["test-container-id"], 1)
+			assert.Equal(t, net.ParseIP("127.0.0.1"), dp.activeIPs["test-container-id"][0])
+
+			cancel()
+		})
+
 	})
 
 	t.Run("a couple of events", func(t *testing.T) {
@@ -363,30 +368,38 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 			viper.Reset()
 		})
 
-		containersQueried := false
-		eventsConnected := false
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
 
-		// this is my little fake docker endpoint. Is this a good idea? Not sure!
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/v1.51/containers/json" {
-				containersQueried = true
-				w.Write([]byte(`[]`))
-			} else if r.URL.Path == "/v1.51/events" {
-				eventsConnected = true
-				<-t.Context().Done()
-			}
-		}))
-		t.Cleanup(func() {
+			listContainersCalled := false
+			eventsCalled := false
+
+			// this is my little fake docker endpoint. Is this a good idea? Not sure!
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1.51/containers/json" {
+					listContainersCalled = true
+					w.Write([]byte(`[]`))
+				} else if r.URL.Path == "/v1.51/events" {
+					eventsCalled = true
+				} else {
+					t.Fatalf("unknown docker endpoint called: %s", r.URL.Path)
+				}
+			}))
+
+			viper.Set(trustedProxyDockerEnabledConfigKey, true)
+			viper.Set(trustedProxyDockerEndpointConfigKey, srv.URL)
+
+			dp := newDockerProvider(ctx)
+			assert.NotNil(t, dp)
+
+			cancel()
 			srv.Close()
+
+			synctest.Wait()
+
+			assert.True(t, listContainersCalled)
+			assert.True(t, eventsCalled)
 		})
 
-		viper.Set(trustedProxyDockerEnabledConfigKey, true)
-		viper.Set(trustedProxyDockerEndpointConfigKey, srv.URL)
-
-		dp := newDockerProvider(t.Context())
-		assert.NotNil(t, dp)
-
-		assert.True(t, containersQueried)
-		assert.True(t, eventsConnected)
 	})
 }
