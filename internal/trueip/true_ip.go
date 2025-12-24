@@ -1,6 +1,7 @@
 package trueip
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strings"
@@ -29,8 +30,8 @@ type trustedProxyProvider interface {
 
 var trustedProxyProviders []trustedProxyProvider
 
-func Initialize() {
-	if dp := newDockerProvider(); dp != nil {
+func Initialize(ctx context.Context) {
+	if dp := newDockerProvider(ctx); dp != nil {
 		trustedProxyProviders = append(trustedProxyProviders, dp)
 	}
 

@@ -1,11 +1,14 @@
 package trueip
 
 import (
+	"context"
 	"errors"
 	"net"
 	"testing"
+	"testing/synctest"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -172,5 +175,154 @@ func TestDockerProvider_updateIPs(t *testing.T) {
 }
 
 func TestDockerProvider_eventListener(t *testing.T) {
+	t.Run("happy case", func(t *testing.T) {
+		mockDocker := mocks.NewMockDockerAPI(t)
+		dp := &dockerProvider{
+			client:    mockDocker,
+			activeIPs: map[string][]net.IP{},
+		}
 
+		eventStream := make(chan events.Message)
+		errorStream := make(chan error)
+
+		mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
+			Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
+		mockDocker.On("ContainerInspect", mock.Anything, "test-container-id").Return(container.InspectResponse{
+			NetworkSettings: &container.NetworkSettings{
+				Networks: map[string]*network.EndpointSettings{
+					"sample-network": {
+						IPAddress: "127.0.0.1",
+					},
+				},
+			},
+		}, nil)
+
+		ctx, cancel := context.WithCancel(t.Context())
+
+		go dp.eventListener(ctx)
+
+		eventStream <- events.Message{
+			Action: events.ActionStart,
+			Actor: events.Actor{
+				ID: "test-container-id",
+			},
+		}
+
+		cancel()
+
+		assert.Len(t, dp.activeIPs, 1)
+		assert.Len(t, dp.activeIPs["test-container-id"], 1)
+		assert.Equal(t, net.ParseIP("127.0.0.1"), dp.activeIPs["test-container-id"][0])
+	})
+
+	t.Run("a couple of events", func(t *testing.T) {
+		mockDocker := mocks.NewMockDockerAPI(t)
+		dp := &dockerProvider{
+			client:    mockDocker,
+			activeIPs: map[string][]net.IP{},
+		}
+
+		synctest.Test(t, func(t *testing.T) {
+			eventStream := make(chan events.Message)
+			errorStream := make(chan error)
+
+			mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
+				Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
+			mockDocker.On("ContainerInspect", mock.AnythingOfType("*context.cancelCtx"), "test-container-id").Return(container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
+					Networks: map[string]*network.EndpointSettings{
+						"sample-network": {
+							IPAddress: "127.0.0.1",
+						},
+					},
+				},
+			}, nil)
+			mockDocker.On("ContainerInspect", mock.AnythingOfType("*context.cancelCtx"), "test-container-id2").Return(container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
+					Networks: map[string]*network.EndpointSettings{
+						"sample-network": {
+							IPAddress: "127.0.0.2",
+						},
+					},
+				},
+			}, nil)
+
+			ctx, cancel := context.WithCancel(t.Context())
+
+			go dp.eventListener(ctx)
+
+			eventStream <- events.Message{
+				Action: events.ActionStart,
+				Actor: events.Actor{
+					ID: "test-container-id",
+				},
+			}
+
+			synctest.Wait()
+
+			assert.Len(t, dp.activeIPs, 1)
+			assert.Len(t, dp.activeIPs["test-container-id"], 1)
+			assert.Equal(t, net.ParseIP("127.0.0.1"), dp.activeIPs["test-container-id"][0])
+
+			eventStream <- events.Message{
+				Action: events.ActionStart,
+				Actor: events.Actor{
+					ID: "test-container-id2",
+				},
+			}
+
+			synctest.Wait()
+
+			assert.Len(t, dp.activeIPs, 2)
+			assert.Len(t, dp.activeIPs["test-container-id"], 1)
+			assert.Equal(t, net.ParseIP("127.0.0.1"), dp.activeIPs["test-container-id"][0])
+			assert.Len(t, dp.activeIPs["test-container-id2"], 1)
+			assert.Equal(t, net.ParseIP("127.0.0.2"), dp.activeIPs["test-container-id2"][0])
+
+			eventStream <- events.Message{
+				Action: events.ActionDie,
+				Actor: events.Actor{
+					ID: "test-container-id",
+				},
+			}
+
+			synctest.Wait()
+
+			assert.Len(t, dp.activeIPs, 1)
+			assert.Empty(t, dp.activeIPs["test-container-id"])
+			assert.Len(t, dp.activeIPs["test-container-id2"], 1)
+			assert.Equal(t, net.ParseIP("127.0.0.2"), dp.activeIPs["test-container-id2"][0])
+
+			cancel()
+		})
+
+	})
+
+	t.Run("error handling and disconnection", func(t *testing.T) {
+		mockDocker := mocks.NewMockDockerAPI(t)
+		dp := &dockerProvider{
+			client:    mockDocker,
+			activeIPs: map[string][]net.IP{},
+		}
+
+		synctest.Test(t, func(t *testing.T) {
+			eventStream := make(chan events.Message)
+			errorStream := make(chan error)
+
+			mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
+				Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
+			mockDocker.On("DaemonHost").Return("localhost")
+
+			ctx, cancel := context.WithCancel(t.Context())
+
+			go dp.eventListener(ctx)
+
+			errorStream <- errors.New("hi")
+
+			cancel()
+		})
+
+		assert.Len(t, mockDocker.Calls, 3) // Events twice, DaemonHost once
+
+	})
 }

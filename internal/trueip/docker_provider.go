@@ -56,7 +56,7 @@ func (dp *dockerProvider) Active() bool {
 	return dp.eventStreamInitialized
 }
 
-func newDockerProvider() *dockerProvider {
+func newDockerProvider(ctx context.Context) *dockerProvider {
 	if !viper.GetBool(trustedProxyDockerEnabledConfigKey) {
 		return nil
 	}
@@ -79,9 +79,9 @@ func newDockerProvider() *dockerProvider {
 		activeIPs: map[string][]net.IP{},
 	}
 
-	go dp.eventListener(context.Background())
+	go dp.eventListener(ctx)
 
-	dp.updateIPs(context.Background())
+	dp.updateIPs(ctx)
 
 	return dp
 }
@@ -120,18 +120,25 @@ func (dp *dockerProvider) eventListener(ctx context.Context) {
 		dp.eventStreamInitialized = true
 
 		log.Info().Msg("docker event stream connected")
-		dp.listenToDockerStreams(ctx, eventStream, errorStream)
+		shouldContinue := dp.listenToDockerStreams(ctx, eventStream, errorStream)
+		if !shouldContinue {
+			log.Warn().Msg("got cleanup signal. no longer listening to docker events")
+			dp.eventStreamInitialized = false
+			break
+		}
 	}
 }
 
-func (dp *dockerProvider) listenToDockerStreams(ctx context.Context, eventStream <-chan events.Message, errorStream <-chan error) {
+func (dp *dockerProvider) listenToDockerStreams(ctx context.Context, eventStream <-chan events.Message, errorStream <-chan error) bool {
 	for {
 		select {
 		case evt := <-eventStream:
 			dp.handleDockerEvent(ctx, evt)
 		case err := <-errorStream:
 			log.Warn().Err(err).Str("docker_endpoint", dp.client.DaemonHost()).Msg("connection to docker lost, reconnecting")
-			return
+			return true
+		case <-ctx.Done():
+			return false
 		}
 	}
 }
