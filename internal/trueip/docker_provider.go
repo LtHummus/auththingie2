@@ -34,8 +34,17 @@ var eventFilter = filters.NewArgs(
 	filters.Arg("event", "start"),
 )
 
+type dockerAPI interface {
+	Events(ctx context.Context, options events.ListOptions) (<-chan events.Message, <-chan error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
+
+	DaemonHost() string
+	ClientVersion() string
+}
+
 type dockerProvider struct {
-	client *dockerclient.Client
+	client dockerAPI
 
 	eventStreamInitialized bool
 	activeIPs              map[string][]net.IP

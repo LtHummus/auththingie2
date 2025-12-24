@@ -13,3 +13,9 @@ packages:
   github.com/lthummus/auththingie2/internal/loginlimit:
     config:
       all: true
+  github.com/lthummus/auththingie2/internal/trueip:
+    interfaces:
+      dockerAPI:
+        config:
+          structname: "MockDockerAPI"
+          filename: "DockerAPI.go"

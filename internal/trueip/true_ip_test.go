@@ -18,6 +18,20 @@ func (tp *testProvider) IsProxyTrusted(ip net.IP) bool {
 	return ip.Equal(tp.validIP)
 }
 func (tp *testProvider) ContainsProxies() bool { return tp.validIP != nil }
+func (tp *testProvider) Active() bool          { return tp.ContainsProxies() }
+func (tp *testProvider) GetTrustedProxies() []TrustedProxy {
+	if tp.validIP != nil {
+		return []TrustedProxy{
+			{
+				Source:      "Test Provider",
+				Description: tp.validIP.String(),
+			},
+		}
+	}
+
+	return nil
+
+}
 
 func trustIPForProxy(t *testing.T, ip string) {
 	t.Cleanup(func() {

@@ -95,3 +95,28 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 		})
 	})
 }
+
+func TestViperProvider_GetTrustedProxies(t *testing.T) {
+	_, n, err := net.ParseCIDR("127.0.0.1/24")
+	require.NoError(t, err)
+
+	vp := &viperProvider{
+		trustedProxyIPs: []net.IP{
+			net.ParseIP("127.0.0.1"),
+			net.ParseIP("1.1.2.2"),
+		},
+		trustedProxyCIDRs: []*net.IPNet{n},
+	}
+
+	tp := vp.GetTrustedProxies()
+	assert.Len(t, tp, 3)
+
+	assert.Equal(t, "Config File - IP", tp[0].Source)
+	assert.Equal(t, "127.0.0.1", tp[0].Description)
+
+	assert.Equal(t, "Config File - IP", tp[1].Source)
+	assert.Equal(t, "1.1.2.2", tp[1].Description)
+
+	assert.Equal(t, "Config File - CIDR", tp[2].Source)
+	assert.Equal(t, "127.0.0.0/24", tp[2].Description)
+}
