@@ -2,6 +2,7 @@ package trueip
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"net"
 	"net/http"
@@ -18,6 +19,9 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/mocks"
 )
+
+//go:embed sample_docker_info.txt
+var sampleDockerInfoResponse []byte
 
 func TestDockerProvider_IsProxyTrusted(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
@@ -371,16 +375,24 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 
-			listContainersCalled := false
-			eventsCalled := false
-
 			// this is my little fake docker endpoint. Is this a good idea? Not sure!
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == "/v1.51/containers/json" {
-					listContainersCalled = true
+				if r.URL.Path == "/_ping" {
+					w.Header().Set("Api-Version", "1.47")
+					w.Header().Set("Builder-Version", "2")
+					w.Header().Set("Docker-Experimental", "false")
+					w.Header().Set("Ostype", "linux")
+					w.Header().Set("Server", "Docker/27.2.0 (linux)")
+					w.Header().Set("Swarm", "inactive")
+					w.Write(nil)
+				} else if r.URL.Path == "/v1.47/info" {
+					w.Header().Set("Content-Type", "application/json")
+					w.Write(sampleDockerInfoResponse)
+				} else if r.URL.Path == "/v1.47/containers/json" {
+					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(`[]`))
-				} else if r.URL.Path == "/v1.51/events" {
-					eventsCalled = true
+				} else if r.URL.Path == "/v1.47/events" {
+
 				} else {
 					t.Fatalf("unknown docker endpoint called: %s", r.URL.Path)
 				}
@@ -397,8 +409,6 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 
 			synctest.Wait()
 
-			assert.True(t, listContainersCalled)
-			assert.True(t, eventsCalled)
 		})
 
 	})

@@ -68,9 +68,16 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 		dockerEndpoint = defaultDockerEndpoint
 	}
 
-	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(dockerEndpoint))
+	dockerClient, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(dockerEndpoint), dockerclient.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Warn().Err(err).Str("docker_endpoint", dockerEndpoint).Msg("could not connect to docker")
+		return nil
+	}
+
+	_, err = dockerClient.Info(ctx)
+	if err != nil {
+		log.Error().Err(err).Str("docker_endpoint", dockerClient.DaemonHost()).Msg("could not query docker info")
+		notices.AddMessage("docker-misconfigure", "Could not contact docker daemon to check for proxies. Look at logs")
 		return nil
 	}
 
