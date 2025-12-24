@@ -95,6 +95,17 @@ func TestFind(t *testing.T) {
 		assert.Equal(t, "2.2.2.2", Find(r))
 	})
 
+	t.Run("take rightmost entry in XFF", func(t *testing.T) {
+		trustIPForProxy(t, "127.0.0.1")
+		r := &http.Request{
+			RemoteAddr: "127.0.0.1:5999",
+			Header:     map[string][]string{},
+		}
+		r.Header.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
+
+		assert.Equal(t, "2.2.2.2", Find(r))
+	})
+
 	t.Run("use custom trust header if configured and present and proxy is trusted", func(t *testing.T) {
 		trustIPForProxy(t, "127.0.0.1")
 		t.Cleanup(func() {

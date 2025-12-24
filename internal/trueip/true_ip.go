@@ -108,7 +108,7 @@ func ListProxies() []TrustedProxy {
 func Find(r *http.Request) string {
 	providerLock.RLock()
 	defer providerLock.RUnlock()
-	
+
 	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); trustedHeaderName != "" {
 		upstreamTrusted := isTrustedProxy(r)
 		if trustedContents := r.Header.Get(trustedHeaderName); upstreamTrusted && trustedContents != "" {
@@ -119,11 +119,8 @@ func Find(r *http.Request) string {
 		notices.AddMessage("invalid-trusted-header-name", "security.trusted_header_name has been set, but we haven't been seeing it in requests")
 	} else if fwd := safeGetXForwardedFor(r); fwd != "" {
 		if isTrustedProxy(r) {
-			s := strings.Index(fwd, ",")
-			if s == -1 {
-				s = len(fwd)
-			}
-			return strings.TrimSpace(fwd[:s])
+			parts := strings.Split(fwd, ",")
+			return strings.TrimSpace(parts[len(parts)-1])
 		}
 	}
 
