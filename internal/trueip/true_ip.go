@@ -7,21 +7,48 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
 	trustedIpHeaderConfigKey = "security.real_ip_header"
 )
 
+type TrustedProxy struct {
+	Source      string
+	Description string
+}
+
 type trustedProxyProvider interface {
 	IsProxyTrusted(ip net.IP) bool
+	ContainsProxies() bool
+	GetTrustedProxies() []TrustedProxy
+	Active() bool
 }
 
 var trustedProxyProviders []trustedProxyProvider
 
 func Initialize() {
+	if dp := newDockerProvider(); dp != nil {
+		trustedProxyProviders = append(trustedProxyProviders, dp)
+	}
+
 	if vp := newViperProvider(); vp != nil {
 		trustedProxyProviders = append(trustedProxyProviders, vp)
+	}
+
+	initOK := false
+
+	for _, curr := range trustedProxyProviders {
+		if curr.Active() {
+			initOK = true
+			break
+		}
+	}
+
+	if !initOK {
+		notices.AddMessage("no-proxies-trusted", "There are no proxies trusted! This means that source IP detection is insecure!")
 	}
 }
 
@@ -56,6 +83,16 @@ func safeGetXForwardedFor(r *http.Request) string {
 		return ""
 	}
 	return headers[len(headers)-1]
+}
+
+func ListProxies() []TrustedProxy {
+	var ret []TrustedProxy
+
+	for _, curr := range trustedProxyProviders {
+		ret = append(ret, curr.GetTrustedProxies()...)
+	}
+
+	return ret
 }
 
 func Find(r *http.Request) string {

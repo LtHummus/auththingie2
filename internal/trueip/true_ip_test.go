@@ -17,6 +17,7 @@ type testProvider struct {
 func (tp *testProvider) IsProxyTrusted(ip net.IP) bool {
 	return ip.Equal(tp.validIP)
 }
+func (tp *testProvider) ContainsProxies() bool { return tp.validIP != nil }
 
 func trustIPForProxy(t *testing.T, ip string) {
 	t.Cleanup(func() {

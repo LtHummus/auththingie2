@@ -60,6 +60,39 @@ func (vp *viperProvider) updateTrustedProxies() {
 	vp.lastUpdateTime = time.Now()
 }
 
+func (vp *viperProvider) ContainsProxies() bool {
+	vp.updateLock.RLock()
+	defer vp.updateLock.RUnlock()
+
+	return len(vp.trustedProxyCIDRs) > 0 || len(vp.trustedProxyIPs) > 0
+}
+
+func (vp *viperProvider) Active() bool {
+	return vp.ContainsProxies()
+}
+
+func (vp *viperProvider) GetTrustedProxies() []TrustedProxy {
+	vp.updateLock.RLock()
+	defer vp.updateLock.RUnlock()
+
+	var ret []TrustedProxy
+	for _, curr := range vp.trustedProxyIPs {
+		ret = append(ret, TrustedProxy{
+			Source:      "Config File - IP",
+			Description: curr.String(),
+		})
+	}
+
+	for _, curr := range vp.trustedProxyCIDRs {
+		ret = append(ret, TrustedProxy{
+			Source:      "Config File - CIDR",
+			Description: curr.String(),
+		})
+	}
+
+	return ret
+}
+
 func (vp *viperProvider) IsProxyTrusted(ip net.IP) bool {
 	vp.updateLock.RLock()
 	defer vp.updateLock.RUnlock()

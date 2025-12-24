@@ -32,6 +32,7 @@ type debugPageInfo struct {
 	RequestTemplate    template.HTML
 	UserTemplate       template.HTML
 	SessionTemplate    template.HTML
+	TrustedProxies     template.HTML
 }
 
 func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
@@ -133,6 +134,12 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"creation_time", s.CreationTime.Format(time.RFC1123)},
 	})
 
+	proxyTable := table.NewWriter()
+	sessionTable.AppendHeader(table.Row{"Source", "Description"})
+	for _, curr := range trueip.ListProxies() {
+		proxyTable.AppendRow(table.Row{curr.Source, curr.Description})
+	}
+
 	render.Render(w, "debug.gohtml", &debugPageInfo{
 		AdminNotices:       notices.GetMessages(),
 		DependencyTemplate: template.HTML(depTable.RenderHTML()),     // #nosec G203 -- table library handles escaping for us
@@ -143,6 +150,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		RequestTemplate:    template.HTML(requestTable.RenderHTML()), // #nosec G203
 		UserTemplate:       template.HTML(userTable.RenderHTML()),    // #nosec G203
 		SessionTemplate:    template.HTML(sessionTable.RenderHTML()), // #nosec G203
+		TrustedProxies:     template.HTML(proxyTable.RenderHTML()),   // #nosec G203
 	})
 
 }
