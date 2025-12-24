@@ -13,6 +13,8 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
@@ -81,12 +83,17 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 
 	go dp.eventListener(ctx)
 
-	dp.updateIPs(ctx)
+	err = dp.updateIPs(ctx)
+	if err != nil {
+		notices.AddMessage("docker-invalid", "Could not contact and query the docker daemon. Check the logs")
+		log.Error().Err(err).Msg("could not contact docker daemon for initial query")
+		return nil
+	}
 
 	return dp
 }
 
-func (dp *dockerProvider) updateIPs(ctx context.Context) {
+func (dp *dockerProvider) updateIPs(ctx context.Context) error {
 	dp.updateLock.Lock()
 	defer dp.updateLock.Unlock()
 
@@ -96,7 +103,7 @@ func (dp *dockerProvider) updateIPs(ctx context.Context) {
 
 	if err != nil {
 		log.Error().Err(err).Msg("could not query running containers from API")
-		return
+		return err
 	}
 
 	for _, curr := range resp {
@@ -109,6 +116,8 @@ func (dp *dockerProvider) updateIPs(ctx context.Context) {
 	}
 
 	log.Info().Int("num_containers", len(dp.activeIPs)).Msg("found active proxies from docker")
+
+	return nil
 }
 
 func (dp *dockerProvider) eventListener(ctx context.Context) {

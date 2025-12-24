@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"testing/synctest"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/network"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -324,5 +327,66 @@ func TestDockerProvider_eventListener(t *testing.T) {
 
 		assert.Len(t, mockDocker.Calls, 3) // Events twice, DaemonHost once
 
+	})
+}
+
+func TestDockerProvider_Active(t *testing.T) {
+	dp := &dockerProvider{}
+
+	assert.False(t, dp.Active())
+
+	dp.eventStreamInitialized = true
+
+	assert.True(t, dp.Active())
+}
+
+func TestDockerProvider_ContainsProxies(t *testing.T) {
+	dp := &dockerProvider{}
+	assert.False(t, dp.ContainsProxies())
+
+	dp.activeIPs = map[string][]net.IP{
+		"test": {
+			net.ParseIP("1.1.1.1"),
+		},
+	}
+	assert.True(t, dp.ContainsProxies())
+}
+
+func TestDockerProvider_newDockerProvider(t *testing.T) {
+	t.Run("disabled", func(t *testing.T) {
+		dp := newDockerProvider(t.Context())
+		assert.Nil(t, dp)
+	})
+
+	t.Run("sample init", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		containersQueried := false
+		eventsConnected := false
+
+		// this is my little fake docker endpoint. Is this a good idea? Not sure!
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/v1.51/containers/json" {
+				containersQueried = true
+				w.Write([]byte(`[]`))
+			} else if r.URL.Path == "/v1.51/events" {
+				eventsConnected = true
+				<-t.Context().Done()
+			}
+		}))
+		t.Cleanup(func() {
+			srv.Close()
+		})
+
+		viper.Set(trustedProxyDockerEnabledConfigKey, true)
+		viper.Set(trustedProxyDockerEndpointConfigKey, srv.URL)
+
+		dp := newDockerProvider(t.Context())
+		assert.NotNil(t, dp)
+
+		assert.True(t, containersQueried)
+		assert.True(t, eventsConnected)
 	})
 }
