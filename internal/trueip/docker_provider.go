@@ -114,6 +114,7 @@ func (dp *dockerProvider) updateIPs(ctx context.Context) error {
 	}
 
 	for _, curr := range resp {
+		log.Info().Str("container_id", curr.ID).Strs("container_names", curr.Names).Msg("adding container as trusted")
 		netIPs, err := dp.getDockerIPs(ctx, curr.ID)
 		if err != nil {
 			log.Warn().Err(err).Str("container_id", curr.ID).Msg("could not get container IP addresses")
@@ -170,10 +171,12 @@ func (dp *dockerProvider) handleDockerEvent(ctx context.Context, event events.Me
 		dp.updateLock.Lock()
 		dp.activeIPs[event.Actor.ID] = ips
 		dp.updateLock.Unlock()
+		log.Info().Str("container_id", event.Actor.ID).Msg("adding as trusted container")
 	} else if event.Action == events.ActionDie {
 		dp.updateLock.Lock()
 		delete(dp.activeIPs, event.Actor.ID)
 		dp.updateLock.Unlock()
+		log.Info().Str("container_id", event.Actor.ID).Msg("removing as trusted container")
 	} else {
 		log.Warn().Str("container_id", event.Actor.ID).Str("action", string(event.Action)).Msg("unknown docker action")
 	}
