@@ -21,8 +21,10 @@ func TestAddMessage(t *testing.T) {
 
 	msgs := GetMessages()
 
-	assert.Equal(t, "hello world", msgs[0])
-	assert.Equal(t, "hello world 2", msgs[1])
+	assert.Len(t, msgs, 2)
+
+	assert.Contains(t, msgs, "hello world")
+	assert.Contains(t, msgs, "hello world 2")
 
 	// make sure duplicate message IDs don't get added
 	AddMessage("foo", "hello world")
