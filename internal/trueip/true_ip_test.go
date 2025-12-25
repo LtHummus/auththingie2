@@ -9,6 +9,8 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 type testProvider struct {
@@ -158,8 +160,8 @@ func Test_isTrustedProxy(t *testing.T) {
 	})
 }
 
-func Test_reinitializationOnConfigChange(t *testing.T) {
-	t.Run("basic path", func(t *testing.T) {
+func Test_Initialization(t *testing.T) {
+	t.Run("basic path including config file change", func(t *testing.T) {
 		t.Cleanup(func() {
 			viper.Reset()
 		})
@@ -186,5 +188,22 @@ func Test_reinitializationOnConfigChange(t *testing.T) {
 
 		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
 		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+	})
+
+	t.Run("put notice in if no valid trusted providers", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+			notices.Reset()
+		})
+		initFromConfig(t.Context())
+
+		assert.Len(t, notices.GetMessages(), 1)
+
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		initFromConfig(t.Context())
+
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+
+		assert.Empty(t, notices.GetMessages())
 	})
 }

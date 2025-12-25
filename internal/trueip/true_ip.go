@@ -136,20 +136,17 @@ func ListProxies() []TrustedProxy {
 func Find(r *http.Request) string {
 	providerLock.RLock()
 	defer providerLock.RUnlock()
-
-	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); trustedHeaderName != "" {
-		upstreamTrusted := isTrustedProxy(r)
-		if trustedContents := r.Header.Get(trustedHeaderName); upstreamTrusted && trustedContents != "" {
+	upstreamTrusted := isTrustedProxy(r)
+	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); upstreamTrusted && trustedHeaderName != "" {
+		if trustedContents := r.Header.Get(trustedHeaderName); trustedContents != "" {
 			return trustedContents
 		}
 
 		log.Warn().Str("trusted_header_name", trustedHeaderName).Msg("security.trusted_header_name is set, but that header isn't in the request")
 		notices.AddMessage("invalid-trusted-header-name", "security.trusted_header_name has been set, but we haven't been seeing it in requests")
-	} else if fwd := safeGetXForwardedFor(r); fwd != "" {
-		if isTrustedProxy(r) {
-			parts := strings.Split(fwd, ",")
-			return strings.TrimSpace(parts[len(parts)-1])
-		}
+	} else if fwd := safeGetXForwardedFor(r); upstreamTrusted && fwd != "" {
+		parts := strings.Split(fwd, ",")
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
