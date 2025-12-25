@@ -1,6 +1,7 @@
 package trueip
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -30,8 +31,8 @@ func (tp *testProvider) GetTrustedProxies() []TrustedProxy {
 	}
 
 	return nil
-
 }
+func (tp *testProvider) Teardown(ctx context.Context) error { return nil }
 
 func trustIPForProxy(t *testing.T, ip string) {
 	t.Cleanup(func() {

@@ -1,15 +1,13 @@
 package trueip
 
 import (
+	"context"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-
-	"github.com/lthummus/auththingie2/internal/config"
 )
 
 const (
@@ -112,12 +110,13 @@ func (vp *viperProvider) IsProxyTrusted(ip net.IP) bool {
 	return false
 }
 
+func (vp *viperProvider) Teardown(ctx context.Context) error {
+	// nop
+	return nil
+}
+
 func newViperProvider() *viperProvider {
 	vp := &viperProvider{}
-	config.RegisterForUpdates(func(event fsnotify.Event) {
-		vp.updateTrustedProxies()
-	})
-
 	vp.updateTrustedProxies()
 	return vp
 }

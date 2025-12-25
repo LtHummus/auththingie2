@@ -96,6 +96,13 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 	})
 }
 
+func TestViperProvider_Teardown(t *testing.T) {
+	// this is a noop, but we'll make sure it doesn't return an error all the same
+	vp := &viperProvider{}
+
+	assert.NoError(t, vp.Teardown(t.Context()))
+}
+
 func TestViperProvider_GetTrustedProxies(t *testing.T) {
 	_, n, err := net.ParseCIDR("127.0.0.1/24")
 	require.NoError(t, err)

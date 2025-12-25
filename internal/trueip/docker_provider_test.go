@@ -413,3 +413,40 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 
 	})
 }
+
+func TestDockerProvider_Teardown(t *testing.T) {
+	t.Run("basic functionality", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mockDocker := mocks.NewMockDockerAPI(t)
+			dp := &dockerProvider{
+				cleanup:   make(chan struct{}),
+				activeIPs: map[string][]net.IP{},
+				client:    mockDocker,
+			}
+
+			eventStream := make(chan events.Message)
+			errorStream := make(chan error)
+
+			mockDocker.On("Events", mock.Anything, mock.AnythingOfType("events.ListOptions")).
+				Return((<-chan events.Message)(eventStream), (<-chan error)(errorStream))
+			mockDocker.On("Close").Run(func(args mock.Arguments) {
+				close(eventStream)
+				close(errorStream)
+			}).Return(nil)
+
+			go dp.eventListener(t.Context())
+			synctest.Wait()
+
+			err := dp.Teardown(t.Context())
+			assert.NoError(t, err)
+
+			// this is the best way i found to determine if the inner context (that has been wrapped with a cancel signal)
+			// has actually been closed on cleanup
+			innerCtx := mockDocker.Calls[0].Arguments[0].(context.Context)
+			_, open := <-innerCtx.Done()
+			assert.False(t, open)
+
+		})
+
+	})
+}

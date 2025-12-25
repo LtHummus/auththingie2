@@ -41,6 +41,7 @@ type dockerAPI interface {
 	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 
+	Close() error
 	DaemonHost() string
 	ClientVersion() string
 }
@@ -52,6 +53,8 @@ type dockerProvider struct {
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
 	lastUpdate             time.Time
+
+	cleanup chan struct{}
 }
 
 func (dp *dockerProvider) Active() bool {
@@ -86,6 +89,8 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 	dp := &dockerProvider{
 		client:    dockerClient,
 		activeIPs: map[string][]net.IP{},
+
+		cleanup: make(chan struct{}),
 	}
 
 	go dp.eventListener(ctx)
@@ -129,6 +134,7 @@ func (dp *dockerProvider) updateIPs(ctx context.Context) error {
 }
 
 func (dp *dockerProvider) eventListener(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
 	for {
 		eventStream, errorStream := dp.client.Events(ctx, events.ListOptions{
 			Filters: eventFilter,
@@ -141,6 +147,7 @@ func (dp *dockerProvider) eventListener(ctx context.Context) {
 		if !shouldContinue {
 			log.Warn().Msg("got cleanup signal. no longer listening to docker events")
 			dp.eventStreamInitialized = false
+			cancel()
 			break
 		}
 	}
@@ -154,6 +161,8 @@ func (dp *dockerProvider) listenToDockerStreams(ctx context.Context, eventStream
 		case err := <-errorStream:
 			log.Warn().Err(err).Str("docker_endpoint", dp.client.DaemonHost()).Msg("connection to docker lost, reconnecting")
 			return true
+		case <-dp.cleanup:
+			return false // TODO: figure out why this and the next block can't be combined
 		case <-ctx.Done():
 			return false
 		}
@@ -231,6 +240,15 @@ func (dp *dockerProvider) ContainsProxies() bool {
 	defer dp.updateLock.RUnlock()
 
 	return len(dp.activeIPs) > 0
+}
+
+func (dp *dockerProvider) Teardown(ctx context.Context) error {
+	dp.cleanup <- struct{}{}
+	err := dp.client.Close()
+	if err != nil {
+		log.Warn().Err(err).Msg("error when closing docker client")
+	}
+	return nil
 }
 
 func (dp *dockerProvider) GetTrustedProxies() []TrustedProxy {

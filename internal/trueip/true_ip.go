@@ -27,6 +27,7 @@ type trustedProxyProvider interface {
 	ContainsProxies() bool
 	GetTrustedProxies() []TrustedProxy
 	Active() bool
+	Teardown(ctx context.Context) error
 }
 
 var (
