@@ -3,28 +3,38 @@ package notices
 import "sync"
 
 var (
-	notices     []string
-	noticeIDs   = map[string]struct{}{}
-	noticesLock = sync.Mutex{}
+	notices     = map[string]string{}
+	noticesLock = sync.RWMutex{}
 )
 
 func AddMessage(id string, message string) {
 	noticesLock.Lock()
 	defer noticesLock.Unlock()
-	if _, exists := noticeIDs[id]; exists {
+	if _, exists := notices[id]; exists {
 		return
 	}
 
-	noticeIDs[id] = struct{}{}
-	notices = append(notices, message)
+	notices[id] = message
 }
 
-func GetMessages() []string {
+func DeleteMessage(id string) {
 	noticesLock.Lock()
 	defer noticesLock.Unlock()
 
+	delete(notices, id)
+}
+
+func GetMessages() []string {
+	noticesLock.RLock()
+	defer noticesLock.RUnlock()
+
 	ret := make([]string, len(notices))
-	copy(ret, notices)
+	i := 0
+	for _, msg := range notices {
+		ret[i] = msg
+		i++
+	}
+
 	return ret
 }
 
@@ -32,6 +42,5 @@ func Reset() {
 	noticesLock.Lock()
 	defer noticesLock.Unlock()
 
-	notices = nil
-	noticeIDs = map[string]struct{}{}
+	notices = map[string]string{}
 }

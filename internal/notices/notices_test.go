@@ -33,6 +33,30 @@ func TestAddMessage(t *testing.T) {
 	assert.Len(t, GetMessages(), 2)
 }
 
+func TestDeleteMessage(t *testing.T) {
+	t.Cleanup(func() {
+		Reset()
+	})
+
+	assert.Empty(t, GetMessages())
+
+	AddMessage("a", "hello")
+	assert.Len(t, GetMessages(), 1)
+
+	// make sure you can delete non-existing messages quietly
+	DeleteMessage("b")
+	assert.Len(t, GetMessages(), 1)
+
+	AddMessage("b", "hello2")
+	assert.Len(t, GetMessages(), 2)
+
+	DeleteMessage("b")
+	assert.Len(t, GetMessages(), 1)
+
+	DeleteMessage("a")
+	assert.Len(t, GetMessages(), 0)
+}
+
 func TestReset(t *testing.T) {
 	t.Cleanup(func() {
 		Reset()

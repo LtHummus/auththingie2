@@ -157,3 +157,34 @@ func Test_isTrustedProxy(t *testing.T) {
 		assert.False(t, isTrustedProxy(r))
 	})
 }
+
+func Test_reinitializationOnConfigChange(t *testing.T) {
+	t.Run("basic path", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		// we are doing things using viper this way and calling `initFromConfig` directly because attaching all of the
+		// listeners to the underlying systems (i.e. config.RegisterForUpdates) is not worth it. This does mean that we
+		// aren't testing to make sure that we register ourselves as a listener, but that's a small price to pay for
+		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
+
+		initFromConfig(t.Context())
+
+		assert.Len(t, trustedProxyProviders, 1)
+		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
+
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
+		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		initFromConfig(t.Context())
+
+		assert.Len(t, trustedProxyProviders, 1)
+		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
+
+		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+	})
+}
