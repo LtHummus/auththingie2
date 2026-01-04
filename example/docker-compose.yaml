@@ -1,7 +1,6 @@
-version: '3'
 services:
   traefik:
-    image: traefik:v2.9
+    image: traefik:v3.6
     container_name: traefik
     ports:
       - '80:80'
@@ -10,12 +9,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik_config:/etc/traefik
+    labels:
+      - auththingie2.trusted_proxy=true
 
   auth:
     container_name: auth
     image: lthummus/auththingie2
     volumes:
       - ./config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - ENVIRONMENT=test
     labels:
