@@ -20,7 +20,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/mocks"
 )
 
-//go:embed sample_docker_info.txt
+//go:embed testdata/sample_docker_info.json
 var sampleDockerInfoResponse []byte
 
 func TestDockerProvider_IsProxyTrusted(t *testing.T) {
