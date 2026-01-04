@@ -21,8 +21,10 @@ func TestAddMessage(t *testing.T) {
 
 	msgs := GetMessages()
 
-	assert.Equal(t, "hello world", msgs[0])
-	assert.Equal(t, "hello world 2", msgs[1])
+	assert.Len(t, msgs, 2)
+
+	assert.Contains(t, msgs, "hello world")
+	assert.Contains(t, msgs, "hello world 2")
 
 	// make sure duplicate message IDs don't get added
 	AddMessage("foo", "hello world")
@@ -31,6 +33,30 @@ func TestAddMessage(t *testing.T) {
 	// make sure messages can not be mutated from outside
 	msgs = append(msgs, "this should not be here")
 	assert.Len(t, GetMessages(), 2)
+}
+
+func TestDeleteMessage(t *testing.T) {
+	t.Cleanup(func() {
+		Reset()
+	})
+
+	assert.Empty(t, GetMessages())
+
+	AddMessage("a", "hello")
+	assert.Len(t, GetMessages(), 1)
+
+	// make sure you can delete non-existing messages quietly
+	DeleteMessage("b")
+	assert.Len(t, GetMessages(), 1)
+
+	AddMessage("b", "hello2")
+	assert.Len(t, GetMessages(), 2)
+
+	DeleteMessage("b")
+	assert.Len(t, GetMessages(), 1)
+
+	DeleteMessage("a")
+	assert.Len(t, GetMessages(), 0)
 }
 
 func TestReset(t *testing.T) {

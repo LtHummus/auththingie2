@@ -49,7 +49,7 @@ func RunServer() {
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
-	trueip.Initialize()
+	trueip.Initialize(context.Background())
 
 	config.Lock.RLock()
 	port := viper.GetInt("server.port")

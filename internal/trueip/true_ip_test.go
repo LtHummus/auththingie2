@@ -1,6 +1,7 @@
 package trueip
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -8,132 +9,201 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
-func TestFindTrueIP(t *testing.T) {
+type testProvider struct {
+	validIP net.IP
+}
+
+func (tp *testProvider) IsProxyTrusted(ip net.IP) bool {
+	return ip.Equal(tp.validIP)
+}
+func (tp *testProvider) ContainsProxies() bool { return tp.validIP != nil }
+func (tp *testProvider) Active() bool          { return tp.ContainsProxies() }
+func (tp *testProvider) GetTrustedProxies() []TrustedProxy {
+	if tp.validIP != nil {
+		return []TrustedProxy{
+			{
+				Source:      "Test Provider",
+				Description: tp.validIP.String(),
+			},
+		}
+	}
+
+	return nil
+}
+func (tp *testProvider) Teardown(ctx context.Context) error { return nil }
+
+func trustIPForProxy(t *testing.T, ip string) {
+	t.Cleanup(func() {
+		trustedProxyProviders = nil
+	})
+
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		t.Fatalf("could not parse IP to trust: %s", ip)
+	}
+
+	trustedProxyProviders = []trustedProxyProvider{
+		&testProvider{validIP: parsedIP},
+	}
+}
+
+func TestFind(t *testing.T) {
 	t.Run("fallback", func(t *testing.T) {
 		r := &http.Request{
-			RemoteAddr: "1.2.3.4:5984",
+			RemoteAddr: "1.2.3.4:59884",
 		}
 
 		assert.Equal(t, "1.2.3.4", Find(r))
 	})
 
-	t.Run("x-forwarded-for w/ empty trusted settings", func(t *testing.T) {
-		trustedProxyIPs = nil
-		trustedProxyCIDRs = nil
+	t.Run("trust XFF if proxy is trusted", func(t *testing.T) {
+		trustIPForProxy(t, "1.2.3.4")
 		r := &http.Request{
 			RemoteAddr: "1.2.3.4:5892",
 			Header:     map[string][]string{},
 		}
-		r.Header.Set("X-Forwarded-For", "192.168.2.1")
 
-		assert.Equal(t, "192.168.2.1", Find(r))
+		r.Header.Set("X-Forwarded-For", "9.9.9.9")
+
+		assert.Equal(t, "9.9.9.9", Find(r))
 	})
 
-	t.Run("x-forwarded-for (multiple) w/ empty trusted settings", func(t *testing.T) {
-		trustedProxyIPs = nil
-		trustedProxyCIDRs = nil
+	t.Run("do not trust XFF is proxy is untrusted", func(t *testing.T) {
 		r := &http.Request{
 			RemoteAddr: "1.2.3.4:5892",
 			Header:     map[string][]string{},
 		}
-		r.Header.Set("X-Forwarded-For", "192.168.2.1, 999.999.999.999")
 
-		assert.Equal(t, "192.168.2.1", Find(r))
-	})
-
-	t.Run("do not trust XFF if proxy is untrusted", func(t *testing.T) {
-		trustedProxyIPs = []net.IP{net.ParseIP("127.0.0.1")}
-		r := &http.Request{
-			RemoteAddr: "1.2.3.4:5892",
-			Header:     map[string][]string{},
-		}
-		r.Header.Set("X-Forwarded-For", "192.168.2.1")
+		r.Header.Set("X-Forwarded-For", "9.9.9.9")
 
 		assert.Equal(t, "1.2.3.4", Find(r))
-	})
-
-	t.Run("trust XFF if proxy IP is trusted", func(t *testing.T) {
-		trustedProxyCIDRs = nil
-		trustedProxyIPs = []net.IP{net.ParseIP("127.0.0.1")}
-		r := &http.Request{
-			RemoteAddr: "127.0.0.1:5892",
-			Header:     map[string][]string{},
-		}
-		r.Header.Set("X-Forwarded-For", "192.168.2.1")
-
-		assert.Equal(t, "192.168.2.1", Find(r))
 	})
 
 	t.Run("always take last XFF header", func(t *testing.T) {
-		trustedProxyCIDRs = nil
-		trustedProxyIPs = []net.IP{net.ParseIP("127.0.0.1")}
+		trustIPForProxy(t, "127.0.0.1")
 		r := &http.Request{
-			RemoteAddr: "127.0.0.1:5892",
+			RemoteAddr: "127.0.0.1:5999",
 			Header: map[string][]string{
 				textproto.CanonicalMIMEHeaderKey("X-Forwarded-For"): {
-					"1.2.3.4",
-					"4.5.6.7",
+					"1.1.1.1",
+					"2.2.2.2",
 				},
 			},
 		}
 
-		assert.Equal(t, "4.5.6.7", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r))
 	})
 
-	t.Run("trust XFF is proxy CIDR is trusted", func(t *testing.T) {
-		_, ipn, _ := net.ParseCIDR("10.0.0.0/8")
-		trustedProxyIPs = nil
-		trustedProxyCIDRs = []*net.IPNet{ipn}
+	t.Run("take rightmost entry in XFF", func(t *testing.T) {
+		trustIPForProxy(t, "127.0.0.1")
 		r := &http.Request{
-			RemoteAddr: "10.20.30.40:3945",
+			RemoteAddr: "127.0.0.1:5999",
 			Header:     map[string][]string{},
 		}
-		r.Header.Set("X-Forwarded-For", "192.168.2.1")
+		r.Header.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
 
-		assert.Equal(t, "192.168.2.1", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r))
 	})
 
-	t.Run("ignore x-real-ip if not enabled", func(t *testing.T) {
+	t.Run("use custom trust header if configured and present and proxy is trusted", func(t *testing.T) {
+		trustIPForProxy(t, "127.0.0.1")
 		t.Cleanup(func() {
 			viper.Reset()
 		})
 		r := &http.Request{
-			RemoteAddr: "1.2.3.4:5892",
+			RemoteAddr: "127.0.0.1:5999",
 			Header:     map[string][]string{},
 		}
-		r.Header.Set("X-Real-Ip", "192.195.199.199")
+		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		assert.Equal(t, "1.2.3.4", Find(r))
-	})
-
-	t.Run("x-real-ip only trusted if enabled", func(t *testing.T) {
 		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
-		t.Cleanup(func() {
-			viper.Reset()
-		})
-		r := &http.Request{
-			RemoteAddr: "1.2.3.4:5892",
-			Header:     map[string][]string{},
-		}
-		r.Header.Set("X-Real-Ip", "192.195.199.199")
 
-		assert.Equal(t, "192.195.199.199", Find(r))
+		assert.Equal(t, "1.1.1.1", Find(r))
 	})
 
-	t.Run("fallback order", func(t *testing.T) {
-		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+	t.Run("ignore set trust header if not coming from proxy", func(t *testing.T) {
+		trustIPForProxy(t, "127.0.0.1")
 		t.Cleanup(func() {
 			viper.Reset()
 		})
 		r := &http.Request{
-			RemoteAddr: "1.2.3.4:5892",
+			RemoteAddr: "127.0.0.5:5999",
 			Header:     map[string][]string{},
 		}
-		r.Header.Set("X-Real-Ip", "192.195.199.199")
-		r.Header.Set("X-Forwarded-For", "192.168.2.1, 999.999.999.999")
+		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		assert.Equal(t, "192.195.199.199", Find(r))
+		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+
+		assert.Equal(t, "127.0.0.5", Find(r))
+	})
+}
+
+func Test_isTrustedProxy(t *testing.T) {
+	t.Run("no trust if you can't parse remote addr", func(t *testing.T) {
+		r := &http.Request{
+			RemoteAddr: "aaaaaaa",
+		}
+
+		assert.False(t, isTrustedProxy(r))
+	})
+
+	t.Run("no trust if you can't parse a source IP", func(t *testing.T) {
+		r := &http.Request{
+			RemoteAddr: "992.281.495.111:9999",
+		}
+
+		assert.False(t, isTrustedProxy(r))
+	})
+}
+
+func Test_Initialization(t *testing.T) {
+	t.Run("basic path including config file change", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+		})
+
+		// we are doing things using viper this way and calling `initFromConfig` directly because attaching all of the
+		// listeners to the underlying systems (i.e. config.RegisterForUpdates) is not worth it. This does mean that we
+		// aren't testing to make sure that we register ourselves as a listener, but that's a small price to pay for
+		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
+
+		initFromConfig(t.Context())
+
+		assert.Len(t, trustedProxyProviders, 1)
+		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
+
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
+		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		initFromConfig(t.Context())
+
+		assert.Len(t, trustedProxyProviders, 1)
+		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
+
+		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+	})
+
+	t.Run("put notice in if no valid trusted providers", func(t *testing.T) {
+		t.Cleanup(func() {
+			viper.Reset()
+			notices.Reset()
+		})
+		initFromConfig(t.Context())
+
+		assert.Len(t, notices.GetMessages(), 1)
+
+		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		initFromConfig(t.Context())
+
+		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
+
+		assert.Empty(t, notices.GetMessages())
 	})
 }

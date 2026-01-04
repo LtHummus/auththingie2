@@ -95,7 +95,44 @@ server:
 * The `server` section has some server configuration. The `auth_url` should be the URL that AuthThingie 2 lives at. `domain` should be the root domain (for example if you are protecting `a.example.com` and `b.example.com`, you should put `example.com`). `port` should be self-explanatory
 * The `security` section has some security configuration. The one you're probably most interested in is putting your proxy server in to the `trusted_proxies` section. For now, we only support IP addresses or CIDRs, but docker introspection is coming soon (TM) 
 
-#### Hidden Options
+### Trusted Proxy Configuration
+
+Your setup might complain about no trusted proxy configurations. This is caused by a missing config (note to self, add this to the first time setup flow as well). The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this is not set, we **trust everything by default which is super dangerous**.  For now, AuthThingie will just warn you about this insecurity, but I will be making this a fatal error in a future release! There are two ways to tell AuthThingie what it can trust
+
+#### Docker Tagging
+
+This is the recommended way of doing things (if you're using Docker). First, you have to mount the docker socket in to the AuthThingie container, usually by adding the following to your `docker-compose.yaml` file:
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+Once you've done that, you can enable docker monitoring by setting `security.trusted_proxies.docker.enabled` to `true` in your AuthThingie config file. If you need to change the endpoint for the Docker socket, you can do that in the config file as well:
+
+```yaml
+security:
+  trusted_proxies:
+    docker:
+      enabled: true
+      endpoint: unix:///var/run/docker.sock # optional, only if not this default value
+```
+
+Once you've got that all squared away, you can just tag your Traefik container with the key `auththingie2.trusted_proxy` and the value `true`. AuthThingie will then trust data coming from that container and that container only.
+
+#### Network Trust
+
+If the above doesn't work for you, you can specify either an explicit IP address or a CIDR representing IPs to trust (or both!). This can be put in your config file under `security.trusted_proxies.network` which should be an array of your IPs and CIDRs. For example:
+
+```yaml
+security:
+  trusted_proxies:
+    network:
+      - "172.18.0.0/16"
+      - "127.0.0.1"
+```
+
+## Hidden Options
 
 These exist, document later (including the secret debugging commands).
 

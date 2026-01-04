@@ -19,10 +19,11 @@ import (
 )
 
 const (
-	httpMethodHeader = "X-Forwarded-Method"
-	protocolHeader   = "X-Forwarded-Proto"
-	hostHeader       = "X-Forwarded-Host"
-	requestURIHeader = "X-Forwarded-Uri"
+	httpMethodHeader      = "X-Forwarded-Method"
+	protocolHeader        = "X-Forwarded-Proto"
+	hostHeader            = "X-Forwarded-Host"
+	requestURIHeader      = "X-Forwarded-Uri"
+	sourceIPAddressHeader = "X-Forwarded-For"
 
 	redirectURLParam  = "redirect_uri"
 	loginMessageParam = "message"
@@ -37,7 +38,7 @@ func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
 		Protocol:   r.Header.Get(protocolHeader),
 		Host:       r.Header.Get(hostHeader),
 		RequestURI: r.Header.Get(requestURIHeader),
-		SourceIP:   net.ParseIP(trueip.Find(r)),
+		SourceIP:   net.ParseIP(r.Header.Get(sourceIPAddressHeader)),
 	}
 }
 
