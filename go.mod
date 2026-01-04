@@ -4,17 +4,17 @@ go 1.25
 
 require (
 	github.com/descope/virtualwebauthn v1.0.3
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-webauthn/webauthn v0.15.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gurkankaymak/hocon v1.2.23
-	github.com/jedib0t/go-pretty/v6 v6.7.7
+	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/makiuchi-d/gozxing v0.1.1
-	github.com/mattn/go-sqlite3 v1.14.32
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
 	github.com/pquerna/otp v1.5.0
 	github.com/rs/zerolog v1.34.0
@@ -46,7 +46,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/go-webauthn/x v0.1.26 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/google/go-tpm v0.9.6 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
