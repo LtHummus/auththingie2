@@ -13,12 +13,12 @@ import (
 func TestWrite(path string) error {
 	testFile := filepath.Join(filepath.Dir(path), ".writetest")
 	log.Debug().Str("path", testFile).Msg("testing write")
-	err := os.WriteFile(testFile, []byte{}, 0600)
+	err := os.WriteFile(testFile, []byte{}, 0600) // #nosec G703 -- path supplied by admin user
 	if err != nil {
 		log.Warn().Err(err).Str("path", testFile).Msg("could not write file")
 		return err
 	}
-	err = os.Remove(testFile)
+	err = os.Remove(testFile) // #nosec G703 -- path supplied by admin user
 	if err != nil {
 		log.Warn().Err(err).Str("path", testFile).Msg("could not remove test file")
 	}

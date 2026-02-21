@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -30,10 +31,17 @@ func CheckHealth(host string, timeout time.Duration, disableTLSCheck bool) error
 		return err
 	}
 
-	res, err := client.Do(req)
+	// for now, we enforce this to only be localhost since we want to make sure that we're not doing any odd probing
+	// if this is too onerous of a restriction, i will think of something else
+	if strings.ToLower(req.URL.Hostname()) != "localhost" {
+		return fmt.Errorf("healthcheck: CheckHealth: can only check health on localhost")
+	}
+
+	res, err := client.Do(req) // #nosec G704 -- we limit this to localhost only
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusFound {
 		log.Error().Str("host", host).Str("status", res.Status).Msg("bad status from server")
