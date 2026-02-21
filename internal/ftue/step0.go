@@ -33,7 +33,7 @@ type step0Params struct {
 	DefaultSlashConfig bool
 	DefaultPWD         bool
 	DefaultCustom      bool
-	PWD                string
+	PWD                string // #nosec G117, this is working directory, not password :)
 	CustomConfigPath   string
 	CustomDBPath       string
 	Errors             []string

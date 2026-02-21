@@ -84,7 +84,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(data)
+	_, err = w.Write(data) // #nosec G705 -- all comes from authn library, should be trusted
 	if err != nil {
 		log.Error().Caller(0).Err(err).Msg("could not write webauthn registration data to response")
 	}
