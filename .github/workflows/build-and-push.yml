@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 jobs:
-  docker:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,6 +36,25 @@ jobs:
         with:
           args: ./...
 
+  tag-and-push:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+
       - name: Set Up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -49,7 +70,9 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: lthummus/auththingie2:latest
+          tags: |
+            lthummus/auththingie2:latest
+            lthummus/auththingie2:${{ steps.tag_version.outputs.new_tag }}
           sbom: true
           provenance: mode=max
 
