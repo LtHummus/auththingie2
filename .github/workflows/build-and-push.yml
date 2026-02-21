@@ -75,4 +75,6 @@ jobs:
             lthummus/auththingie2:${{ steps.tag_version.outputs.new_tag }}
           sbom: true
           provenance: mode=max
+          build-args: |
+            AUTHTHINGIE_VERSION=${{ steps.tag_version.outputs.new_version }}
 

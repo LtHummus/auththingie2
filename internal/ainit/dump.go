@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/internal/config"
+	"github.com/lthummus/auththingie2/internal/version"
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 		Str("os", runtime.GOOS).
 		Str("go_version", strings.TrimPrefix(runtime.Version(), "go")).
 		Str("git_commit", revision).
+		Str("version", version.AuthThingie2Version).
 		Msg("hello world")
 	if !config.IsProductionMode() || config.IsDebugLoggingEnabled() {
 		zerolog.SetGlobalLevel(zerolog.TraceLevel)
