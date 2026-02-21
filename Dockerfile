@@ -16,7 +16,8 @@ ARG TARGETPLATFORM
 RUN xx-apt-get -y install gcc
 
 ENV CGO_ENABLED=1
-RUN xx-go build -ldflags "-linkmode 'external' -extldflags '-static'" -o ./auththingie2 . && \
+ARG AUTHTHINGIE_VERSION
+RUN xx-go build -ldflags "-linkmode 'external' -extldflags '-static' -X github.com/lthummus/auththingie2/internal/version.AuthThingie2Version=${AUTHTHINGIE_VERSION}" -o ./auththingie2 . && \
     xx-verify --static ./auththingie2
 
 FROM gcr.io/distroless/static-debian12:latest
