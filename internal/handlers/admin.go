@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -362,6 +363,13 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	}
 	err = nu.SetPassword(pw1)
 	if err != nil {
+		if errors.Is(err, user.ErrInvalidPasswordChars) {
+			render.Render(w, "create_user_page.gohtml", &createUserPageParams{
+				Error:    "Password contains invalid characters",
+				Username: username,
+			})
+			return
+		}
 		log.Error().Err(err).Msg("could not set password")
 		render.Render(w, "create_user_page.gohtml", &createUserPageParams{
 			Error:    "Could not hash password",

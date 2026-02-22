@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	ErrNoPasswordSet     = errors.New("user: no password set")
-	ErrIncorrectPassword = errors.New("user: wrong password")
-	ErrInvalidHash       = errors.New("user: invalid password hash")
+	ErrNoPasswordSet        = errors.New("user: no password set")
+	ErrIncorrectPassword    = errors.New("user: wrong password")
+	ErrInvalidHash          = errors.New("user: invalid password hash")
+	ErrInvalidPasswordChars = errors.New("user: password contains invalid characters")
 )
 
 var _ webauthn.User = (*User)(nil)
@@ -57,6 +58,12 @@ func (u *User) CheckPassword(candidate string) error {
 		return ErrNoPasswordSet
 	}
 
+	var err error
+	candidate, err = cleanPassword(candidate)
+	if err != nil {
+		return ErrInvalidPasswordChars
+	}
+
 	if strings.HasPrefix(u.PasswordHash, "$2") {
 		// password is bcrypt
 		err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(candidate))
@@ -71,7 +78,7 @@ func (u *User) CheckPassword(candidate string) error {
 		return nil
 	}
 
-	err := argon.ValidatePassword(candidate, u.PasswordHash)
+	err = argon.ValidatePassword(candidate, u.PasswordHash)
 	if errors.Is(err, argon.ErrWrongPassword) {
 		return ErrIncorrectPassword
 	}
@@ -121,6 +128,12 @@ func (u *User) TOTPEnabled() bool {
 }
 
 func (u *User) SetPassword(password string) error {
+	var err error
+	password, err = cleanPassword(password)
+	if err != nil {
+		return ErrInvalidPasswordChars
+	}
+
 	hash, err := argon.GenerateFromPassword(password)
 	if err != nil {
 		log.Error().Err(err).Msg("could not hash password")

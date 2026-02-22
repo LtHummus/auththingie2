@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -75,6 +76,12 @@ func (e *Env) HandleSelfConfigPasswordPost(w http.ResponseWriter, r *http.Reques
 
 	err = u.SetPassword(newPw)
 	if err != nil {
+		if errors.Is(err, user.ErrInvalidPasswordChars) {
+			render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{
+				Error: "Password contains invalid characters. Please choose a new one",
+			})
+			return
+		}
 		log.Error().Err(err).Msg("could not update user password")
 		render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{
 			Error: "Error hashing new password",
