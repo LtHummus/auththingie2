@@ -49,7 +49,12 @@ func RunServer() {
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
-	trueip.Initialize(context.Background())
+	err = trueip.Initialize(context.Background())
+	if err != nil {
+		log.Error().Err(err).Msg("invalid trusted proxy configuration")
+		config.RunErrorServer([]string{err.Error()})
+		os.Exit(1)
+	}
 
 	config.Lock.RLock()
 	port := viper.GetInt("server.port")

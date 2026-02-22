@@ -2,6 +2,7 @@ package trueip
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -38,16 +39,22 @@ var (
 	providerLock          sync.RWMutex
 )
 
-func Initialize(ctx context.Context) {
-	initFromConfig(ctx)
+func Initialize(ctx context.Context) error {
+	err := initFromConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("trueip: Intialize: no trusted proxy configuration. Please configure this. See README for details")
+	}
 
 	config.RegisterForUpdates(func(event fsnotify.Event) {
 		log.Debug().Msg("reloading trusted proxy config")
-		initFromConfig(context.Background())
+		err = initFromConfig(context.Background())
+		log.Warn().Err(err).Msg("invalid proxy configuration")
 	})
+
+	return nil
 }
 
-func initFromConfig(ctx context.Context) {
+func initFromConfig(ctx context.Context) error {
 	providerLock.Lock()
 	defer providerLock.Unlock()
 
@@ -85,6 +92,12 @@ func initFromConfig(ctx context.Context) {
 	}
 
 	trustedProxyProviders = newTrustedProviders
+
+	if !initOK {
+		return fmt.Errorf("trueip: initFromConfig: no trusted proxy providers configured")
+	}
+
+	return nil
 }
 
 func isTrustedProxy(r *http.Request) bool {

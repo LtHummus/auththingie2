@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/notices"
 )
@@ -172,7 +173,8 @@ func Test_Initialization(t *testing.T) {
 		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
 		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
 
-		initFromConfig(t.Context())
+		err := initFromConfig(t.Context())
+		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
 		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
@@ -181,7 +183,8 @@ func Test_Initialization(t *testing.T) {
 		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
 
 		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
-		initFromConfig(t.Context())
+		err = initFromConfig(t.Context())
+		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
 		assert.IsType(t, &viperProvider{}, trustedProxyProviders[0])
@@ -190,20 +193,12 @@ func Test_Initialization(t *testing.T) {
 		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
 	})
 
-	t.Run("put notice in if no valid trusted providers", func(t *testing.T) {
+	t.Run("return error if init with no configuration", func(t *testing.T) {
 		t.Cleanup(func() {
 			viper.Reset()
 			notices.Reset()
 		})
-		initFromConfig(t.Context())
-
-		assert.Len(t, notices.GetMessages(), 1)
-
-		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
-		initFromConfig(t.Context())
-
-		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
-
-		assert.Empty(t, notices.GetMessages())
+		err := initFromConfig(t.Context())
+		assert.Error(t, err)
 	})
 }
