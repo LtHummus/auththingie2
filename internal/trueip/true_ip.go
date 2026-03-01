@@ -47,8 +47,9 @@ func Initialize(ctx context.Context) error {
 
 	config.RegisterForUpdates(func(event fsnotify.Event) {
 		log.Debug().Msg("reloading trusted proxy config")
-		err = initFromConfig(context.Background())
-		log.Warn().Err(err).Msg("invalid proxy configuration")
+		if err := initFromConfig(context.Background()); err != nil {
+			log.Warn().Err(err).Msg("invalid proxy configuration")
+		}
 	})
 
 	return nil
