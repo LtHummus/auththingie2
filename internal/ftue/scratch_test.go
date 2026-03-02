@@ -109,7 +109,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "ERROR: password mismatch or is blank!")
 	})
 
-	t.Run("password mismatch", func(t *testing.T) {
+	t.Run("invalid characters test", func(t *testing.T) {
 		_, _, e := makeTestEnv(t)
 
 		v := url.Values{}

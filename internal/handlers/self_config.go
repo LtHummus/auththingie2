@@ -51,6 +51,12 @@ func (e *Env) HandleSelfConfigPasswordPost(w http.ResponseWriter, r *http.Reques
 
 	err := u.CheckPassword(oldPw)
 	if err != nil {
+		if errors.Is(err, user.ErrInvalidPasswordChars) {
+			render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{
+				Error: "Your current password contains invalid characters. Please get an admin to reset your password (or they can disable PRECIS checks)",
+			})
+			return
+		}
 		render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{
 			Error: "Incorrect old password",
 		})

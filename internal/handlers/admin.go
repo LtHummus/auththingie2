@@ -246,6 +246,10 @@ func (e *Env) HandleEditUserSubmission(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(newPwd) != "" {
 		err := u.SetPassword(newPwd)
 		if err != nil {
+			if errors.Is(err, user.ErrInvalidPasswordChars) {
+				http.Error(w, "Password contains invalid characters", http.StatusBadRequest)
+				return
+			}
 			log.Error().Err(err).Msg("could not set user password")
 			http.Error(w, "could not set user password", http.StatusInternalServerError)
 			return

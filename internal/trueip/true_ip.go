@@ -42,6 +42,7 @@ var (
 func Initialize(ctx context.Context) error {
 	err := initFromConfig(ctx)
 	if err != nil {
+		log.Error().Err(err).Msg("No Trusted Proxy configuration! Please configure this! See README for details")
 		return fmt.Errorf("trueip: Intialize: no trusted proxy configuration. Please configure this. See README for details")
 	}
 
@@ -92,11 +93,11 @@ func initFromConfig(ctx context.Context) error {
 		notices.DeleteMessage("no-proxies-trusted")
 	}
 
-	trustedProxyProviders = newTrustedProviders
-
 	if !initOK {
 		return fmt.Errorf("trueip: initFromConfig: no trusted proxy providers configured")
 	}
+
+	trustedProxyProviders = newTrustedProviders
 
 	return nil
 }
