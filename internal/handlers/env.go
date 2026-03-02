@@ -25,6 +25,16 @@ type Env struct {
 	LoginLimiter loginlimit.LoginLimiter
 }
 
+const (
+	loginMessageNotLoggedIn             = "not_logged_in"
+	loginMessageRuleRequiresSecondLogin = "reauth_required"
+)
+
+var validLoginMessages = map[string]string{
+	loginMessageNotLoggedIn:             "You are not logged in. Please log in.",
+	loginMessageRuleRequiresSecondLogin: "This matched rule requires you to login again",
+}
+
 func (e *Env) BuildRouter() http.Handler {
 	log.Info().Msg("setting up listeners")
 
