@@ -61,8 +61,9 @@ func TestCleanPassword(t *testing.T) {
 				input: "🧑‍🔧",
 			},
 			{
-				name:  "Password containing RTL isolates",
-				input: "⁧45⁩",
+				name: "Password containing RTL isolates",
+				// input is "[RLI]45[PDI]"
+				input: string([]byte{0xe2, 0x81, 0xa7, 0x34, 0x35, 0xe2, 0x81, 0xa9}),
 			},
 		}
 
