@@ -3,7 +3,7 @@ module github.com/lthummus/auththingie2
 go 1.25
 
 require (
-	github.com/descope/virtualwebauthn v1.0.3
+	github.com/descope/virtualwebauthn v1.0.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-webauthn/webauthn v0.15.0
