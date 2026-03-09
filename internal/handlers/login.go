@@ -179,7 +179,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if argon.NeedsMigration(u.PasswordHash) {
-		go func() {
+		go func() { // #nosec G118 -- we want this to run in the background
 			pwmigrate.MigrateUser(context.Background(), u, password, e.Database)
 		}()
 	}

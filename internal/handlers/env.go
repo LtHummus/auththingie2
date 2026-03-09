@@ -8,6 +8,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
+	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -99,6 +100,8 @@ func (e *Env) BuildRouter() http.Handler {
 	} else {
 		log.Warn().Msg("not enabling security headers")
 	}
+
+	handler = maxbytes.NewMaxBytesMiddleware(handler, 1024*10*10)
 
 	return handler
 }

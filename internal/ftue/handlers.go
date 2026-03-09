@@ -14,6 +14,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/importer"
+	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
@@ -96,6 +97,8 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	} else {
 		log.Warn().Msg("not enabling security headers")
 	}
+
+	handler = maxbytes.NewMaxBytesMiddleware(handler, 10*1024*1024)
 
 	return handler
 }
