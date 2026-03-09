@@ -21,6 +21,10 @@ import (
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
+const (
+	MaxBodySize = 10 * 1024 * 1024 // 10 MB
+)
+
 var importCache *ttlcache.Cache[string, *importer.Results]
 var initCache = sync.OnceFunc(func() {
 	log.Debug().Msg("initializing import cache")
@@ -98,7 +102,7 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 		log.Warn().Msg("not enabling security headers")
 	}
 
-	handler = maxbytes.NewMaxBytesMiddleware(handler, 10*1024*1024)
+	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
 }

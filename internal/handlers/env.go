@@ -27,6 +27,10 @@ type Env struct {
 }
 
 const (
+	MaxBodySize = 10 * 1024 * 1024 // 10 MB
+)
+
+const (
 	loginMessageNotLoggedIn             = "not_logged_in"
 	loginMessageRuleRequiresSecondLogin = "reauth_required"
 )
@@ -101,7 +105,7 @@ func (e *Env) BuildRouter() http.Handler {
 		log.Warn().Msg("not enabling security headers")
 	}
 
-	handler = maxbytes.NewMaxBytesMiddleware(handler, 1024*10*10)
+	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
 }
