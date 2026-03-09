@@ -117,6 +117,29 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "no contents")
 	})
 
+	t.Run("very large file should error", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		elevenMegs := 11 * 1024 * 1024
+
+		var sb strings.Builder
+		sb.Grow(elevenMegs)
+		for range elevenMegs {
+			sb.WriteString("a")
+		}
+
+		v := url.Values{}
+		v.Add("config_file_text", sb.String())
+
+		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+
 	t.Run("error in config parse", func(t *testing.T) {
 		contents := `---AAA___A__)(!(*@#$)(A*S()*(`
 
