@@ -97,7 +97,7 @@ server:
 
 ### Trusted Proxy Configuration
 
-Your setup might complain about no trusted proxy configurations. This is caused by a missing config (note to self, add this to the first time setup flow as well). The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this is not set, we **trust everything by default which is super dangerous**.  For now, AuthThingie will just warn you about this insecurity, but I will be making this a fatal error in a future release! There are two ways to tell AuthThingie what it can trust
+Your setup might complain about no trusted proxy configurations. This is caused by a missing config (note to self, add this to the first time setup flow as well). The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this section is not configured, **AuthThingie2 will not start up due to an unsafe configuration**. There are two ways to tell AuthThingie what it can trust
 
 #### Docker Tagging
 

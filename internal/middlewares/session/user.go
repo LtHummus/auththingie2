@@ -125,7 +125,7 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 	}
 
 	if argon.NeedsMigration(dbu.PasswordHash) {
-		go func() {
+		go func() { // #nosec G118 -- we want this to run in the background
 			pwmigrate.MigrateUser(context.Background(), dbu, pass, database)
 		}()
 	}

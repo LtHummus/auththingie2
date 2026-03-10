@@ -8,6 +8,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
+	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -23,6 +24,20 @@ type Env struct {
 	Analyzer     rules.Analyzer
 	WebAuthn     *webauthn.WebAuthn
 	LoginLimiter loginlimit.LoginLimiter
+}
+
+const (
+	MaxBodySize = 10 * 1024 * 1024 // 10 MB
+)
+
+const (
+	loginMessageNotLoggedIn             = "not_logged_in"
+	loginMessageRuleRequiresSecondLogin = "reauth_required"
+)
+
+var validLoginMessages = map[string]string{
+	loginMessageNotLoggedIn:             "You are not logged in. Please log in.",
+	loginMessageRuleRequiresSecondLogin: "This matched rule requires you to login again",
 }
 
 func (e *Env) BuildRouter() http.Handler {
@@ -89,6 +104,8 @@ func (e *Env) BuildRouter() http.Handler {
 	} else {
 		log.Warn().Msg("not enabling security headers")
 	}
+
+	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
 }

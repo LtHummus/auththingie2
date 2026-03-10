@@ -14,10 +14,15 @@ import (
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/importer"
+	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/user"
+)
+
+const (
+	MaxBodySize = 10 * 1024 * 1024 // 10 MB
 )
 
 var importCache *ttlcache.Cache[string, *importer.Results]
@@ -96,6 +101,8 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	} else {
 		log.Warn().Msg("not enabling security headers")
 	}
+
+	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
 }

@@ -153,7 +153,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusFound, resp.StatusCode)
 		redirectURL, err := resp.Location()
 		require.NoError(t, err)
-		assert.Equal(t, "You are not logged in. Please log in.", redirectURL.Query().Get(loginMessageParam))
+		assert.Equal(t, loginMessageNotLoggedIn, redirectURL.Query().Get(loginMessageParam))
 		assert.Equal(t, "/login", redirectURL.Path)
 		assert.Equal(t, "https://download.example.com/", redirectURL.Query().Get(redirectURLParam))
 
@@ -437,7 +437,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusFound, resp.StatusCode)
 		redirectURL, err := resp.Location()
 		require.NoError(t, err)
-		assert.Equal(t, "You are not logged in. Please log in.", redirectURL.Query().Get(loginMessageParam))
+		assert.Equal(t, loginMessageNotLoggedIn, redirectURL.Query().Get(loginMessageParam))
 	})
 
 	t.Run("works with duration (still in time)", func(t *testing.T) {
@@ -478,7 +478,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		assert.Equal(t, http.StatusFound, resp.StatusCode)
 		redirectURL, err := resp.Location()
 		require.NoError(t, err)
-		assert.Equal(t, "This matched rule requires you to log in again", redirectURL.Query().Get(loginMessageParam))
+		assert.Equal(t, loginMessageRuleRequiresSecondLogin, redirectURL.Query().Get(loginMessageParam))
 		assert.Equal(t, "/login", redirectURL.Path)
 		assert.Equal(t, "https://download.example.com/", redirectURL.Query().Get(redirectURLParam))
 	})

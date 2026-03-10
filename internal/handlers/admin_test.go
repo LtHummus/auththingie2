@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -876,6 +878,30 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "Password may not be blank")
+	})
+
+	t.Run("fail if password is invalid", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+
+		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
+
+		// encoded password that has some BiDi control characters in there
+		decodedPW, err := hex.DecodeString("e281a73435e281a9")
+		require.NoError(t, err)
+
+		v := url.Values{}
+		v.Add("username", "newuser")
+		v.Add("pw1", string(decodedPW))
+		v.Add("pw2", string(decodedPW))
+
+		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", strings.NewReader(v.Encode()), withUser(sampleAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Password contains invalid characters")
 	})
 
 	t.Run("fail if passwords do not match", func(t *testing.T) {

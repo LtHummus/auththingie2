@@ -1,6 +1,7 @@
 package ftue
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -39,6 +40,13 @@ func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Re
 
 	err := u.SetPassword(password)
 	if err != nil {
+		if errors.Is(err, user.ErrInvalidPasswordChars) {
+			render.Render(w, "ftuescratch.gohtml", &ftueParams{
+				Error: "password contains invalid characters, pick a new one",
+			})
+			log.Error().Err(err).Msg("password contains invalid characters")
+			return
+		}
 		log.Error().Err(err).Msg("could not hash password")
 		http.Error(w, "could not hash password", http.StatusInternalServerError)
 		return

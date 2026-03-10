@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -50,7 +51,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
-		r := makeTestRequest(t, http.MethodGet, "/login?message=This+is+a+test+message", nil)
+		r := makeTestRequest(t, http.MethodGet, fmt.Sprintf("/login?message=%s", loginMessageNotLoggedIn), nil)
 		w := httptest.NewRecorder()
 
 		e.BuildRouter().ServeHTTP(w, r)
@@ -58,7 +59,23 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
 		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
-		assert.Contains(t, w.Body.String(), `This is a test message`)
+		assert.Contains(t, w.Body.String(), `You are not logged in. Please log in`)
+		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
+	})
+
+	t.Run("do not render arbitrary messages in to the page", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+		e.LoginLimiter = nil
+
+		r := makeTestRequest(t, http.MethodGet, "/login?message=This+should+not+be+there+111111", nil)
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.NotContains(t, w.Body.String(), `111111`)
 		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
 

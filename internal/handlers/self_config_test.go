@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -170,6 +172,28 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "New password may not be blank")
+	})
+
+	t.Run("password contains invalid characters", func(t *testing.T) {
+		_, db, _, e := makeTestEnv(t)
+
+		// invalid password --contains BiDi control characters
+		decodedPW, err := hex.DecodeString("e281a73435e281a9")
+		require.NoError(t, err)
+
+		v := url.Values{}
+		v.Add("old_pw", "test1")
+		v.Add("pw1", string(decodedPW))
+		v.Add("pw2", string(decodedPW))
+
+		r := makeTestRequest(t, http.MethodPost, "/edit_self/password", strings.NewReader(v.Encode()), withUser(sampleNonAdminUser, db))
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.BuildRouter().ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "Password contains invalid characters. Please choose a new one")
 	})
 
 	t.Run("error on db update", func(t *testing.T) {

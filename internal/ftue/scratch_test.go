@@ -109,6 +109,25 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "ERROR: password mismatch or is blank!")
 	})
 
+	t.Run("invalid characters test", func(t *testing.T) {
+		_, _, e := makeTestEnv(t)
+
+		v := url.Values{}
+		v.Add("username", "test")
+		// strings are hex-ecnoded "[RLI]45[PDI]"
+		v.Add("password", string([]byte{0xe2, 0x81, 0xa7, 0x34, 0x35, 0xe2, 0x81, 0xa9}))
+		v.Add("password2", string([]byte{0xe2, 0x81, 0xa7, 0x34, 0x35, 0xe2, 0x81, 0xa9}))
+
+		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "password contains invalid characters, pick a new one")
+	})
+
 	t.Run("user creation fails", func(t *testing.T) {
 		db, _, e := makeTestEnv(t)
 
