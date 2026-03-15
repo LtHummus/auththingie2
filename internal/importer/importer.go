@@ -34,9 +34,7 @@ func getString(o hocon.Object, key string) (*string, error) {
 		return nil, fmt.Errorf("not a string: %s", key)
 	}
 
-	s := quoteTrim(v.(hocon.String).String())
-
-	return &s, nil
+	return new(quoteTrim(v.(hocon.String).String())), nil
 }
 
 func getBoolean(o hocon.Object, key string) (bool, error) {
@@ -85,9 +83,7 @@ func getDuration(o hocon.Object, key string) (*time.Duration, error) {
 		return nil, fmt.Errorf("not a duration: %s: %T", key, v)
 	}
 
-	dur := time.Duration(hdur)
-
-	return &dur, nil
+	return new(time.Duration(hdur)), nil
 }
 
 func decodeUser(v hocon.Value) (*user.User, error) {

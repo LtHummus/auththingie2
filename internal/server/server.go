@@ -29,9 +29,8 @@ func RunServer() {
 	render.Init()
 
 	err := config.Init()
-	var fileNotFoundError viper.ConfigFileNotFoundError
 
-	if errors.As(err, &fileNotFoundError) {
+	if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 		log.Warn().Msg("no config file found; starting FTUE")
 		ftue.RunFTUEServer(ftue.StepStartFromBeginning)
 		return

@@ -446,11 +446,9 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Minute)))
 
-		timeout := 5 * time.Minute
-
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{
 			PermittedRoles: []string{"a"},
-			Timeout:        &timeout,
+			Timeout:        new(5 * time.Minute),
 		})
 
 		w := httptest.NewRecorder()
@@ -465,11 +463,9 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Hour)))
 
-		timeout := 5 * time.Minute
-
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{
 			PermittedRoles: []string{"a"},
-			Timeout:        &timeout,
+			Timeout:        new(5 * time.Minute),
 		})
 
 		w := httptest.NewRecorder()

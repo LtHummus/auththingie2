@@ -86,8 +86,7 @@ func Init() error {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
+		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 			initError = err
 			return initError
 		}

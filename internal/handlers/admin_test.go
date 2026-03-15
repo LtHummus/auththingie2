@@ -51,13 +51,12 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 			},
 		}, nil)
 
-		host := "test.example.com"
 		a.On("Rules").Return([]rules.Rule{
 			{
 				Name:            "test-rule",
 				SourceAddress:   nil,
 				ProtocolPattern: nil,
-				HostPattern:     &host,
+				HostPattern:     new("test.example.com"),
 				PathPattern:     nil,
 				Timeout:         nil,
 				Public:          false,

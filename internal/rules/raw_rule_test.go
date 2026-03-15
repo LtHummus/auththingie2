@@ -6,18 +6,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/lthummus/auththingie2/internal/util"
 )
 
 func TestRawRule_ToRule(t *testing.T) {
 	t.Run("all fields present", func(t *testing.T) {
 		rr := rawRule{
 			Name:            "test",
-			SourceAddress:   util.P("10.0.0.0/8"),
-			ProtocolPattern: util.P("https"),
-			HostPattern:     util.P("foo.example.com"),
-			PathPattern:     util.P("/index.html"),
+			SourceAddress:   new("10.0.0.0/8"),
+			ProtocolPattern: new("https"),
+			HostPattern:     new("foo.example.com"),
+			PathPattern:     new("/index.html"),
 			Public:          false,
 			PermittedRoles:  []string{"a", "b"},
 		}
@@ -47,7 +45,7 @@ func TestRawRule_ToRule(t *testing.T) {
 	t.Run("fail on bad source address", func(t *testing.T) {
 		rr := rawRule{
 			Name:          "test",
-			SourceAddress: util.P("abcd/efg"),
+			SourceAddress: new("abcd/efg"),
 		}
 
 		r, err := rr.ToRule()

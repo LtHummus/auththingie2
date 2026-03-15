@@ -100,8 +100,7 @@ func (r *Rule) toRawRule() rawRule {
 	rr := rawRule{}
 	rr.Name = r.Name
 	if r.SourceAddress != nil {
-		srcAddrString := r.SourceAddress.String()
-		rr.SourceAddress = &srcAddrString
+		rr.SourceAddress = new(r.SourceAddress.String())
 	}
 
 	rr.ProtocolPattern = r.ProtocolPattern
