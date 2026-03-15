@@ -41,13 +41,15 @@ func NewValidator(db db.DB, ll loginlimit.LoginLimiter) *ValidatorImpl {
 
 func (v *ValidatorImpl) generateInvalidCredentialsError(sourceIP string, username string, sourceIPKey string, accountKey string) error {
 	accountRemaining, err := v.ll.MarkFailedAttempt(accountKey)
+	accountLocked := false
 	if err != nil {
 		if errors.Is(err, loginlimit.ErrAccountLocked) {
+			accountLocked = true
 			log.Info().Str("ip", sourceIP).Str("username", username).Msg("account locked due to too many failures")
-			return &AccountLockedError{}
+		} else {
+			log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("could not mark username as failed login")
+			return err
 		}
-		log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("could not mark username as failed login")
-		return err
 	}
 
 	ipRemaining, err := v.ll.MarkFailedAttempt(sourceIPKey)
@@ -58,6 +60,10 @@ func (v *ValidatorImpl) generateInvalidCredentialsError(sourceIP string, usernam
 		}
 		log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("could not mark username as failed login")
 		return err
+	}
+
+	if accountLocked {
+		return &AccountLockedError{}
 	}
 
 	return &InvalidUsernamePasswordError{
@@ -71,7 +77,7 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 	accountKey := fmt.Sprintf("username|%s", username)
 
 	if v.ll.IsAccountLocked(sourceIPKey) {
-		return nil, &AccountLockedError{}
+		return nil, &IPBlockedError{}
 	}
 
 	if v.ll.IsAccountLocked(accountKey) {
