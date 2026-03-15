@@ -116,5 +116,9 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 	v.ll.MarkSuccessfulAttempt(accountKey)
 	v.ll.MarkSuccessfulAttempt(sourceIPKey)
 
+	if u.Disabled {
+		return u, &AccountDisabledError{}
+	}
+
 	return u, nil
 }

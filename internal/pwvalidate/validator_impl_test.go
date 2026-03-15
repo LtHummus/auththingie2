@@ -3,6 +3,7 @@ package pwvalidate
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -207,6 +208,27 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		assert.Equal(t, correctPasswordHash, u.PasswordHash)
 	})
 
+	t.Run("account disabled", func(t *testing.T) {
+		mdb, mll, v := makeMocks(t)
+
+		mll.On("IsAccountLocked", "ip|127.0.0.1").Return(false)
+		mll.On("IsAccountLocked", "username|username").Return(false)
+
+		mdb.On("GetUserByUsername", mock.Anything, "username").Return(&user.User{
+			PasswordHash: correctPasswordHash,
+			Disabled:     true,
+		}, nil)
+
+		mll.On("MarkSuccessfulAttempt", "ip|127.0.0.1")
+		mll.On("MarkSuccessfulAttempt", "username|username")
+
+		u, err := v.Validate(context.TODO(), "username", correctPassword, "127.0.0.1")
+		require.NotNil(t, u)
+
+		var ade *AccountDisabledError
+		assert.ErrorAs(t, err, &ade)
+	})
+
 	t.Run("successful login -- needs migration", func(t *testing.T) {
 		mdb, mll, v := makeMocks(t)
 
@@ -233,8 +255,13 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		assert.Equal(t, correctPasswordHash, u.PasswordHash)
 
-		// this is a bit messy because the pw migration runs in the background invsibly to us so we have no idea
-		// to await on it. Just wait a second for it to complete.
-		time.Sleep(1 * time.Second)
+		assert.Eventually(t, func() bool {
+			return len(mdb.Mock.Calls) >= 2
+		}, 5*time.Second, 250*time.Millisecond)
+
+		updatedUser := mdb.Mock.Calls[1].Arguments[1].(*user.User)
+		assert.True(t, strings.HasPrefix(updatedUser.PasswordHash, "$argon2id$v=19$m=65536,t=1,p=2$"))
+		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 1*time.Second)
+		assert.NoError(t, argon.ValidatePassword(correctPassword, updatedUser.PasswordHash))
 	})
 }

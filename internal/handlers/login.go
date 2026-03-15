@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
-	"github.com/lthummus/auththingie2/internal/pwmigrate"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/totp"
 	"github.com/lthummus/auththingie2/internal/trueip"
@@ -119,87 +118,59 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
-	sourceIPKey := fmt.Sprintf("ip|%s", trueip.Find(r))
-	accountKey := fmt.Sprintf("username|%s", username)
-
-	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "This IP has had too many login failures recently. Try again later",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	if e.LoginLimiter.IsAccountLocked(accountKey) {
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "This account is temporarily locked",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	u, err := e.Database.GetUserByUsername(r.Context(), username)
+	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
 	if err != nil {
-		log.Error().Err(err).Msg("could not query for user")
-		http.Error(w, "database error", http.StatusInternalServerError)
-		return
+		if _, ok := errors.AsType[*pwvalidate.AccountLockedError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Invalid username or password. This account has been locked due to multiple failures",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "This IP has had too many login failures recently. Try again later",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          fmt.Sprintf("Invalid username or password. You have %d more attempts before the account is temporarily locked", iupe.AccountRemainingBeforeLocked),
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		if u != nil && u.Disabled && !u.TOTPEnabled() && errors.Is(err, &pwvalidate.AccountDisabledError{}) {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Account is disabled",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		// we want the error of account being disabled if TOTP is enabled to fall through so we can check it later
+		// in the TOTP handler
+		if u == nil || !u.Disabled || !u.TOTPEnabled() || !errors.Is(err, &pwvalidate.AccountDisabledError{}) {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Server side error happened. Try again?",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
 	}
-
-	if u == nil {
-		log.Error().Str("ip", trueip.Find(r)).Msg("invalid login")
-
-		// do an argon validation even though it won't work because we want to consume some time so the existence of a user can't
-		// be detected via timing
-		_ = argon.ValidatePassword("aaaaaaaaaa", fakeArgonHash)
-
-		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
-
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          errorMessage,
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	err = u.CheckPassword(password)
-	if err != nil {
-		log.Error().Str("ip", trueip.Find(r)).Err(err).Msg("invalid login")
-
-		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
-
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          errorMessage,
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	if argon.NeedsMigration(u.PasswordHash) {
-		go func() { // #nosec G118 -- we want this to run in the background
-			pwmigrate.MigrateUser(context.Background(), u, password, e.Database)
-		}()
-	}
-
-	e.LoginLimiter.MarkSuccessfulAttempt(sourceIPKey)
-	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
 
 	if u.TOTPEnabled() {
 		loginTicket := totp.GenerateLoginTicket(u.Id, redirectURL)
 		e.handleTotpPrompt(w, r, loginTicket, "")
-		return
-	}
-
-	if u.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("login of disabled account")
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "Account is disabled",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
 		return
 	}
 

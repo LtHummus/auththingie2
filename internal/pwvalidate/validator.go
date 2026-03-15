@@ -32,3 +32,9 @@ type IPBlockedError struct{}
 func (_ *IPBlockedError) Error() string {
 	return "ip has been temporarily blocked"
 }
+
+type AccountDisabledError struct{}
+
+func (_ *AccountDisabledError) Error() string {
+	return "account is disabled"
+}
