@@ -265,21 +265,23 @@ func setupSalts(t *testing.T) {
 	salt.CheckOrMakeSalt()
 }
 
-func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *Env) {
+func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *mocks.MockPasswordValidator, *Env) {
 	a := mocks.NewMockAnalyzer(t)
 	db := mocks.NewMockDB(t)
 	ll := mocks.NewMockLoginLimiter(t)
+	pwv := mocks.NewMockPasswordValidator(t)
 	wa, err := webauthn.New(&webauthn.Config{
 		RPID:          "example.com",
 		RPDisplayName: "example.com",
 		RPOrigins:     []string{"https://example.com"},
 	})
 	assert.NoError(t, err)
-	return a, db, ll, &Env{
-		Database:     db,
-		Analyzer:     a,
-		WebAuthn:     wa,
-		LoginLimiter: ll,
+	return a, db, ll, pwv, &Env{
+		Database:          db,
+		Analyzer:          a,
+		WebAuthn:          wa,
+		LoginLimiter:      ll,
+		PasswordValidator: pwv,
 	}
 }
 

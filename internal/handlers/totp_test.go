@@ -69,7 +69,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	render.Init()
 
 	t.Run("error if no validation data found", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/totp", nil)
 		w := httptest.NewRecorder()
@@ -80,7 +80,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("database error", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -101,7 +101,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("user not found error", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -122,7 +122,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("no TOTP set", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -147,7 +147,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("expired TOTP ticket", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(-5*time.Minute)))
@@ -167,7 +167,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("IP is banned at outset", func(t *testing.T) {
-		_, _, ll, e := makeTestEnv(t)
+		_, _, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(true)
 
@@ -186,7 +186,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("IP becomes banned after bad TOTP", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -213,7 +213,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("user becomes locked after wrong TOTP", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -240,7 +240,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("wrong TOTP given", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -270,7 +270,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -310,7 +310,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("can't proceed if account is disabled", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -343,7 +343,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code with redirect", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -384,7 +384,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		})
 
 		notices.AddMessage("test", "this is a test message")
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -425,7 +425,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		})
 
 		notices.AddMessage("test", "this is a test message")
-		_, db, ll, e := makeTestEnv(t)
+		_, db, ll, _, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|sampleadmin").Return(false)
@@ -466,7 +466,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	render.Init()
 
 	t.Run("CSRF detection", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil)
 		r.Header.Set("Sec-Fetch-Site", "cross-site")
@@ -479,7 +479,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	})
 
 	t.Run("not logged in", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil)
 		w := httptest.NewRecorder()
@@ -491,7 +491,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	})
 
 	t.Run("already has totp disabled", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/disable_totp", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -503,7 +503,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	})
 
 	t.Run("db write error", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("30 rock is a pretty good show"))
 
@@ -517,7 +517,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 	})
 
 	t.Run("everything is ok", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		db.On("SaveUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 
@@ -540,7 +540,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	render.Init()
 
 	t.Run("setup -- not logged in", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil)
 		w := httptest.NewRecorder()
@@ -551,7 +551,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("setup -- already enrolled", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, withUser(sampleNonAdminWithTOTP, db))
 		w := httptest.NewRecorder()
@@ -565,7 +565,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	// TODO: already have enrollment data
 
 	t.Run("enrollment data generated", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/enable_totp", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -611,7 +611,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("patch -- return a 404", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPatch, "/enable_totp", nil)
 		w := httptest.NewRecorder()
@@ -622,7 +622,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- csrf detection", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil)
 		r.Header.Set("Origin", "https://bad.example.com")
@@ -636,7 +636,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- invalid session data", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/enable_totp", nil)
 		w := httptest.NewRecorder()
@@ -648,7 +648,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- invalid ticket", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, "abcdefghijklmnopqrstuvwxyz")
@@ -664,7 +664,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- expired ticket", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(-5*time.Minute)))
@@ -691,7 +691,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- mismatched user ticket", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		code, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		assert.NoError(t, err)
@@ -711,7 +711,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- submitted code missing", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		q := url.Values{}
 		q.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, sampleTOTPSeed, time.Now().Add(5*time.Minute)))
@@ -738,7 +738,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- incorrect totp code", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Set(totpEnrollmentTicketFieldName, buildEnrollmentTicket(t, sampleNonAdminUser.Id, "AAAAAAAAAA", time.Now().Add(5*time.Minute)))
@@ -755,7 +755,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- database error on write", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		db.On("UpdateTOTPSeed", mock.Anything, sampleNonAdminUser.Id, sampleTOTPSeed).Return(errors.New("bad bad bad"))
 
@@ -777,7 +777,7 @@ func TestEnv_HandleTOTPSetup(t *testing.T) {
 	})
 
 	t.Run("post -- everything ok", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		db.On("UpdateTOTPSeed", mock.Anything, sampleNonAdminUser.Id, sampleTOTPSeed).Return(nil)
 

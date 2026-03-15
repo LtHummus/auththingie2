@@ -11,6 +11,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -20,10 +21,11 @@ import (
 )
 
 type Env struct {
-	Database     db.DB
-	Analyzer     rules.Analyzer
-	WebAuthn     *webauthn.WebAuthn
-	LoginLimiter loginlimit.LoginLimiter
+	Database          db.DB
+	Analyzer          rules.Analyzer
+	WebAuthn          *webauthn.WebAuthn
+	LoginLimiter      loginlimit.LoginLimiter
+	PasswordValidator pwvalidate.PasswordValidator
 }
 
 const (

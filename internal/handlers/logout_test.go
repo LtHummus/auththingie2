@@ -18,7 +18,7 @@ func TestEnv_HandleLogout(t *testing.T) {
 	render.Init()
 
 	t.Run("clobber session", func(t *testing.T) {
-		_, db, _, e := makeTestEnv(t)
+		_, db, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/logout", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()

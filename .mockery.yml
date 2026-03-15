@@ -4,6 +4,9 @@ filename: "{{.InterfaceName}}.go"
 pkgname: "mocks"
 template: testify
 packages:
+  github.com/lthummus/auththingie2/internal/pwvalidate:
+    config:
+      all: true
   github.com/lthummus/auththingie2/internal/db:
     config:
       all: true

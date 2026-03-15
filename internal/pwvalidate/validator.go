@@ -6,7 +6,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
-type Validator interface {
+type PasswordValidator interface {
 	Validate(ctx context.Context, username string, password string, sourceIP string) (*user.User, error)
 }
 
