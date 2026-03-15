@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/mocks"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
@@ -98,96 +99,76 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 	t.Run("with logged in user from session", func(t *testing.T) {
 		u, _, r := generateMockUserSessionRequest(true, nil)
-		db := mocks.NewMockDB(t)
+		pwv := mocks.NewMockPasswordValidator(t)
 
-		u2, source := GetUserFromRequestAllowFallback(r, db)
+		u2, source := GetUserFromRequestAllowFallback(r, pwv)
 		assert.Equal(t, u, u2)
 		assert.Equal(t, UserSourceSession, source)
 	})
 
 	t.Run("valid user from basic auth", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewMockDB(t)
+		pwv := mocks.NewMockPasswordValidator(t)
 
 		r.SetBasicAuth("test", "test1")
 
-		db.On("GetUserByUsername", mock.Anything, "test").Return(&user.User{
-			Username:          "test",
-			PasswordHash:      test1PasswordHash,
-			TOTPSeed:          nil,
-			StoredCredentials: nil,
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+			Username: "test",
 		}, nil)
 
-		user, source := GetUserFromRequestAllowFallback(r, db)
-		require.NotNil(t, user)
+		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		require.NotNil(t, u)
 
 		assert.Equal(t, UserSourceBasicAuth, source)
 
-		assert.Equal(t, "test", user.Username)
+		assert.Equal(t, "test", u.Username)
 	})
 
 	t.Run("basic auth user does not exist", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewMockDB(t)
+		pwv := mocks.NewMockPasswordValidator(t)
 
 		r.SetBasicAuth("baduser", "badpass")
 
-		db.On("GetUserByUsername", mock.Anything, "baduser").Return(nil, nil)
+		pwv.On("Validate", mock.Anything, "baduser", "badpass", "192.0.2.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{
+			AccountRemainingBeforeLocked: 4,
+			IPRemainingBeforeLocked:      4,
+		})
 
-		user, source := GetUserFromRequestAllowFallback(r, db)
-		assert.Nil(t, user)
-		assert.Equal(t, UserSourceInvalidUser, source)
-	})
-
-	t.Run("return invalid user if basic auth credentials are wrong", func(t *testing.T) {
-		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewMockDB(t)
-
-		r.SetBasicAuth("test", "test2")
-
-		db.On("GetUserByUsername", mock.Anything, "test").Return(&user.User{
-			Username:          "test",
-			PasswordHash:      test1PasswordHash,
-			TOTPSeed:          nil,
-			StoredCredentials: nil,
-		}, nil)
-
-		user, source := GetUserFromRequestAllowFallback(r, db)
-		assert.Nil(t, user)
-
+		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		assert.Nil(t, u)
 		assert.Equal(t, UserSourceInvalidUser, source)
 	})
 
 	t.Run("return basic auth even if basic auth user has TOTP enabled", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewMockDB(t)
+		pwv := mocks.NewMockPasswordValidator(t)
 
 		r.SetBasicAuth("test", "test1")
 
-		totpSeed := "ABCDEFG"
-		db.On("GetUserByUsername", mock.Anything, "test").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
 			Username:          "test",
 			PasswordHash:      test1PasswordHash,
-			TOTPSeed:          &totpSeed,
+			TOTPSeed:          new("ABCDEFG"),
 			StoredCredentials: nil,
 		}, nil)
 
-		user, source := GetUserFromRequestAllowFallback(r, db)
+		u, source := GetUserFromRequestAllowFallback(r, pwv)
 
-		assert.True(t, user.TOTPEnabled())
-		assert.Equal(t, "test", user.Username)
-		assert.Equal(t, "ABCDEFG", *user.TOTPSeed)
+		assert.True(t, u.TOTPEnabled())
+		assert.Equal(t, "test", u.Username)
+		assert.Equal(t, "ABCDEFG", *u.TOTPSeed)
 
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 
-	t.Run("return invalid user if user has passkeys enabled", func(t *testing.T) {
+	t.Run("return user even if user has passkeys enabled", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
-		db := mocks.NewMockDB(t)
+		pwv := mocks.NewMockPasswordValidator(t)
 
 		r.SetBasicAuth("test", "test1")
 
-		db.On("GetUserByUsername", mock.Anything, "test").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
 			Username:     "test",
 			PasswordHash: test1PasswordHash,
 			TOTPSeed:     nil,
@@ -198,11 +179,30 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			},
 		}, nil)
 
-		user, source := GetUserFromRequestAllowFallback(r, db)
+		u, source := GetUserFromRequestAllowFallback(r, pwv)
 
-		assert.Equal(t, "test", user.Username)
-		assert.Len(t, user.StoredCredentials, 1)
+		assert.Equal(t, "test", u.Username)
+		assert.Len(t, u.StoredCredentials, 1)
 		assert.Equal(t, UserSourceBasicAuth, source)
+	})
+
+	t.Run("return user even if disabled", func(t *testing.T) {
+		_, _, r := generateMockUserSessionRequest(false, nil)
+		pwv := mocks.NewMockPasswordValidator(t)
+
+		r.SetBasicAuth("test", "test1")
+
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+			Username: "test",
+			Disabled: true,
+		}, &pwvalidate.AccountDisabledError{})
+
+		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		require.NotNil(t, u)
+
+		assert.Equal(t, UserSourceBasicAuth, source)
+
+		assert.Equal(t, "test", u.Username)
 	})
 }
 

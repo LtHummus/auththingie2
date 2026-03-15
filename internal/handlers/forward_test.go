@@ -280,11 +280,12 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {
-		a, db, _, _, e := makeTestEnv(t)
+		a, _, _, pwv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
+		r.RemoteAddr = "192.0.2.1:9999"
 
-		db.On("GetUserByUsername", mock.Anything, "username").Return(&user.User{Username: "test",
+		pwv.On("Validate", mock.Anything, "username", "test1", "192.0.2.1").Return(&user.User{Username: "test",
 			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
 			Admin:        false,
 			Roles:        []string{"foo"},
@@ -302,11 +303,12 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ passkeys", func(t *testing.T) {
-		a, db, _, _, e := makeTestEnv(t)
+		a, _, _, pwv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
+		r.RemoteAddr = "192.0.2.1:9999"
 
-		db.On("GetUserByUsername", mock.Anything, "username").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "username", "test1", "192.0.2.1").Return(&user.User{
 			Username:     "test",
 			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
 			Admin:        false,

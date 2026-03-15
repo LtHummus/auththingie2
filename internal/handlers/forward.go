@@ -122,7 +122,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, e.Database)
+	user, source := session.GetUserFromRequestAllowFallback(r, e.PasswordValidator)
 
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {

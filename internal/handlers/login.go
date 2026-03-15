@@ -8,7 +8,6 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/config"
-	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
@@ -83,34 +82,6 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
 	}
-}
-
-func (e *Env) handleLoginFailureAndGetError(accountKey string, sourceIPKey string) string {
-	errorMessage := "Invalid Username or Password"
-
-	accountLocked := false
-
-	remaining, err := e.LoginLimiter.MarkFailedAttempt(accountKey)
-	if errors.Is(err, loginlimit.ErrAccountLocked) {
-		accountLocked = true
-		errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-	} else if err != nil {
-		log.Warn().Err(err).Str("account_key", accountKey).Msg("error when marking login failure")
-		errorMessage = "An error happened attempting to log you in"
-	} else {
-		errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-	}
-
-	// mark IP address as failed as well, but slightly different semantics for errors
-	remaining, err = e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
-	if errors.Is(err, loginlimit.ErrAccountLocked) && !accountLocked {
-		errorMessage = "Invalid Username or Password. This IP address has failed login too many times. Try again later"
-	} else if err != nil && !errors.Is(err, loginlimit.ErrAccountLocked) {
-		log.Warn().Err(err).Str("source_ip_key", sourceIPKey).Msg("error when marking login failure")
-		errorMessage = "An error happened attempting to log you in"
-	}
-
-	return errorMessage
 }
 
 func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
