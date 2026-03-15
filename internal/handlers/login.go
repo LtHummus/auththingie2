@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
@@ -18,19 +17,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
-
-// fakeArgonHash is a hash of an arbitrary string that we can check against later when logging in with a user that does
-// not exist. We want a valid argon hash to check against so we don't leak user existence via timing. We generate one
-// here to use because we want to generate one that uses the configured argon parameters
-var fakeArgonHash string
-
-func init() {
-	var err error
-	fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password")
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not generate fake hash -- is your argon configuration ok?")
-	}
-}
 
 type loginPageParams struct {
 	RedirectURI    string
@@ -118,7 +104,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if u != nil && u.Disabled && !u.TOTPEnabled() && errors.Is(err, &pwvalidate.AccountDisabledError{}) {
+		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok && u != nil && u.Disabled && !u.TOTPEnabled() {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Account is disabled",
 				RedirectURI:    redirectURL,
@@ -129,7 +115,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 		// we want the error of account being disabled if TOTP is enabled to fall through so we can check it later
 		// in the TOTP handler
-		if u == nil || !u.Disabled || !u.TOTPEnabled() || !errors.Is(err, &pwvalidate.AccountDisabledError{}) {
+		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); u == nil || !u.Disabled || !u.TOTPEnabled() || !ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,

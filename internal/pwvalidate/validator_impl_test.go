@@ -166,7 +166,8 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		u, err := v.Validate(context.Background(), "username", "bad_password", "127.0.0.1")
 		assert.Nil(t, u)
 
-		assert.ErrorIs(t, err, &AccountLockedError{})
+		var ale *AccountLockedError
+		assert.ErrorAs(t, err, &ale)
 	})
 
 	t.Run("incorrect password -- ip blocked", func(t *testing.T) {
@@ -185,7 +186,8 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		u, err := v.Validate(context.Background(), "username", "bad_password", "127.0.0.1")
 		assert.Nil(t, u)
 
-		assert.ErrorIs(t, err, &IPBlockedError{})
+		var ipbl *IPBlockedError
+		assert.ErrorAs(t, err, &ipbl)
 	})
 
 	t.Run("successful login", func(t *testing.T) {
