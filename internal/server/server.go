@@ -15,6 +15,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/ftue"
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -87,11 +88,15 @@ func RunServer() {
 		log.Fatal().Err(err).Msg("could not initialize webauthn")
 	}
 
+	ll := loginlimit.NewInMemoryLimiter()
+	pwv := pwvalidate.NewValidator(database, ll)
+
 	e := handlers.Env{
-		Analyzer:     f,
-		Database:     database,
-		WebAuthn:     wan,
-		LoginLimiter: loginlimit.NewInMemoryLimiter(),
+		Analyzer:          f,
+		Database:          database,
+		WebAuthn:          wan,
+		LoginLimiter:      ll,
+		PasswordValidator: pwv,
 	}
 	log.Info().Msg("services initialized")
 
