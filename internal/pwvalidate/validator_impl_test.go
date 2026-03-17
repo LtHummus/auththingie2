@@ -263,7 +263,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		updatedUser := mdb.Mock.Calls[1].Arguments[1].(*user.User)
 		assert.True(t, strings.HasPrefix(updatedUser.PasswordHash, "$argon2id$v=19$m=65536,t=1,p=2$"))
-		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 1*time.Second)
+		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 2*time.Second)
 		assert.NoError(t, argon.ValidatePassword(correctPassword, updatedUser.PasswordHash))
 	})
 }

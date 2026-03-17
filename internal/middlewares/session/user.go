@@ -16,7 +16,6 @@ import (
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/salt"
-	"github.com/lthummus/auththingie2/internal/trueip"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
@@ -92,7 +91,7 @@ func GetUserFromRequest(r *http.Request) *user.User {
 	return info.(*sessionData).user
 }
 
-func GetUserFromRequestAllowFallback(r *http.Request, validator pwvalidate.PasswordValidator) (*user.User, UserSource) {
+func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator) (*user.User, UserSource) {
 	u := GetUserFromRequest(r)
 	if u != nil {
 		return u, UserSourceSession
@@ -103,12 +102,12 @@ func GetUserFromRequestAllowFallback(r *http.Request, validator pwvalidate.Passw
 		return nil, UserSourceInvalidUser
 	}
 
-	dbu, err := validator.Validate(r.Context(), username, pass, trueip.Find(r))
+	dbu, err := validator.Validate(r.Context(), username, pass, sourceIP)
 	if err != nil {
 		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
 			return dbu, UserSourceBasicAuth
 		}
-		log.Warn().Err(err).Str("ip", trueip.Find(r)).Str("username", username).Msg("invalid login")
+		log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("invalid login")
 		return nil, UserSourceInvalidUser
 	}
 

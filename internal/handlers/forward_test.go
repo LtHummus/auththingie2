@@ -285,7 +285,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		r.SetBasicAuth("username", "test1")
 		r.RemoteAddr = "192.0.2.1:9999"
 
-		pwv.On("Validate", mock.Anything, "username", "test1", "192.0.2.1").Return(&user.User{Username: "test",
+		pwv.On("Validate", mock.Anything, "username", "test1", "10.0.0.1").Return(&user.User{Username: "test",
 			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
 			Admin:        false,
 			Roles:        []string{"foo"},
@@ -308,7 +308,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		r.SetBasicAuth("username", "test1")
 		r.RemoteAddr = "192.0.2.1:9999"
 
-		pwv.On("Validate", mock.Anything, "username", "test1", "192.0.2.1").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "username", "test1", "10.0.0.1").Return(&user.User{
 			Username:     "test",
 			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
 			Admin:        false,

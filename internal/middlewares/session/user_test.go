@@ -101,7 +101,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		u, _, r := generateMockUserSessionRequest(true, nil)
 		pwv := mocks.NewMockPasswordValidator(t)
 
-		u2, source := GetUserFromRequestAllowFallback(r, pwv)
+		u2, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 		assert.Equal(t, u, u2)
 		assert.Equal(t, UserSourceSession, source)
 	})
@@ -112,11 +112,11 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		r.SetBasicAuth("test", "test1")
 
-		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(&user.User{
 			Username: "test",
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 		require.NotNil(t, u)
 
 		assert.Equal(t, UserSourceBasicAuth, source)
@@ -130,12 +130,12 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		r.SetBasicAuth("baduser", "badpass")
 
-		pwv.On("Validate", mock.Anything, "baduser", "badpass", "192.0.2.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{
+		pwv.On("Validate", mock.Anything, "baduser", "badpass", "10.0.0.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{
 			AccountRemainingBeforeLocked: 4,
 			IPRemainingBeforeLocked:      4,
 		})
 
-		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 		assert.Nil(t, u)
 		assert.Equal(t, UserSourceInvalidUser, source)
 	})
@@ -146,14 +146,14 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		r.SetBasicAuth("test", "test1")
 
-		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(&user.User{
 			Username:          "test",
 			PasswordHash:      test1PasswordHash,
 			TOTPSeed:          new("ABCDEFG"),
 			StoredCredentials: nil,
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 
 		assert.True(t, u.TOTPEnabled())
 		assert.Equal(t, "test", u.Username)
@@ -168,7 +168,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		r.SetBasicAuth("test", "test1")
 
-		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(&user.User{
 			Username:     "test",
 			PasswordHash: test1PasswordHash,
 			TOTPSeed:     nil,
@@ -179,7 +179,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			},
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 
 		assert.Equal(t, "test", u.Username)
 		assert.Len(t, u.StoredCredentials, 1)
@@ -192,12 +192,12 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		r.SetBasicAuth("test", "test1")
 
-		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(&user.User{
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(&user.User{
 			Username: "test",
 			Disabled: true,
 		}, &pwvalidate.AccountDisabledError{})
 
-		u, source := GetUserFromRequestAllowFallback(r, pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 		require.NotNil(t, u)
 
 		assert.Equal(t, UserSourceBasicAuth, source)
