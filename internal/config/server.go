@@ -28,7 +28,7 @@ func RunErrorServer(errorsFound []string) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		render.Render(w, "config_errors.gohtml", errorParams)
+		render.RenderWithStatusCode(w, http.StatusInternalServerError, "config_errors.gohtml", errorParams)
 	})
 	mux.Handle("/static/", render.StaticFSHandler())
 

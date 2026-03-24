@@ -139,6 +139,10 @@ func RenderHTMXCompatibleError(w http.ResponseWriter, r *http.Request, msg strin
 }
 
 func Render(w http.ResponseWriter, name string, data any) {
+	RenderWithStatusCode(w, http.StatusOK, name, data)
+}
+
+func RenderWithStatusCode(w http.ResponseWriter, statusCode int, name string, data any) {
 	// TODO: should this render an error to the response writer when we fail?
 
 	templ := templates[name]
@@ -156,6 +160,7 @@ func Render(w http.ResponseWriter, name string, data any) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Error().Err(err).Str("name", name).Msg("error writing response to buffer")
