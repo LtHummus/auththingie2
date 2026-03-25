@@ -12,6 +12,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
+	"github.com/lthummus/auththingie2/internal/debugsignals"
 	"github.com/lthummus/auththingie2/internal/ftue"
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
@@ -100,8 +101,17 @@ func RunServer() {
 	}
 	log.Info().Msg("services initialized")
 
-	listenEnableDebugPage()
-	listenEnableDebugLogging()
+	debugPageStopListener := make(chan struct{})
+	debugListenerEnabled := debugsignals.ListenEnableDebugPage(debugPageStopListener)
+	if !debugListenerEnabled {
+		close(debugPageStopListener)
+	}
+
+	debugLogStopListener := make(chan struct{})
+	debugLogListenerEnabled := debugsignals.ListenEnableDebugLogging(debugLogStopListener)
+	if !debugLogListenerEnabled {
+		close(debugLogStopListener)
+	}
 
 	log.Info().Msg("listeners installed")
 
@@ -138,6 +148,16 @@ func RunServer() {
 	<-c
 
 	log.Warn().Msg("interrupt received")
+
+	if debugLogListenerEnabled {
+		debugLogStopListener <- struct{}{}
+		close(debugLogStopListener)
+	}
+
+	if debugListenerEnabled {
+		debugPageStopListener <- struct{}{}
+		close(debugPageStopListener)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
