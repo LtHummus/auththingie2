@@ -317,11 +317,8 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 
 		resp := w.Result()
 
-		assert.Equal(t, http.StatusFound, resp.StatusCode)
-		redirectURL, err := resp.Location()
-		require.NoError(t, err)
-
-		assert.Equal(t, "/forbidden", redirectURL.Path)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		assert.Contains(t, w.Body.String(), "invalid credentials")
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {
