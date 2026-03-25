@@ -11,6 +11,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -277,6 +278,50 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		redirectLocation, err := resp.Location()
 		assert.NoError(t, err)
 		assert.Equal(t, "/forbidden", redirectLocation.Path)
+	})
+
+	t.Run("yes rule, non-admin, basic auth, role not allowed", func(t *testing.T) {
+		a, _, _, pwv, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+		r.SetBasicAuth("username", "test1")
+
+		pwv.On("Validate", mock.Anything, "username", "test1", "10.0.0.1").Return(&user.User{Username: "test",
+			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
+			Admin:        false,
+			Roles:        []string{"foo"},
+		}, nil)
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"bar"}})
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusFound, resp.StatusCode)
+		redirectURL, err := resp.Location()
+		require.NoError(t, err)
+
+		assert.Equal(t, "/forbidden", redirectURL.Path)
+	})
+
+	t.Run("basic auth invalid credentials", func(t *testing.T) {
+		a, _, _, pwv, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+		r.SetBasicAuth("username", "test2")
+
+		pwv.On("Validate", mock.Anything, "username", "test2", "10.0.0.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{})
+		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{PermittedRoles: []string{"bar"}})
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		resp := w.Result()
+
+		assert.Equal(t, http.StatusFound, resp.StatusCode)
+		redirectURL, err := resp.Location()
+		require.NoError(t, err)
+
+		assert.Equal(t, "/forbidden", redirectURL.Path)
 	})
 
 	t.Run("yes rule, non-admin, has TOTP w/ basic auth", func(t *testing.T) {

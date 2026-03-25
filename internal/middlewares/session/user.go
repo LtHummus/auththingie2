@@ -107,6 +107,10 @@ func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator
 		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
 			return dbu, UserSourceBasicAuth
 		}
+		if _, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
+			// return that the source was respected even if credentials are invalid
+			return nil, UserSourceBasicAuth
+		}
 		log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("invalid login")
 		return nil, UserSourceInvalidUser
 	}

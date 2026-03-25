@@ -137,7 +137,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
 		assert.Nil(t, u)
-		assert.Equal(t, UserSourceInvalidUser, source)
+		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 
 	t.Run("return basic auth even if basic auth user has TOTP enabled", func(t *testing.T) {

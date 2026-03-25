@@ -124,6 +124,13 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// otherwise, see if we have a logged in user
 	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator)
 
+	// basic auth user, but invalid credentials
+	if user == nil && source == session.UserSourceBasicAuth {
+		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials")
+		http.Redirect(w, r, fmt.Sprintf("%s/forbidden", viper.GetString("server.auth_url")), http.StatusFound)
+		return
+	}
+
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {
 		log.Debug().Str("username", "<not logged in>").Msg("redirecting to login page")
