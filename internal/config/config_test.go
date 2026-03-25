@@ -2,7 +2,6 @@ package config
 
 import (
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -146,7 +145,7 @@ func TestIsDebugLoggingEnabled(t *testing.T) {
 
 func TestEnableDebugPage(t *testing.T) {
 	t.Cleanup(func() {
-		atomic.StoreUint32(&DebugFlagOverride, 0)
+		DebugFlagOverride.Store(0)
 	})
 
 	t.Run("defaults for prod mode", func(t *testing.T) {
@@ -166,7 +165,7 @@ func TestEnableDebugPage(t *testing.T) {
 
 	t.Run("prod mode and flag is set", func(t *testing.T) {
 		t.Setenv("ENVIRONMENT", "prod")
-		atomic.StoreUint32(&DebugFlagOverride, 1)
+		DebugFlagOverride.Store(1)
 		assert.True(t, EnableDebugPage())
 	})
 

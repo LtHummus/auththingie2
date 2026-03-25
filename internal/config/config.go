@@ -24,7 +24,7 @@ var (
 	hasInit   bool
 	initError error
 
-	DebugFlagOverride uint32
+	DebugFlagOverride atomic.Uint32
 
 	updateListenerLock sync.RWMutex
 	updateListeners    []UpdateListener
@@ -56,7 +56,7 @@ func EnableDebugPage() bool {
 		return true
 	}
 
-	if atomic.LoadUint32(&DebugFlagOverride) > 0 {
+	if DebugFlagOverride.Load() > 0 {
 		return true
 	}
 

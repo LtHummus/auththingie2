@@ -5,7 +5,6 @@ package debugsignals
 import (
 	"os"
 	"os/signal"
-	"sync/atomic"
 	"syscall"
 
 	"github.com/rs/zerolog"
@@ -22,7 +21,7 @@ func ListenEnableDebugPage(stop <-chan struct{}) bool {
 
 	go listenAndAct(syscall.SIGUSR1, stop, func() {
 		log.Warn().Msg("enabling debug page at /debug")
-		atomic.AddUint32(&config.DebugFlagOverride, 1)
+		config.DebugFlagOverride.Add(1)
 	})
 
 	return true
