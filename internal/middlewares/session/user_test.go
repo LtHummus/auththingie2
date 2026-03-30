@@ -186,7 +186,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 
-	t.Run("return user even if disabled", func(t *testing.T) {
+	t.Run("do not return disabled users", func(t *testing.T) {
 		_, _, r := generateMockUserSessionRequest(false, nil)
 		pwv := mocks.NewMockPasswordValidator(t)
 
@@ -198,11 +198,34 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		}, &pwvalidate.AccountDisabledError{})
 
 		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
-		require.NotNil(t, u)
-
+		assert.Nil(t, u)
 		assert.Equal(t, UserSourceBasicAuth, source)
+	})
 
-		assert.Equal(t, "test", u.Username)
+	t.Run("do not return a user for ip blocks", func(t *testing.T) {
+		_, _, r := generateMockUserSessionRequest(false, nil)
+		pwv := mocks.NewMockPasswordValidator(t)
+
+		r.SetBasicAuth("test", "test1")
+
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(nil, &pwvalidate.IPBlockedError{})
+
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		assert.Nil(t, u)
+		assert.Equal(t, UserSourceBasicAuth, source)
+	})
+
+	t.Run("do not return a user for username blocks", func(t *testing.T) {
+		_, _, r := generateMockUserSessionRequest(false, nil)
+		pwv := mocks.NewMockPasswordValidator(t)
+
+		r.SetBasicAuth("test", "test1")
+
+		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(nil, &pwvalidate.AccountLockedError{})
+
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		assert.Nil(t, u)
+		assert.Equal(t, UserSourceBasicAuth, source)
 	})
 }
 
