@@ -177,6 +177,9 @@ func (a *ViperConfigAnalyzer) MatchesRule(ri *RequestInfo) *Rule {
 }
 
 func (a *ViperConfigAnalyzer) AddRule(r Rule) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
 	a.rules = append(a.rules, r)
 }
 
@@ -191,11 +194,19 @@ func (a *ViperConfigAnalyzer) Rules() []Rule {
 }
 
 func (a *ViperConfigAnalyzer) KnownRoles() []string {
+	a.lock.RLock()
+	defer a.lock.RUnlock()
+
 	ret := make([]string, len(a.knownRoles))
 	copy(ret, a.knownRoles)
 	return ret
 }
 
 func (a *ViperConfigAnalyzer) Errors() []string {
-	return a.errors
+	a.lock.RLock()
+	defer a.lock.RUnlock()
+
+	ret := make([]string, len(a.errors))
+	copy(ret, a.errors)
+	return ret
 }
