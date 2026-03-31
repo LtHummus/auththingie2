@@ -6,7 +6,7 @@ require (
 	github.com/descope/virtualwebauthn v1.0.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-webauthn/webauthn v0.16.1
+	github.com/go-webauthn/webauthn v0.16.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
