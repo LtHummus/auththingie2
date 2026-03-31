@@ -2,10 +2,12 @@
 
 package debugsignals
 
-func ListenEnableDebugPage() {
+func ListenEnableDebugPage(stop <-chan struct{}) bool {
 	// nop
+	return false
 }
 
-func ListenEnableDebugLogging() {
+func ListenEnableDebugLogging(stop <-chan struct{}) bool {
 	// nop
+	return false
 }

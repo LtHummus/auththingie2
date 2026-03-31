@@ -10,31 +10,45 @@ type PasswordValidator interface {
 	Validate(ctx context.Context, username string, password string, sourceIP string) (*user.User, error)
 }
 
-var _ error = &InvalidUsernamePasswordError{}
+type PasswordValidatorError interface {
+	error
+	isAuthError()
+}
+
+var (
+	_ PasswordValidatorError = &InvalidUsernamePasswordError{}
+	_ PasswordValidatorError = &AccountLockedError{}
+	_ PasswordValidatorError = &IPBlockedError{}
+	_ PasswordValidatorError = &AccountDisabledError{}
+)
 
 type InvalidUsernamePasswordError struct {
 	AccountRemainingBeforeLocked int
 	IPRemainingBeforeLocked      int
 }
 
-func (_ *InvalidUsernamePasswordError) Error() string {
+func (iupe *InvalidUsernamePasswordError) Error() string {
 	return "invalid username or password"
 }
+func (iupe *InvalidUsernamePasswordError) isAuthError() {}
 
 type AccountLockedError struct{}
 
-func (_ *AccountLockedError) Error() string {
+func (ale *AccountLockedError) Error() string {
 	return "account has been temporarily locked"
 }
+func (ale *AccountLockedError) isAuthError() {}
 
 type IPBlockedError struct{}
 
-func (_ *IPBlockedError) Error() string {
+func (ipbe *IPBlockedError) Error() string {
 	return "ip has been temporarily blocked"
 }
+func (ipbe *IPBlockedError) isAuthError() {}
 
 type AccountDisabledError struct{}
 
-func (_ *AccountDisabledError) Error() string {
+func (ade *AccountDisabledError) Error() string {
 	return "account is disabled"
 }
+func (ade *AccountDisabledError) isAuthError() {}

@@ -126,8 +126,8 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {
-		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials")
-		http.Error(w, "invalid credentials", http.StatusForbidden)
+		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials or account locked")
+		http.Error(w, "invalid credentials or account locked", http.StatusForbidden)
 		return
 	}
 

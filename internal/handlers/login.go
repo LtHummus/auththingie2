@@ -104,18 +104,19 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok && u != nil && u.Disabled && !u.TOTPEnabled() {
-			render.Render(w, "login.gohtml", &loginPageParams{
-				Error:          "Account is disabled",
-				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-			})
-			return
-		}
-
-		// we want the error of account being disabled if TOTP is enabled to fall through so we can check it later
-		// in the TOTP handler
-		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); u == nil || !u.Disabled || !u.TOTPEnabled() || !ok {
+		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
+			if u != nil && u.TOTPEnabled() {
+				// do nothing, fall through so we do the disabled check post-TOTP
+			} else {
+				render.Render(w, "login.gohtml", &loginPageParams{
+					Error:          "Account is disabled",
+					RedirectURI:    redirectURL,
+					EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				})
+				return
+			}
+		} else {
+			// generic error so render that
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
