@@ -92,7 +92,7 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 	}
 
 	if u == nil {
-		log.Error().Str("ip", sourceIP).Msg("invalid login")
+		log.Warn().Str("ip", sourceIP).Msg("invalid login")
 
 		// do an argon validation even though it won't work because we want to consume some time so the existence of a user can't
 		// be detected via timing
@@ -103,7 +103,7 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 
 	err = u.CheckPassword(password)
 	if err != nil {
-		log.Error().Str("ip", sourceIP).Str("username", username).Err(err).Msg("invalid login")
+		log.Warn().Str("ip", sourceIP).Str("username", username).Err(err).Msg("invalid login")
 
 		return nil, v.generateInvalidCredentialsError(sourceIP, username, sourceIPKey, accountKey)
 	}

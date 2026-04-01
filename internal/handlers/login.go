@@ -77,6 +77,17 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 
 	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
 	if err != nil {
+		if _, ok := errors.AsType[pwvalidate.PasswordValidatorError](err); !ok {
+			// if there's not an auth error, just render something generic
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Server side error happened. Try again?",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		// can't use errors.AsType in a switch statement, so we have this instead :(
 		if _, ok := errors.AsType[*pwvalidate.AccountLockedError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Invalid username or password. This account has been locked due to multiple failures",
@@ -84,27 +95,21 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 			})
 			return
-		}
-
-		if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
+		} else if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "This IP has had too many login failures recently. Try again later",
 				RedirectURI:    redirectURL,
 				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 			})
 			return
-		}
-
-		if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
+		} else if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          fmt.Sprintf("Invalid username or password. You have %d more attempts before the account is temporarily locked", iupe.AccountRemainingBeforeLocked),
 				RedirectURI:    redirectURL,
 				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 			})
 			return
-		}
-
-		if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
+		} else if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
 			if u != nil && u.TOTPEnabled() {
 				// do nothing, fall through so we do the disabled check post-TOTP
 			} else {
@@ -116,7 +121,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-			// generic error so render that
+			// adding this branch just in case I add an auth error and forget to handle it here
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
