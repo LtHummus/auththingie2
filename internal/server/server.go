@@ -150,12 +150,10 @@ func RunServer() {
 	log.Warn().Msg("interrupt received")
 
 	if debugLogListenerEnabled {
-		debugLogStopListener <- struct{}{}
 		close(debugLogStopListener)
 	}
 
 	if debugListenerEnabled {
-		debugPageStopListener <- struct{}{}
 		close(debugPageStopListener)
 	}
 

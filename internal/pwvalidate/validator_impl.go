@@ -54,6 +54,7 @@ func (v *ValidatorImpl) generateInvalidCredentialsError(sourceIP string, usernam
 
 	ipRemaining, err := v.ll.MarkFailedAttempt(sourceIPKey)
 	if err != nil {
+		// we want to return ip blocked as highest priority since we don't want to leak any more info if an IP is hammering us
 		if errors.Is(err, loginlimit.ErrAccountLocked) {
 			log.Info().Str("ip", sourceIP).Str("username", username).Msg("ip blocked due to too many failures")
 			return &IPBlockedError{}
