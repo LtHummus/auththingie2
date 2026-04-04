@@ -53,8 +53,7 @@ func (e *Env) HandleNotAllowed(w http.ResponseWriter, r *http.Request) {
 		Username string
 	}{username}
 
-	w.WriteHeader(http.StatusForbidden)
-	render.Render(w, "forbidden.gohtml", &params)
+	render.RenderWithStatusCode(w, http.StatusForbidden, "forbidden.gohtml", &params)
 }
 
 func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
@@ -68,8 +67,7 @@ func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
 		Username string
 	}{username}
 
-	w.WriteHeader(http.StatusForbidden)
-	render.Render(w, "disabled.gohtml", &params)
+	render.RenderWithStatusCode(w, http.StatusForbidden, "disabled.gohtml", &params)
 }
 
 func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
