@@ -127,15 +127,12 @@ func RenderHTMXCompatibleError(w http.ResponseWriter, r *http.Request, msg strin
 	w.Header().Set("HX-Retarget", "#"+idName)
 	w.Header().Set("HX-Reswap", "outerHTML")
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusUnprocessableEntity)
-
 	params := map[string]string{
 		"Message": msg,
 		"IdName":  strippedIDName,
 	}
 
-	Render(w, "htmx_error.gohtml", params)
+	RenderWithStatusCode(w, http.StatusUnprocessableEntity, "htmx_error.gohtml", params)
 }
 
 func Render(w http.ResponseWriter, name string, data any) {
