@@ -13,11 +13,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
-	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/db"
-	"github.com/lthummus/auththingie2/internal/pwmigrate"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/salt"
-	"github.com/lthummus/auththingie2/internal/trueip"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
@@ -93,7 +91,7 @@ func GetUserFromRequest(r *http.Request) *user.User {
 	return info.(*sessionData).user
 }
 
-func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.User, UserSource) {
+func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator) (*user.User, UserSource) {
 	u := GetUserFromRequest(r)
 	if u != nil {
 		return u, UserSourceSession
@@ -104,30 +102,15 @@ func GetUserFromRequestAllowFallback(r *http.Request, database db.DB) (*user.Use
 		return nil, UserSourceInvalidUser
 	}
 
-	dbu, err := database.GetUserByUsername(r.Context(), username)
+	dbu, err := validator.Validate(r.Context(), username, pass, sourceIP)
 	if err != nil {
-		log.Warn().Err(err).Str("username", username).Msg("could not query for user")
-		return nil, UserSourceInvalidUser
-	}
-	if dbu == nil {
-		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid login")
-		return nil, UserSourceInvalidUser
-	}
-
-	err = dbu.CheckPassword(pass)
-	if err != nil {
-		if errors.Is(err, user.ErrIncorrectPassword) {
-			log.Warn().Str("username", username).Str("ip", trueip.Find(r)).Msg("invalid login")
-			return nil, UserSourceInvalidUser
+		if _, ok := errors.AsType[pwvalidate.PasswordValidatorError](err); ok {
+			// in case of any sort of auth error (account disabled, IP blocked, etc) we want to return nil user, but still
+			// report that the credentials came from basic auth so callers can handle appropriately
+			return nil, UserSourceBasicAuth
 		}
-		log.Warn().Err(err).Str("username", username).Str("ip", trueip.Find(r)).Msg("could not validate password")
+		log.Warn().Err(err).Str("ip", sourceIP).Str("username", username).Msg("invalid login")
 		return nil, UserSourceInvalidUser
-	}
-
-	if argon.NeedsMigration(dbu.PasswordHash) {
-		go func() { // #nosec G118 -- we want this to run in the background
-			pwmigrate.MigrateUser(context.Background(), dbu, pass, database)
-		}()
 	}
 
 	return dbu, UserSourceBasicAuth

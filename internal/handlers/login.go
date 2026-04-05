@@ -1,18 +1,15 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/config"
-	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
-	"github.com/lthummus/auththingie2/internal/pwmigrate"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/totp"
 	"github.com/lthummus/auththingie2/internal/trueip"
@@ -20,19 +17,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
-
-// fakeArgonHash is a hash of an arbitrary string that we can check against later when logging in with a user that does
-// not exist. We want a valid argon hash to check against so we don't leak user existence via timing. We generate one
-// here to use because we want to generate one that uses the configured argon parameters
-var fakeArgonHash string
-
-func init() {
-	var err error
-	fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password")
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not generate fake hash -- is your argon configuration ok?")
-	}
-}
 
 type loginPageParams struct {
 	RedirectURI    string
@@ -86,120 +70,70 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (e *Env) handleLoginFailureAndGetError(accountKey string, sourceIPKey string) string {
-	errorMessage := "Invalid Username or Password"
-
-	accountLocked := false
-
-	remaining, err := e.LoginLimiter.MarkFailedAttempt(accountKey)
-	if errors.Is(err, loginlimit.ErrAccountLocked) {
-		accountLocked = true
-		errorMessage = "Invalid Username or Password. This account has been locked due to multiple failures"
-	} else if err != nil {
-		log.Warn().Err(err).Str("account_key", accountKey).Msg("error when marking login failure")
-		errorMessage = "An error happened attempting to log you in"
-	} else {
-		errorMessage = fmt.Sprintf("Invalid Username or Password. You have %d more attempts before the account is temporarily locked", remaining)
-	}
-
-	// mark IP address as failed as well, but slightly different semantics for errors
-	remaining, err = e.LoginLimiter.MarkFailedAttempt(sourceIPKey)
-	if errors.Is(err, loginlimit.ErrAccountLocked) && !accountLocked {
-		errorMessage = "Invalid Username or Password. This IP address has failed login too many times. Try again later"
-	} else if err != nil && !errors.Is(err, loginlimit.ErrAccountLocked) {
-		log.Warn().Err(err).Str("source_ip_key", sourceIPKey).Msg("error when marking login failure")
-		errorMessage = "An error happened attempting to log you in"
-	}
-
-	return errorMessage
-}
-
 func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	redirectURL := getRedirectURIFromRequest(r)
 
-	sourceIPKey := fmt.Sprintf("ip|%s", trueip.Find(r))
-	accountKey := fmt.Sprintf("username|%s", username)
-
-	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "This IP has had too many login failures recently. Try again later",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	if e.LoginLimiter.IsAccountLocked(accountKey) {
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "This account is temporarily locked",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	u, err := e.Database.GetUserByUsername(r.Context(), username)
+	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
 	if err != nil {
-		log.Error().Err(err).Msg("could not query for user")
-		http.Error(w, "database error", http.StatusInternalServerError)
-		return
+		if _, ok := errors.AsType[pwvalidate.PasswordValidatorError](err); !ok {
+			// if there's not an auth error, just render something generic
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Server side error happened. Try again?",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
+
+		// can't use errors.AsType in a switch statement, so we have this instead :(
+		if _, ok := errors.AsType[*pwvalidate.AccountLockedError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Invalid username or password. This account has been locked due to multiple failures",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		} else if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "This IP has had too many login failures recently. Try again later",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		} else if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          fmt.Sprintf("Invalid username or password. You have %d more attempts before the account is temporarily locked", iupe.AccountRemainingBeforeLocked),
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		} else if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
+			if u != nil && u.TOTPEnabled() {
+				// do nothing, fall through so we do the disabled check post-TOTP
+			} else {
+				render.Render(w, "login.gohtml", &loginPageParams{
+					Error:          "Account is disabled",
+					RedirectURI:    redirectURL,
+					EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				})
+				return
+			}
+		} else {
+			// adding this branch just in case I add an auth error and forget to handle it here
+			render.Render(w, "login.gohtml", &loginPageParams{
+				Error:          "Server side error happened. Try again?",
+				RedirectURI:    redirectURL,
+				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			})
+			return
+		}
 	}
-
-	if u == nil {
-		log.Error().Str("ip", trueip.Find(r)).Msg("invalid login")
-
-		// do an argon validation even though it won't work because we want to consume some time so the existence of a user can't
-		// be detected via timing
-		_ = argon.ValidatePassword("aaaaaaaaaa", fakeArgonHash)
-
-		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
-
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          errorMessage,
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	err = u.CheckPassword(password)
-	if err != nil {
-		log.Error().Str("ip", trueip.Find(r)).Err(err).Msg("invalid login")
-
-		errorMessage := e.handleLoginFailureAndGetError(accountKey, sourceIPKey)
-
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          errorMessage,
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
-		return
-	}
-
-	if argon.NeedsMigration(u.PasswordHash) {
-		go func() { // #nosec G118 -- we want this to run in the background
-			pwmigrate.MigrateUser(context.Background(), u, password, e.Database)
-		}()
-	}
-
-	e.LoginLimiter.MarkSuccessfulAttempt(sourceIPKey)
-	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
 
 	if u.TOTPEnabled() {
 		loginTicket := totp.GenerateLoginTicket(u.Id, redirectURL)
 		e.handleTotpPrompt(w, r, loginTicket, "")
-		return
-	}
-
-	if u.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("login of disabled account")
-		render.Render(w, "login.gohtml", &loginPageParams{
-			Error:          "Account is disabled",
-			RedirectURI:    redirectURL,
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
-		})
 		return
 	}
 

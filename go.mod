@@ -1,6 +1,6 @@
 module github.com/lthummus/auththingie2
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/descope/virtualwebauthn v1.0.4
@@ -14,10 +14,10 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/makiuchi-d/gozxing v0.1.1
-	github.com/mattn/go-sqlite3 v1.14.34
+	github.com/mattn/go-sqlite3 v1.14.38
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
 	github.com/pquerna/otp v1.5.0
-	github.com/rs/zerolog v1.34.0
+	github.com/rs/zerolog v1.35.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -46,7 +46,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
-	github.com/go-webauthn/x v0.2.1 // indirect
+	github.com/go-webauthn/x v0.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect

@@ -12,9 +12,11 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
+	"github.com/lthummus/auththingie2/internal/debugsignals"
 	"github.com/lthummus/auththingie2/internal/ftue"
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -29,9 +31,8 @@ func RunServer() {
 	render.Init()
 
 	err := config.Init()
-	var fileNotFoundError viper.ConfigFileNotFoundError
 
-	if errors.As(err, &fileNotFoundError) {
+	if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 		log.Warn().Msg("no config file found; starting FTUE")
 		ftue.RunFTUEServer(ftue.StepStartFromBeginning)
 		return
@@ -88,16 +89,29 @@ func RunServer() {
 		log.Fatal().Err(err).Msg("could not initialize webauthn")
 	}
 
+	ll := loginlimit.NewInMemoryLimiter()
+	pwv := pwvalidate.NewValidator(database, ll)
+
 	e := handlers.Env{
-		Analyzer:     f,
-		Database:     database,
-		WebAuthn:     wan,
-		LoginLimiter: loginlimit.NewInMemoryLimiter(),
+		Analyzer:          f,
+		Database:          database,
+		WebAuthn:          wan,
+		LoginLimiter:      ll,
+		PasswordValidator: pwv,
 	}
 	log.Info().Msg("services initialized")
 
-	listenEnableDebugPage()
-	listenEnableDebugLogging()
+	debugPageStopListener := make(chan struct{})
+	debugListenerEnabled := debugsignals.ListenEnableDebugPage(debugPageStopListener)
+	if !debugListenerEnabled {
+		close(debugPageStopListener)
+	}
+
+	debugLogStopListener := make(chan struct{})
+	debugLogListenerEnabled := debugsignals.ListenEnableDebugLogging(debugLogStopListener)
+	if !debugLogListenerEnabled {
+		close(debugLogStopListener)
+	}
 
 	log.Info().Msg("listeners installed")
 
@@ -134,6 +148,14 @@ func RunServer() {
 	<-c
 
 	log.Warn().Msg("interrupt received")
+
+	if debugLogListenerEnabled {
+		close(debugLogStopListener)
+	}
+
+	if debugListenerEnabled {
+		close(debugPageStopListener)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

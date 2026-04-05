@@ -53,8 +53,7 @@ func (e *Env) HandleNotAllowed(w http.ResponseWriter, r *http.Request) {
 		Username string
 	}{username}
 
-	w.WriteHeader(http.StatusForbidden)
-	render.Render(w, "forbidden.gohtml", &params)
+	render.RenderWithStatusCode(w, http.StatusForbidden, "forbidden.gohtml", &params)
 }
 
 func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
@@ -68,8 +67,7 @@ func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
 		Username string
 	}{username}
 
-	w.WriteHeader(http.StatusForbidden)
-	render.Render(w, "disabled.gohtml", &params)
+	render.RenderWithStatusCode(w, http.StatusForbidden, "disabled.gohtml", &params)
 }
 
 func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
@@ -122,7 +120,14 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, e.Database)
+	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator)
+
+	// basic auth user, but invalid credentials
+	if user == nil && source == session.UserSourceBasicAuth {
+		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials or account locked")
+		http.Error(w, "invalid credentials or account locked", http.StatusForbidden)
+		return
+	}
 
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {

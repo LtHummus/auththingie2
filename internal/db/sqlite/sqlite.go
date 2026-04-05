@@ -17,12 +17,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/user"
-	"github.com/lthummus/auththingie2/internal/util"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type SQLite struct {
@@ -155,8 +154,7 @@ func (s *SQLite) getCredentials(ctx context.Context, guid string) ([]user.Passke
 		}
 
 		if lastUsed != 0 {
-			t := time.Unix(lastUsed, 0)
-			pk.LastUsed = &t
+			pk.LastUsed = new(time.Unix(lastUsed, 0))
 		}
 
 		keys = append(keys, pk)
@@ -350,8 +348,7 @@ func (s *SQLite) FindKeyById(ctx context.Context, keyID string) (user.Passkey, e
 	}
 
 	if lastUsed != 0 {
-		t := time.Unix(lastUsed, 0)
-		pk.LastUsed = &t
+		pk.LastUsed = new(time.Unix(lastUsed, 0))
 	}
 
 	return pk, nil
@@ -527,7 +524,7 @@ func (s *SQLite) NeedsSetup(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	s.setupNeeded = util.P(userCount == 0)
+	s.setupNeeded = new(userCount == 0)
 	return userCount == 0, nil
 }
 

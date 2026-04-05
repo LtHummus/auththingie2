@@ -10,20 +10,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lthummus/auththingie2/internal/argon"
-	"github.com/lthummus/auththingie2/internal/config"
-	"github.com/lthummus/auththingie2/internal/loginlimit"
-	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
-	"github.com/lthummus/auththingie2/internal/notices"
-	"github.com/lthummus/auththingie2/internal/render"
-	"github.com/lthummus/auththingie2/internal/salt"
-	enrollment "github.com/lthummus/auththingie2/internal/totp"
-	"github.com/lthummus/auththingie2/internal/user"
-
 	"github.com/gorilla/securecookie"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/lthummus/auththingie2/internal/config"
+	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/notices"
+	"github.com/lthummus/auththingie2/internal/pwvalidate"
+	"github.com/lthummus/auththingie2/internal/render"
+	"github.com/lthummus/auththingie2/internal/salt"
+	enrollment "github.com/lthummus/auththingie2/internal/totp"
 )
 
 func TestEnv_HandleLoginPage(t *testing.T) {
@@ -33,7 +31,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
 
 	t.Run("render login page on GET", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		r := makeTestRequest(t, http.MethodGet, "/login", nil)
@@ -48,7 +46,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("render login page with message", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		r := makeTestRequest(t, http.MethodGet, fmt.Sprintf("/login?message=%s", loginMessageNotLoggedIn), nil)
@@ -64,7 +62,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("do not render arbitrary messages in to the page", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		r := makeTestRequest(t, http.MethodGet, "/login?message=This+should+not+be+there+111111", nil)
@@ -80,7 +78,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login page should not have passkey option if passkeys are disabled", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		viper.Set(config.KeyPasskeysDisabled, true)
@@ -100,7 +98,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("puts redirect uri in form if needed", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		r := makeTestRequest(t, http.MethodGet, "/login?redirect_uri=https%3A%2F%2Fexample.com", nil)
@@ -115,7 +113,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	// begin POST tests
 
 	t.Run("CSRF detection", func(t *testing.T) {
-		_, _, _, e := makeTestEnv(t)
+		_, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -133,15 +131,13 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("gracefully handle database error", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
 		v.Add("password", "test1")
 
-		ll.On("IsAccountLocked", "username|test").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		db.On("GetUserByUsername", mock.Anything, "test").Return(nil, errors.New("database error"))
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(nil, errors.New("whoops"))
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -149,23 +145,21 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		e.BuildRouter().ServeHTTP(w, r)
 
-		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "database error")
+		assert.Contains(t, w.Body.String(), "Server side error happened. Try again")
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+	t.Run("invalid credentials, not locked", func(t *testing.T) {
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com")
 
-		ll.On("IsAccountLocked", "username|test").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("MarkFailedAttempt", "username|test").Return(4, nil)
-		ll.On("MarkFailedAttempt", "ip|192.0.2.1").Return(4, nil)
-		db.On("GetUserByUsername", mock.Anything, "test").Return(nil, nil)
+		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{
+			AccountRemainingBeforeLocked: 4,
+			IPRemainingBeforeLocked:      4,
+		})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -174,48 +168,19 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "Invalid Username or Password")
-		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
-	})
-
-	t.Run("incorrect password", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "regularuser")
-		v.Add("password", "thisisanincorrectpassword")
-		v.Add("redirect_uri", "https://test.example.com")
-
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("MarkFailedAttempt", "username|regularuser").Return(4, nil)
-		ll.On("MarkFailedAttempt", "ip|192.0.2.1").Return(4, nil)
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "Invalid Username or Password. You have 4 more attempts before the account is temporarily locked")
+		assert.Contains(t, w.Body.String(), "Invalid username or password. You have 4 more attempts before the account is temporarily locked")
 		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
 	})
 
 	t.Run("incorrect password that results in a locked account (by username and IP)", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "thisisanincorrectpassword")
 		v.Add("redirect_uri", "https://test.example.com")
 
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("MarkFailedAttempt", "username|regularuser").Return(0, loginlimit.ErrAccountLocked)
-		ll.On("MarkFailedAttempt", "ip|192.0.2.1").Return(0, loginlimit.ErrAccountLocked)
+		pwv.On("Validate", mock.Anything, "regularuser", "thisisanincorrectpassword", "192.0.2.1").Return(nil, &pwvalidate.AccountLockedError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -224,116 +189,19 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "Invalid Username or Password. This account has been locked due to multiple failures")
-		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
-	})
-
-	t.Run("incorrect password that results in a locked account (username only)", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "regularuser")
-		v.Add("password", "thisisanincorrectpassword")
-		v.Add("redirect_uri", "https://test.example.com")
-
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("MarkFailedAttempt", "username|regularuser").Return(0, loginlimit.ErrAccountLocked)
-		ll.On("MarkFailedAttempt", "ip|192.0.2.1").Return(1, nil)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "Invalid Username or Password. This account has been locked due to multiple failures")
-		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
-	})
-
-	t.Run("incorrect password that results in a locked account (ip only)", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "regularuser")
-		v.Add("password", "thisisanincorrectpassword")
-		v.Add("redirect_uri", "https://test.example.com")
-
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("MarkFailedAttempt", "username|regularuser").Return(1, nil)
-		ll.On("MarkFailedAttempt", "ip|192.0.2.1").Return(0, loginlimit.ErrAccountLocked)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "This IP address has failed login too many times.")
-		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
-	})
-
-	t.Run("fail login if account is locked due to login limits (username)", func(t *testing.T) {
-		_, _, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "regularuser")
-		v.Add("password", "thisisanincorrectpassword")
-		v.Add("redirect_uri", "https://test.example.com")
-
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(true)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "This account is temporarily locked")
-		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
-	})
-
-	t.Run("fail login if account is locked due to login limits (ip)", func(t *testing.T) {
-		_, _, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "regularuser")
-		v.Add("password", "thisisanincorrectpassword")
-		v.Add("redirect_uri", "https://test.example.com")
-
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(true)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "This IP has had too many login failures recently")
+		assert.Contains(t, w.Body.String(), "Invalid username or password. This account has been locked due to multiple failures")
 		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://test.example.com" />`)
 	})
 
 	t.Run("can't login with disabled account", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "username|regularuser")
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUser, nil)
+		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleDisabledUser, &pwvalidate.AccountDisabledError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -347,18 +215,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login passes with disable if TOTP is enabled", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|regularuser")
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleDisabledUserWithTOTP, nil)
+		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleDisabledUserWithTOTP, &pwvalidate.AccountDisabledError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -378,18 +242,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP and redirect uri", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|regularuser")
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
+		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -414,18 +274,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP or explicit redirect", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|regularuser")
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
+		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -445,7 +301,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -454,11 +310,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|regularuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|regularuser")
-		db.On("GetUserByUsername", mock.Anything, "regularuser").Return(sampleNonAdminUser, nil)
+		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -486,7 +338,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -495,11 +347,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|adminuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|adminuser")
-		db.On("GetUserByUsername", mock.Anything, "adminuser").Return(sampleAdminUser, nil)
+		pwv.On("Validate", mock.Anything, "adminuser", "test1", "192.0.2.1").Return(sampleAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -523,7 +371,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("correct username/password with TOTP", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
+		_, _, _, pwv, e := makeTestEnv(t)
 
 		viper.Set("auth_url", "https://example.com")
 		t.Cleanup(func() {
@@ -535,11 +383,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|sampletotp").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|sampletotp")
-		db.On("GetUserByUsername", mock.Anything, "sampletotp").Return(sampleNonAdminWithTOTP, nil)
+		pwv.On("Validate", mock.Anything, "sampletotp", "test1", "192.0.2.1").Return(sampleNonAdminWithTOTP, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -560,42 +404,4 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		assert.Equal(t, "https://test.example.com/foo", ticket.RedirectURI)
 	})
 
-	t.Run("migrate password on login", func(t *testing.T) {
-		_, db, ll, e := makeTestEnv(t)
-
-		v := url.Values{}
-		v.Add("username", "oldpwuser")
-		v.Add("password", "test1")
-		v.Add("redirect_uri", "")
-
-		ll.On("IsAccountLocked", "ip|192.0.2.1").Return(false)
-		ll.On("IsAccountLocked", "username|oldpwuser").Return(false)
-		ll.On("MarkSuccessfulAttempt", "ip|192.0.2.1")
-		ll.On("MarkSuccessfulAttempt", "username|oldpwuser")
-		db.On("GetUserByUsername", mock.Anything, "oldpwuser").Return(sampleNonAdminWithOldArgonParams, nil)
-		db.On("UpdatePassword", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
-
-		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
-		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		e.BuildRouter().ServeHTTP(w, r)
-
-		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
-		finalURL, err := w.Result().Location()
-		assert.NoError(t, err)
-		assert.Equal(t, "", finalURL.Scheme)
-		assert.Equal(t, "", finalURL.Host)
-		assert.Equal(t, "/", finalURL.Path)
-
-		// wait until the update password goroutine has finished
-		assert.Eventually(t, func() bool {
-			return len(db.Mock.Calls) >= 2
-		}, 5*time.Second, 250*time.Millisecond)
-		updatedUser := db.Mock.Calls[1].Arguments[1].(*user.User)
-
-		assert.True(t, strings.HasPrefix(updatedUser.PasswordHash, "$argon2id$v=19$m=65536,t=3,p=2$"))
-		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 2*time.Second)
-		assert.NoError(t, argon.ValidatePassword("test1", updatedUser.PasswordHash))
-	})
 }

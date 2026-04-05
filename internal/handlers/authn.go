@@ -112,7 +112,14 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	sessionData := sessionCache.Get(authID).Value()
+	sessDataItem := sessionCache.Get(authID)
+	if sessDataItem == nil || sessDataItem.IsExpired() {
+		log.Warn().Msg("user waited too long to authenticate via passkeys")
+		render.RenderJSONError(w, "Auth session expired. Please complete passkey registration quicker", "authn.login.session_expired", http.StatusBadRequest)
+		return
+	}
+
+	sessionData := sessDataItem.Value()
 
 	credential, err := e.WebAuthn.CreateCredential(u, *sessionData, response)
 	if err != nil {
@@ -197,7 +204,14 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 		return
 	}
 
-	sessData := sessionCache.Get(authID).Value()
+	sessDataItem := sessionCache.Get(authID)
+	if sessDataItem == nil || sessDataItem.IsExpired() {
+		log.Warn().Msg("user waited too long to authenticate via passkeys")
+		render.RenderJSONError(w, "Auth session expired. Please complete passkey logins quicker", "authn.login.session_expired", http.StatusBadRequest)
+		return
+	}
+
+	sessData := sessDataItem.Value()
 	var foundUser *user.User
 
 	cred, err := e.WebAuthn.ValidateDiscoverableLogin(func(rid, handle []byte) (webauthn.User, error) {
