@@ -207,7 +207,7 @@ func TestDockerProvider_eventListener(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(t.Context())
 
-			go dp.eventListener(ctx)
+			go dp.eventListener(ctx, nil)
 
 			eventStream <- events.Message{
 				Action: events.ActionStart,
@@ -261,7 +261,7 @@ func TestDockerProvider_eventListener(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(t.Context())
 
-			go dp.eventListener(ctx)
+			go dp.eventListener(ctx, nil)
 
 			eventStream <- events.Message{
 				Action: events.ActionStart,
@@ -327,7 +327,7 @@ func TestDockerProvider_eventListener(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(t.Context())
 
-			go dp.eventListener(ctx)
+			go dp.eventListener(ctx, nil)
 
 			errorStream <- errors.New("hi")
 
@@ -434,7 +434,7 @@ func TestDockerProvider_Teardown(t *testing.T) {
 				close(errorStream)
 			}).Return(nil)
 
-			go dp.eventListener(t.Context())
+			go dp.eventListener(t.Context(), nil)
 			synctest.Wait()
 
 			err := dp.Teardown(t.Context())
