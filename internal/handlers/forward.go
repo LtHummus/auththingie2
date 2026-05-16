@@ -80,6 +80,11 @@ func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
 }
 
 func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
+	if !trueip.IsFromTrustedProxy(r) {
+		http.Error(w, "forward auth request not from trusted proxy", http.StatusForbidden)
+		return
+	}
+
 	ri := pullInfoFromRequest(r)
 	log.
 		Debug().

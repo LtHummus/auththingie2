@@ -132,9 +132,10 @@ security:
       - "127.0.0.1"
 ```
 
-## Hidden Options
+## Debug Signals
 
-These exist, document later (including the secret debugging commands).
+While AuthThingie2 is running (on a *nix OS), you can send signals to the process to enable some debugging information:
 
-
+- `SIGUSR1` publishes `/debug` to anyone (including unauthenticated users). In normal operation, `/debug` has some configuation/build information that might be useful for debugging configurations and is only available to logged in admin users. `SIGUSR1` will make it availble to ANYONE. Restart the app to make `/debug` admin-only again.
+- `SIGUSR2` enables debug logging in the logs
 

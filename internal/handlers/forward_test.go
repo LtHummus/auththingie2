@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lthummus/auththingie2/internal/trueip"
 	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
@@ -86,13 +87,13 @@ func buildTestRequest(t *testing.T, e *Env, user *user.User, options ...testRequ
 		Value: sess.SessionID,
 	})
 
+	r.RemoteAddr = "127.0.0.1:29583"
+
 	// so much copying :(
 	return session2.ArbitraryAttachSession(*sess, r, user, nil)
 }
 
 func TestEnv_HandleAccountDisabled(t *testing.T) {
-	render.Init()
-
 	t.Run("basic case", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		_, _, _, _, e := makeTestEnv(t)
@@ -141,6 +142,13 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 }
 
 func TestEnv_HandleCheckRequest(t *testing.T) {
+	viper.Set("security.trusted_proxies.network", []string{"127.0.0.1"})
+	trueip.Initialize(t.Context())
+	t.Cleanup(func() {
+		viper.Reset()
+		trueip.TearDown(t.Context())
+	})
+
 	t.Run("handle matches no rules; no user", func(t *testing.T) {
 		a, _, _, _, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
@@ -325,7 +333,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, _, pwv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
-		r.RemoteAddr = "192.0.2.1:9999"
+		r.RemoteAddr = "127.0.0.1:9999"
 
 		pwv.On("Validate", mock.Anything, "username", "test1", "10.0.0.1").Return(&user.User{Username: "test",
 			PasswordHash: "$argon2id$v=19$m=65536,t=3,p=2$dwWG0v/k39J/7eB5D2gCZw$jnLnqbck1oa2e5scSSQAy4THJUR734LEq6XTunB7678",
@@ -348,7 +356,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		a, _, _, pwv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.SetBasicAuth("username", "test1")
-		r.RemoteAddr = "192.0.2.1:9999"
+		r.RemoteAddr = "127.0.0.1:9999"
 
 		pwv.On("Validate", mock.Anything, "username", "test1", "10.0.0.1").Return(&user.User{
 			Username:     "test",
@@ -454,6 +462,7 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	t.Run("invalid headers specified", func(t *testing.T) {
 		_, _, _, _, e := makeTestEnv(t)
 		r := httptest.NewRequest(http.MethodGet, "/check", nil)
+		r.RemoteAddr = "127.0.0.1:9987"
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)

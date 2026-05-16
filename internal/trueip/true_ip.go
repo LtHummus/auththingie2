@@ -56,6 +56,11 @@ func Initialize(ctx context.Context) error {
 	return nil
 }
 
+// TearDown is for testing only
+func TearDown(ctx context.Context) {
+	trustedProxyProviders = nil
+}
+
 func initFromConfig(ctx context.Context) error {
 	providerLock.Lock()
 	defer providerLock.Unlock()
@@ -146,6 +151,12 @@ func ListProxies() []TrustedProxy {
 	}
 
 	return ret
+}
+
+func IsFromTrustedProxy(r *http.Request) bool {
+	providerLock.RLock()
+	defer providerLock.RUnlock()
+	return isTrustedProxy(r)
 }
 
 func Find(r *http.Request) string {
