@@ -62,6 +62,7 @@ func TestViperValidator_IsAllowed(t *testing.T) {
 		assert.True(t, v.IsAllowed("https://foo.example.com"))
 		assert.True(t, v.IsAllowed("https://bar.foo.example.com"))
 		assert.True(t, v.IsAllowed("http://example.com"))
+		assert.True(t, v.IsAllowed("http://example.com."))
 
 		assert.False(t, v.IsAllowed("ftp://example.com"))
 		assert.False(t, v.IsAllowed("https://otherexample.com"))
@@ -69,6 +70,27 @@ func TestViperValidator_IsAllowed(t *testing.T) {
 		assert.False(t, v.IsAllowed("/"))
 		assert.False(t, v.IsAllowed(""))
 		assert.False(t, v.IsAllowed("//example.com"))
+		assert.False(t, v.IsAllowed("https://example.com@bad.com"))
+	})
+
+	t.Run("corretly trim trailing suffix on allowed domains", func(t *testing.T) {
+		cfg := buildConfig(withServerDomain("example.com."))
+		v, err := NewFromConfig(cfg)
+		require.NoError(t, err)
+
+		assert.True(t, v.IsAllowed("https://example.com"))
+	})
+
+	t.Run("test for subdomains", func(t *testing.T) {
+		cfg := buildConfig(withAllowedDomain("foo.example.com"))
+		v, err := NewFromConfig(cfg)
+		require.NoError(t, err)
+
+		assert.True(t, v.IsAllowed("https://foo.example.com"))
+		assert.True(t, v.IsAllowed("https://aaa.foo.example.com"))
+		assert.True(t, v.IsAllowed("https://bbb.foo.example.com"))
+
+		assert.False(t, v.IsAllowed("https://example.com"))
 	})
 
 	t.Run("test with two allowed domains", func(t *testing.T) {

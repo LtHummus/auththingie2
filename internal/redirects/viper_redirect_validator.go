@@ -48,7 +48,7 @@ func NewFromConfig(v *viper.Viper) (*ViperValidator, error) {
 	}
 
 	for i := range allowedDomains {
-		sanitizedDomain, err := idna.Lookup.ToASCII(strings.ToLower(allowedDomains[i]))
+		sanitizedDomain, err := idna.Lookup.ToASCII(strings.ToLower(strings.TrimSuffix(allowedDomains[i], ".")))
 		if err != nil {
 			return nil, fmt.Errorf("redirects: NewFromConfig: could not parse domain %s: %w", allowedDomains[i], err)
 		}
@@ -97,7 +97,7 @@ func (v *ViperValidator) IsAllowed(rawURL string) bool {
 		return false
 	}
 
-	hostname := strings.ToLower(parsed.Hostname())
+	hostname := strings.ToLower(strings.TrimSuffix(parsed.Hostname(), "."))
 	if hostname == "" {
 		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for empty hostname")
 		return false
