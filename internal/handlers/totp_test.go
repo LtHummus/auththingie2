@@ -80,11 +80,12 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("database error", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, errors.New("whoops"))
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -101,11 +102,12 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("user not found error", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
 		db.On("GetUserByGuid", mock.Anything, "test-user").Return(nil, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -122,7 +124,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("no TOTP set", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -131,6 +133,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: nil,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add("totp-code", "000000")
@@ -167,9 +170,10 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("IP is banned at outset", func(t *testing.T) {
-		_, _, ll, _, _, e := makeTestEnv(t)
+		_, _, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(true)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -186,7 +190,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("IP becomes banned after bad TOTP", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -197,6 +201,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -213,7 +218,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("user becomes locked after wrong TOTP", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -224,6 +229,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -240,7 +246,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("wrong TOTP given", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -251,6 +257,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		v := url.Values{}
 		v.Add(totpLoginTicketFieldName, buildLoginTicket(t, "test-user", "", time.Now().Add(5*time.Minute)))
@@ -270,7 +277,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -281,6 +288,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		require.NoError(t, err)
@@ -310,7 +318,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("can't proceed if account is disabled", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -322,6 +330,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			TOTPSeed: &sampleTOTPSeed,
 			Disabled: true,
 		}, nil)
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		require.NoError(t, err)
@@ -343,7 +352,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 	})
 
 	t.Run("correct TOTP code with redirect", func(t *testing.T) {
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -354,6 +363,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "https://test.example.com/something").Return("https://test.example.com/something", false)
 
 		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		require.NoError(t, err)
@@ -384,7 +394,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		})
 
 		notices.AddMessage("test", "this is a test message")
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|test-user").Return(false)
@@ -395,6 +405,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			Username: "testuser",
 			TOTPSeed: &sampleTOTPSeed,
 		}, nil)
+		ruriv.On("Sanitize", "https://test.example.com/something").Return("https://test.example.com/something", false)
 
 		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		require.NoError(t, err)
@@ -425,7 +436,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 		})
 
 		notices.AddMessage("test", "this is a test message")
-		_, db, ll, _, _, e := makeTestEnv(t)
+		_, db, ll, _, ruriv, e := makeTestEnv(t)
 
 		ll.On("IsAccountLocked", "totp_ip|192.0.2.1").Return(false)
 		ll.On("IsAccountLocked", "totp_user_guid|sampleadmin").Return(false)
@@ -437,6 +448,7 @@ func TestEnv_HandleTOTPValidation(t *testing.T) {
 			TOTPSeed: &sampleTOTPSeed,
 			Admin:    true,
 		}, nil)
+		ruriv.On("Sanitize", "https://test.example.com/something").Return("https://test.example.com/something", false)
 
 		correctTOTP, err := totp.GenerateCode(sampleTOTPSeed, time.Now())
 		require.NoError(t, err)

@@ -177,12 +177,9 @@ async function handleDiscoverLogin() {
 
     console.log(respJSON);
 
-    let nextPage = location.origin; // this is a hack, will this always work?
-    const searchParams = new URL(document.location).searchParams;
+    let nextPage = document.getElementById('passkey-login-button').dataset.redirectUri || location.origin;
     if (respJSON.admin_messages) {
-        nextPage = nextPage + "/admin/notices?redirect_uri=" + searchParams.get("redirect_uri")
-    } else if (searchParams.has('redirect_uri')) {
-        nextPage = searchParams.get('redirect_uri');
+        nextPage = nextPage + "/admin/notices?redirect_uri=" + redirectURI
     }
 
     window.location.href = nextPage;

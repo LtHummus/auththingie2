@@ -43,6 +43,8 @@ func NewFromConfig(v *viper.Viper) (*ViperValidator, error) {
 	if customDomains := v.GetStringSlice(AllowedDomainsKey); customDomains != nil {
 		log.Info().Strs("custom_domains", customDomains).Msg("using domain allow-list for redirect uri filtering")
 		allowedDomains = customDomains
+	} else {
+		log.Warn().Strs("allowed_domain", allowedDomains).Msg("redirect uri validator not set, defaulting to server domain")
 	}
 
 	for i := range allowedDomains {

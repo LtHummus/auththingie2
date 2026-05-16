@@ -108,6 +108,9 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: we should probably check the URL here against the redirect URI validator to make sure we don't attempt to
+	//       check things...but that might break configurations for certain folks. Something to think about.
+
 	// first, see if our request matches any rules defined
 	rule := e.Analyzer.MatchesRule(&ri)
 	if rule == nil {
@@ -137,7 +140,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {
 		log.Debug().Str("username", "<not logged in>").Msg("redirecting to login page")
-		redirectToLogin(w, r, ri, loginMessageNotLoggedIn)
+		e.redirectToLogin(w, r, ri, loginMessageNotLoggedIn)
 		return
 	}
 
@@ -165,7 +168,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	if rule != nil && rule.Timeout != nil && source == session.UserSourceSession && time.Since(sess.LoginTime) > *rule.Timeout {
 		// user has logged in, but not since the timeout, so prompt for relogin
 		log.Warn().Str("user_id", sess.UserID).Time("login_time", sess.LoginTime).Dur("rule_timeout", *rule.Timeout).Msg("need to reauthenticate")
-		redirectToLogin(w, r, ri, loginMessageRuleRequiresSecondLogin)
+		e.redirectToLogin(w, r, ri, loginMessageRuleRequiresSecondLogin)
 		return
 	}
 
@@ -181,9 +184,10 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", viper.GetString("server.auth_url")), http.StatusFound)
 }
 
-func redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
+func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
+	redirectURI, _ := e.RedirectURLValidator.Sanitize(ri.GetURL())
 	v := url.Values{}
-	v.Set(redirectURLParam, ri.GetURL())
+	v.Set(redirectURLParam, redirectURI)
 	if messageKey != "" {
 		v.Set(loginMessageParam, messageKey)
 	}

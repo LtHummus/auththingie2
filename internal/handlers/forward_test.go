@@ -149,11 +149,23 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 		trueip.TearDown(t.Context())
 	})
 
+	t.Run("reject requests from non-trusted proxy", func(t *testing.T) {
+		_, _, _, _, _, e := makeTestEnv(t)
+		r := buildTestRequest(t, e, nil)
+		r.RemoteAddr = "99.99.99.99:9999"
+
+		w := httptest.NewRecorder()
+		e.HandleCheckRequest(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+	})
+
 	t.Run("handle matches no rules; no user", func(t *testing.T) {
-		a, _, _, _, _, e := makeTestEnv(t)
+		a, _, _, _, ruriv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 
 		a.On("MatchesRule", mock.Anything).Return(nil)
+		ruriv.On("Sanitize", "https://download.example.com/").Return("https://download.example.com/", false)
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)
@@ -473,13 +485,14 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("invalid cookie", func(t *testing.T) {
-		a, _, _, _, _, e := makeTestEnv(t)
+		a, _, _, _, ruriv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, nil)
 		r.AddCookie(&http.Cookie{
 			Name:  session2.SessionCookieName,
 			Value: "lol",
 		})
 
+		ruriv.On("Sanitize", "https://download.example.com/").Return("https://download.example.com/", false)
 		a.On("MatchesRule", mock.Anything).Return(nil)
 
 		w := httptest.NewRecorder()
@@ -511,13 +524,14 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	})
 
 	t.Run("works with duration (needs to reauth)", func(t *testing.T) {
-		a, _, _, _, _, e := makeTestEnv(t)
+		a, _, _, _, ruriv, e := makeTestEnv(t)
 		r := buildTestRequest(t, e, &user.User{Id: "5", Username: "test", Admin: false, Roles: []string{"a", "b"}}, withLoginTime(time.Now().Add(-1*time.Hour)))
 
 		a.On("MatchesRule", mock.Anything).Return(&rules.Rule{
 			PermittedRoles: []string{"a"},
 			Timeout:        new(5 * time.Minute),
 		})
+		ruriv.On("Sanitize", "https://download.example.com/").Return("https://download.example.com/", false)
 
 		w := httptest.NewRecorder()
 		e.HandleCheckRequest(w, r)

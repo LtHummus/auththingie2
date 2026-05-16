@@ -31,8 +31,10 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
 
 	t.Run("render login page on GET", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, ruriv, e := makeTestEnv(t)
 		e.LoginLimiter = nil
+
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		r := makeTestRequest(t, http.MethodGet, "/login", nil)
 		w := httptest.NewRecorder()
@@ -46,8 +48,10 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("render login page with message", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, ruriv, e := makeTestEnv(t)
 		e.LoginLimiter = nil
+
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		r := makeTestRequest(t, http.MethodGet, fmt.Sprintf("/login?message=%s", loginMessageNotLoggedIn), nil)
 		w := httptest.NewRecorder()
@@ -62,8 +66,10 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("do not render arbitrary messages in to the page", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, ruriv, e := makeTestEnv(t)
 		e.LoginLimiter = nil
+
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		r := makeTestRequest(t, http.MethodGet, "/login?message=This+should+not+be+there+111111", nil)
 		w := httptest.NewRecorder()
@@ -78,8 +84,10 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login page should not have passkey option if passkeys are disabled", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, ruriv, e := makeTestEnv(t)
 		e.LoginLimiter = nil
+
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		viper.Set(config.KeyPasskeysDisabled, true)
 		t.Cleanup(func() {
@@ -98,8 +106,9 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("puts redirect uri in form if needed", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, ruriv, e := makeTestEnv(t)
 		e.LoginLimiter = nil
+		ruriv.On("Sanitize", "https://example.com").Return("https://example.com", true)
 
 		r := makeTestRequest(t, http.MethodGet, "/login?redirect_uri=https%3A%2F%2Fexample.com", nil)
 		w := httptest.NewRecorder()
@@ -108,6 +117,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<input type="hidden" name="redirect_uri" value="https://example.com" />`)
+		assert.Contains(t, w.Body.String(), `<button id="passkey-login-button" data-redirect-uri="https://example.com">`)
 	})
 
 	// begin POST tests
@@ -131,12 +141,13 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("gracefully handle database error", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
 		v.Add("password", "test1")
 
+		ruriv.On("Sanitize", "").Return("/", true)
 		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(nil, errors.New("whoops"))
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -149,13 +160,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("invalid credentials, not locked", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com")
 
+		ruriv.On("Sanitize", "https://test.example.com").Return("https://test.example.com", false)
 		pwv.On("Validate", mock.Anything, "test", "test1", "192.0.2.1").Return(nil, &pwvalidate.InvalidUsernamePasswordError{
 			AccountRemainingBeforeLocked: 4,
 			IPRemainingBeforeLocked:      4,
@@ -173,13 +185,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("incorrect password that results in a locked account (by username and IP)", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "thisisanincorrectpassword")
 		v.Add("redirect_uri", "https://test.example.com")
 
+		ruriv.On("Sanitize", "https://test.example.com").Return("https://test.example.com", false)
 		pwv.On("Validate", mock.Anything, "regularuser", "thisisanincorrectpassword", "192.0.2.1").Return(nil, &pwvalidate.AccountLockedError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -194,13 +207,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("can't login with disabled account", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleDisabledUser, &pwvalidate.AccountDisabledError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -215,13 +229,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login passes with disable if TOTP is enabled", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleDisabledUserWithTOTP, &pwvalidate.AccountDisabledError{})
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -242,13 +257,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP and redirect uri", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -274,13 +290,14 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP or explicit redirect", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "")
 
+		ruriv.On("Sanitize", "").Return("/", true)
 		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -301,7 +318,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -310,6 +327,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "regularuser", "test1", "192.0.2.1").Return(sampleNonAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -338,7 +356,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -347,6 +365,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "adminuser", "test1", "192.0.2.1").Return(sampleAdminUser, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))
@@ -371,7 +390,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("correct username/password with TOTP", func(t *testing.T) {
-		_, _, _, pwv, _, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, e := makeTestEnv(t)
 
 		viper.Set("auth_url", "https://example.com")
 		t.Cleanup(func() {
@@ -383,6 +402,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		v.Add("password", "test1")
 		v.Add("redirect_uri", "https://test.example.com/foo")
 
+		ruriv.On("Sanitize", "https://test.example.com/foo").Return("https://test.example.com/foo", false)
 		pwv.On("Validate", mock.Anything, "sampletotp", "test1", "192.0.2.1").Return(sampleNonAdminWithTOTP, nil)
 
 		r := makeTestRequest(t, http.MethodPost, "/login", strings.NewReader(v.Encode()))

@@ -17,7 +17,7 @@ func (e *Env) ShowNotices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	redirectURL := getRedirectURIFromRequest(r)
+	redirectURL := e.getRedirectURIFromRequest(r)
 	if redirectURL == "" {
 		redirectURL = "/"
 	}

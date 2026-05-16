@@ -43,9 +43,11 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, ruriv, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
+
+		ruriv.On("Sanitize", "").Return("/", true)
 
 		e.BuildRouter().ServeHTTP(w, r)
 
@@ -61,9 +63,11 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, ruriv, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
+
+		ruriv.On("Sanitize", "https://example.com").Return("https://example.com", false)
 
 		e.BuildRouter().ServeHTTP(w, r)
 
@@ -73,9 +77,11 @@ func TestEnv_ShowNotices(t *testing.T) {
 	})
 
 	t.Run("redirect if there are no messages", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, ruriv, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
+
+		ruriv.On("Sanitize", "https://example.com").Return("https://example.com", false)
 
 		e.BuildRouter().ServeHTTP(w, r)
 
@@ -95,9 +101,11 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("hi", "hi")
 
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, ruriv, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
+
+		ruriv.On("Sanitize", "https://example.com").Return("https://example.com", false)
 
 		e.BuildRouter().ServeHTTP(w, r)
 
