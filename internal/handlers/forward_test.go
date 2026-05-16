@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lthummus/auththingie2/internal/trueip"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/trueip"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -145,7 +146,6 @@ func TestEnv_HandleCheckRequest(t *testing.T) {
 	viper.Set("security.trusted_proxies.network", []string{"127.0.0.1"})
 	trueip.Initialize(t.Context())
 	t.Cleanup(func() {
-		viper.Reset()
 		trueip.TearDown(t.Context())
 	})
 
