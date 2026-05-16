@@ -61,6 +61,11 @@ func New(v *viper.Viper) (*Rule, error) {
 	}, nil
 }
 
+// internalMatch matches input against patterns such as `/api/*`
+// a * in a pattern matches many characters. A ? matches a single character. We can not use path.Match here because
+// we want * to match across separators (e.g. `/api/*` would match `/api/foo` but not `/api/v1/foo. Note for future self
+// using the library `doublestar` could work here, but would break configs since `*` won't match across separators, but
+// ** will
 func internalMatch(pattern string, candidate string) bool {
 	for len(pattern) > 0 {
 		switch pattern[0] {
