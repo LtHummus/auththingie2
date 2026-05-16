@@ -23,7 +23,7 @@ func (e *Env) ShowNotices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if viper.GetBool("unsafe_hide_admin_messages") {
-		http.Redirect(w, r, redirectURL, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in getRedirectURIFromRequest
 		return
 	}
 
@@ -32,7 +32,7 @@ func (e *Env) ShowNotices(w http.ResponseWriter, r *http.Request) {
 	if len(messages) == 0 {
 		// not sure how we ended up here if there are no messages, but just redirect the user to where they
 		// were going
-		http.Redirect(w, r, redirectURL, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in getRedirectURIFromRequest
 		return
 	}
 

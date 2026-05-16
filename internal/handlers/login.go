@@ -159,7 +159,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		v.Set("redirect_uri", redirectURL)
 		http.Redirect(w, r, fmt.Sprintf("/admin/notices?%s", v.Encode()), http.StatusFound)
 	} else {
-		http.Redirect(w, r, redirectURL, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in `getRedirectURIFromRequest`
 	}
 
 }
