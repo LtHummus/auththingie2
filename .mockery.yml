@@ -22,3 +22,9 @@ packages:
         config:
           structname: "MockDockerAPI"
           filename: "DockerAPI.go"
+  github.com/lthummus/auththingie2/internal/redirects:
+    interfaces:
+      Validator:
+        config:
+          structname: "MockRedirectURIValidator"
+          filename: "RedirectURIValiadator.go"

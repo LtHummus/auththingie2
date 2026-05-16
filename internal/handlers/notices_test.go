@@ -17,7 +17,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	render.Init()
 
 	t.Run("non admin should error", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil)
 		w := httptest.NewRecorder()
 
@@ -27,7 +27,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	})
 
 	t.Run("error out if logged in and not admin", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -43,7 +43,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -61,7 +61,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -73,7 +73,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	})
 
 	t.Run("redirect if there are no messages", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -95,7 +95,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("hi", "hi")
 
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 

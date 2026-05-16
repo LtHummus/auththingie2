@@ -19,16 +19,16 @@ const (
 	DefaultFallbackURL = "/"
 )
 
-type Validator struct {
+type ViperValidator struct {
 	allowAll       bool
 	fallbackURL    string
 	allowedDomains []string
 }
 
-func NewFromConfig(v *viper.Viper) (*Validator, error) {
+func NewFromConfig(v *viper.Viper) (*ViperValidator, error) {
 	if v.GetBool(AllowAllKey) {
 		log.Warn().Msg("redirect checking is disabled. this can be insecure!")
-		return &Validator{allowAll: true}, nil
+		return &ViperValidator{allowAll: true}, nil
 	}
 
 	fallback := DefaultFallbackURL
@@ -53,7 +53,7 @@ func NewFromConfig(v *viper.Viper) (*Validator, error) {
 		allowedDomains[i] = sanitizedDomain
 	}
 
-	return &Validator{
+	return &ViperValidator{
 		fallbackURL:    fallback,
 		allowedDomains: allowedDomains,
 	}, nil
@@ -63,7 +63,7 @@ func onDomain(hostname string, domain string) bool {
 	return hostname == domain || strings.HasSuffix(hostname, fmt.Sprintf(".%s", domain))
 }
 
-func (v *Validator) IsAllowed(rawURL string) bool {
+func (v *ViperValidator) IsAllowed(rawURL string) bool {
 	if v.allowAll {
 		return true
 	}
@@ -110,7 +110,7 @@ func (v *Validator) IsAllowed(rawURL string) bool {
 	return false
 }
 
-func (v *Validator) Sanitize(rawURL string) (string, bool) {
+func (v *ViperValidator) Sanitize(rawURL string) (string, bool) {
 	if v.IsAllowed(rawURL) {
 		return rawURL, false
 	}

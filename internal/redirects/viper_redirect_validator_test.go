@@ -52,7 +52,7 @@ func buildConfig(opts ...configFunc) *viper.Viper {
 	return v
 }
 
-func TestValidator_IsAllowed(t *testing.T) {
+func TestViperValidator_IsAllowed(t *testing.T) {
 	t.Run("basic test for backwards compatibility", func(t *testing.T) {
 		cfg := buildConfig(withServerDomain("example.com"))
 		v, err := NewFromConfig(cfg)
@@ -117,7 +117,7 @@ func TestValidator_IsAllowed(t *testing.T) {
 	})
 }
 
-func TestValidator_Sanitize(t *testing.T) {
+func TestViperValidator_Sanitize(t *testing.T) {
 	t.Run("basic test", func(t *testing.T) {
 		cfg := buildConfig(withServerDomain("example.com"), withFallbackURL("https://fallback.example.com"))
 		v, err := NewFromConfig(cfg)

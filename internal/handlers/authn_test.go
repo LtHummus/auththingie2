@@ -65,7 +65,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		authenticator := virtualwebauthn.NewAuthenticator()
 
 		// build test environment
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		// call out to request a challenge for a new key
@@ -166,7 +166,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		authenticator := virtualwebauthn.NewAuthenticator()
 
 		// build test environment
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		// call out to request a challenge for a new key
@@ -255,7 +255,7 @@ func TestWebAuthnFlow(t *testing.T) {
 	})
 
 	t.Run("log in with key not found", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
@@ -315,7 +315,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil)
@@ -328,7 +328,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil)
@@ -341,7 +341,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 	})
 
 	t.Run("get payload if everything went ok", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleNonAdminUser, db))
@@ -393,7 +393,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
@@ -406,7 +406,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 	})
 
 	t.Run("fail if already logged in", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil, withUser(sampleNonAdminUser, db))
@@ -419,7 +419,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 	})
 
 	t.Run("all data is good if everything goes ok", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
@@ -453,7 +453,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 			viper.Set(config.KeyPasskeysDisabled, false)
 		})
 
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil)
@@ -466,7 +466,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil)
@@ -479,7 +479,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 	})
 
 	t.Run("work if user has no keys", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(sampleNonAdminUser, db))
@@ -492,7 +492,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 	})
 
 	t.Run("work if user has some keys", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(sampleNonAdminWithCredentials, db))
@@ -513,7 +513,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	render.Init()
 
 	t.Run("not logged in", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, isHTMXRequest())
@@ -528,7 +528,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("does not own key", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/VgeUYW5GwThRS74X02aJRw", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
@@ -542,7 +542,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("key not found", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys/aaaaaaa", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
@@ -556,7 +556,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("renders non-editable row", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -574,7 +574,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("renders editable row", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -592,7 +592,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("delete key", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -609,7 +609,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("error on delete key", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -627,7 +627,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("update key name", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -649,7 +649,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 	})
 
 	t.Run("update key name db error", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		db.On("FindKeyById", mock.Anything, "VgeUYW5GwThRS74X02aJRw").Return(user.Passkey{
@@ -678,7 +678,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 	render.Init()
 
 	t.Run("happy case", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, withUser(sampleNonAdminWithCredentials, db), isHTMXRequest())
@@ -699,7 +699,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 	})
 
 	t.Run("with multiple passkeys", func(t *testing.T) {
-		_, db, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, withUser(sampleNonAdminWithMultiplePasskeys, db), isHTMXRequest())
@@ -721,7 +721,7 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 	})
 
 	t.Run("not logged in", func(t *testing.T) {
-		_, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodGet, "/webauthn/keys", nil, isHTMXRequest())
