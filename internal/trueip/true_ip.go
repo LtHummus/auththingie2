@@ -56,8 +56,17 @@ func Initialize(ctx context.Context) error {
 	return nil
 }
 
-// TearDown is for testing only
 func TearDown(ctx context.Context) {
+	providerLock.Lock()
+	defer providerLock.Unlock()
+
+	for _, curr := range trustedProxyProviders {
+		err := curr.Teardown(ctx)
+		if err != nil {
+			log.Error().Type("provider", curr).Err(err).Msg("error tearing down trusted IP provider")
+		}
+	}
+
 	trustedProxyProviders = nil
 }
 

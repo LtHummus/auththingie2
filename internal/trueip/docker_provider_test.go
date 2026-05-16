@@ -344,7 +344,7 @@ func TestDockerProvider_Active(t *testing.T) {
 
 	assert.False(t, dp.Active())
 
-	dp.eventStreamInitialized = true
+	dp.eventStreamInitialized.Store(true)
 
 	assert.True(t, dp.Active())
 }

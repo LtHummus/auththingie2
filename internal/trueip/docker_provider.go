@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -49,7 +50,7 @@ type dockerAPI interface {
 type dockerProvider struct {
 	client dockerAPI
 
-	eventStreamInitialized bool
+	eventStreamInitialized atomic.Bool
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
 	lastUpdate             time.Time
@@ -58,7 +59,7 @@ type dockerProvider struct {
 }
 
 func (dp *dockerProvider) Active() bool {
-	return dp.eventStreamInitialized
+	return dp.eventStreamInitialized.Load()
 }
 
 func newDockerProvider(ctx context.Context) *dockerProvider {
@@ -155,7 +156,7 @@ func (dp *dockerProvider) eventListener(ctx context.Context, ready chan<- struct
 			Filters: eventFilter,
 		})
 
-		dp.eventStreamInitialized = true
+		dp.eventStreamInitialized.Store(true)
 		if first && ready != nil {
 			close(ready)
 			first = false
@@ -165,7 +166,7 @@ func (dp *dockerProvider) eventListener(ctx context.Context, ready chan<- struct
 		shouldContinue := dp.listenToDockerStreams(ctx, eventStream, errorStream)
 		if !shouldContinue {
 			log.Warn().Msg("got cleanup signal. no longer listening to docker events")
-			dp.eventStreamInitialized = false
+			dp.eventStreamInitialized.Store(false)
 			cancel()
 			break
 		}
