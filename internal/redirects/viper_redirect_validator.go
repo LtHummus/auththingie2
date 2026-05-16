@@ -40,7 +40,7 @@ func NewFromConfig(v *viper.Viper) (*ViperValidator, error) {
 	// by default, allow the server domain only as an allowed redirect domain. This should be safe and backwards
 	// compatible as this needs to be set in other places for AT2 to work in the first place
 	allowedDomains := []string{v.GetString(ServerDomainKey)}
-	if customDomains := v.GetStringSlice(AllowedDomainsKey); customDomains != nil {
+	if customDomains := v.GetStringSlice(AllowedDomainsKey); len(customDomains) > 0 {
 		log.Info().Strs("custom_domains", customDomains).Msg("using domain allow-list for redirect uri filtering")
 		allowedDomains = customDomains
 	} else {

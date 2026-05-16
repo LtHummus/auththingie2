@@ -108,8 +108,10 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: we should probably check the URL here against the redirect URI validator to make sure we don't attempt to
-	//       check things...but that might break configurations for certain folks. Something to think about.
+	if !e.RedirectURLValidator.IsAllowed(ri.GetURL()) {
+		http.Error(w, "invalid url attempted to be checked; this is probably a configuration error", http.StatusForbidden)
+		return
+	}
 
 	// first, see if our request matches any rules defined
 	rule := e.Analyzer.MatchesRule(&ri)
@@ -185,9 +187,10 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
-	redirectURI, _ := e.RedirectURLValidator.Sanitize(ri.GetURL())
 	v := url.Values{}
-	v.Set(redirectURLParam, redirectURI)
+
+	// safe to use ri.GetURL because it should be checked earlier in the flow with `IsAllowed`
+	v.Set(redirectURLParam, ri.GetURL())
 	if messageKey != "" {
 		v.Set(loginMessageParam, messageKey)
 	}

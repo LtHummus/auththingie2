@@ -179,7 +179,7 @@ async function handleDiscoverLogin() {
 
     let nextPage = document.getElementById('passkey-login-button').dataset.redirectUri || location.origin;
     if (respJSON.admin_messages) {
-        nextPage = nextPage + "/admin/notices?redirect_uri=" + redirectURI
+        nextPage = location.origin + "/admin/notices?redirect_uri=" + encodeURIComponent(document.getElementById('passkey-login-button').dataset.redirectUri)
     }
 
     window.location.href = nextPage;
