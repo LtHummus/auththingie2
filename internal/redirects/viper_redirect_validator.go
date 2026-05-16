@@ -76,6 +76,7 @@ func (v *ViperValidator) IsAllowed(rawURL string) bool {
 
 	if strings.HasPrefix(rawURL, "//") {
 		// do not allow relative protocol URLs
+		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for being open-scheme")
 		return false
 	}
 
@@ -87,13 +88,18 @@ func (v *ViperValidator) IsAllowed(rawURL string) bool {
 
 	if !parsed.IsAbs() {
 		// only allow absolute URLs
+		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for being non-absolute")
 		return false
 	}
 
-	// TODO: do we want to filter on schemes here?
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for being non-http/non-https")
+		return false
+	}
 
 	hostname := strings.ToLower(parsed.Hostname())
 	if hostname == "" {
+		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for empty hostname")
 		return false
 	}
 
@@ -109,6 +115,7 @@ func (v *ViperValidator) IsAllowed(rawURL string) bool {
 		}
 	}
 
+	log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect_uri for not being on allowed list")
 	return false
 }
 
