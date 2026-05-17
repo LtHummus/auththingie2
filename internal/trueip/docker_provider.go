@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -49,7 +50,7 @@ type dockerAPI interface {
 type dockerProvider struct {
 	client dockerAPI
 
-	eventStreamInitialized bool
+	eventStreamInitialized atomic.Bool
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
 	lastUpdate             time.Time
@@ -58,7 +59,7 @@ type dockerProvider struct {
 }
 
 func (dp *dockerProvider) Active() bool {
-	return dp.eventStreamInitialized
+	return dp.eventStreamInitialized.Load()
 }
 
 func newDockerProvider(ctx context.Context) *dockerProvider {
@@ -93,7 +94,21 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 		cleanup: make(chan struct{}),
 	}
 
-	go dp.eventListener(ctx)
+	eventStreamReady := make(chan struct{})
+	go dp.eventListener(ctx, eventStreamReady)
+
+	// wait for the event stream to be initialized before returning because otherwise there's a race where the trueip
+	// system checks Active() potentially before the event stream has connected
+	select {
+	case <-eventStreamReady:
+	case <-ctx.Done():
+		log.Warn().Err(ctx.Err()).Msg("context cancelled while waiting for docker event stream to initialize")
+		return nil
+	case <-time.After(2 * time.Second):
+		log.Warn().Msg("timed out waiting for docker event stream to initialize")
+		notices.AddMessage("docker-invalid", "Timed out waiting for the docker event stream to initialize. Check the logs")
+		return nil
+	}
 
 	err = dp.updateIPs(ctx)
 	if err != nil {
@@ -133,20 +148,25 @@ func (dp *dockerProvider) updateIPs(ctx context.Context) error {
 	return nil
 }
 
-func (dp *dockerProvider) eventListener(ctx context.Context) {
+func (dp *dockerProvider) eventListener(ctx context.Context, ready chan<- struct{}) {
 	ctx, cancel := context.WithCancel(ctx)
+	first := true
 	for {
 		eventStream, errorStream := dp.client.Events(ctx, events.ListOptions{
 			Filters: eventFilter,
 		})
 
-		dp.eventStreamInitialized = true
+		dp.eventStreamInitialized.Store(true)
+		if first && ready != nil {
+			close(ready)
+			first = false
+		}
 
 		log.Info().Msg("docker event stream connected")
 		shouldContinue := dp.listenToDockerStreams(ctx, eventStream, errorStream)
 		if !shouldContinue {
 			log.Warn().Msg("got cleanup signal. no longer listening to docker events")
-			dp.eventStreamInitialized = false
+			dp.eventStreamInitialized.Store(false)
 			cancel()
 			break
 		}

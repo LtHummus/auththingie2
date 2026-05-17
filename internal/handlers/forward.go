@@ -80,6 +80,11 @@ func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
 }
 
 func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
+	if !trueip.IsFromTrustedProxy(r) {
+		http.Error(w, "forward auth request not from trusted proxy", http.StatusForbidden)
+		return
+	}
+
 	ri := pullInfoFromRequest(r)
 	log.
 		Debug().
@@ -100,6 +105,11 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 			Stringer("source_ip", ri.SourceIP).
 			Msg("invalid request from proxy")
 		http.Error(w, "invalid http request info from reverse proxy", http.StatusBadRequest)
+		return
+	}
+
+	if !e.RedirectURLValidator.IsAllowed(ri.GetURL()) {
+		http.Error(w, "invalid url attempted to be checked; this is probably a configuration error", http.StatusForbidden)
 		return
 	}
 
@@ -132,7 +142,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// if the user is nil, that means they are not logged in and we can just prompt them to do so
 	if user == nil {
 		log.Debug().Str("username", "<not logged in>").Msg("redirecting to login page")
-		redirectToLogin(w, r, ri, loginMessageNotLoggedIn)
+		e.redirectToLogin(w, r, ri, loginMessageNotLoggedIn)
 		return
 	}
 
@@ -160,7 +170,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	if rule != nil && rule.Timeout != nil && source == session.UserSourceSession && time.Since(sess.LoginTime) > *rule.Timeout {
 		// user has logged in, but not since the timeout, so prompt for relogin
 		log.Warn().Str("user_id", sess.UserID).Time("login_time", sess.LoginTime).Dur("rule_timeout", *rule.Timeout).Msg("need to reauthenticate")
-		redirectToLogin(w, r, ri, loginMessageRuleRequiresSecondLogin)
+		e.redirectToLogin(w, r, ri, loginMessageRuleRequiresSecondLogin)
 		return
 	}
 
@@ -176,8 +186,10 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", viper.GetString("server.auth_url")), http.StatusFound)
 }
 
-func redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
+func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
 	v := url.Values{}
+
+	// safe to use ri.GetURL because it should be checked earlier in the flow with `IsAllowed`
 	v.Set(redirectURLParam, ri.GetURL())
 	if messageKey != "" {
 		v.Set(loginMessageParam, messageKey)

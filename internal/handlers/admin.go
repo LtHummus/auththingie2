@@ -429,7 +429,7 @@ func (e *Env) HandleAdminUnenrollTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/admin/users/%s", userId), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/admin/users/%s", userId), http.StatusFound) // #nosec G710 -- we know this is a valid userID from saving
 }
 
 func (e *Env) HandleUserDelete(w http.ResponseWriter, r *http.Request) {

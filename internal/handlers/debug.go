@@ -135,7 +135,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	})
 
 	proxyTable := table.NewWriter()
-	sessionTable.AppendHeader(table.Row{"Source", "Description"})
+	proxyTable.AppendHeader(table.Row{"Source", "Description"})
 	for _, curr := range trueip.ListProxies() {
 		proxyTable.AppendRow(table.Row{curr.Source, curr.Description})
 	}

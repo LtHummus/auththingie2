@@ -25,7 +25,7 @@ type loginPageParams struct {
 	EnablePasskeys bool
 }
 
-func getRedirectURIFromRequest(r *http.Request) string {
+func (e *Env) getRedirectURIFromRequest(r *http.Request) string {
 	redirectURI := ""
 	if formRedirect := r.FormValue(redirectURLParam); formRedirect != "" {
 		redirectURI = formRedirect
@@ -35,6 +35,7 @@ func getRedirectURIFromRequest(r *http.Request) string {
 		redirectURI = queryRedirect
 	}
 
+	redirectURI, _ = e.RedirectURLValidator.Sanitize(redirectURI)
 	log.Debug().Str("redirect_uri", redirectURI).Msg("pulled redirect uri from request")
 
 	return redirectURI
@@ -61,7 +62,7 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if r.Method == http.MethodGet {
 		render.Render(w, "login.gohtml", &loginPageParams{
-			RedirectURI:    getRedirectURIFromRequest(r),
+			RedirectURI:    e.getRedirectURIFromRequest(r),
 			Message:        getMessageFromRequest(r),
 			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
 		})
@@ -73,7 +74,7 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
-	redirectURL := getRedirectURIFromRequest(r)
+	redirectURL := e.getRedirectURIFromRequest(r)
 
 	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
 	if err != nil {
@@ -158,7 +159,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		v.Set("redirect_uri", redirectURL)
 		http.Redirect(w, r, fmt.Sprintf("/admin/notices?%s", v.Encode()), http.StatusFound)
 	} else {
-		http.Redirect(w, r, redirectURL, http.StatusFound)
+		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in `getRedirectURIFromRequest`
 	}
 
 }

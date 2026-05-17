@@ -89,7 +89,10 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	accountKey := fmt.Sprintf("totp_user_guid|%s", data.UserID)
 
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
-	redirectURI := data.RedirectURI
+
+	// i don't _think_ this sanitize is needed since the sanitized url was put in to the totp ticket which has been
+	// cryptographically authenticated by us...but never hurts to double-check
+	redirectURI, _ := e.RedirectURLValidator.Sanitize(data.RedirectURI)
 
 	if e.LoginLimiter.IsAccountLocked(sourceIPKey) {
 		e.handleTotpPrompt(w, r, data, "This IP address has failed TOTP validation too many times. Try again later.")

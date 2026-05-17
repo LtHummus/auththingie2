@@ -71,6 +71,9 @@ db:
   file: /config/at2.db
   kind: sqlite
 security:
+  redirects:
+    allowed_domains:
+      - example.com
   trusted_proxies:
     network:
       - "172.18.0.0/16"
@@ -98,6 +101,10 @@ server:
 ### Trusted Proxy Configuration
 
 Your setup might complain about no trusted proxy configurations. This is caused by a missing config (note to self, add this to the first time setup flow as well). The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this section is not configured, **AuthThingie2 will not start up due to an unsafe configuration**. There are two ways to tell AuthThingie what it can trust
+
+### Redirects Allowlist
+
+All URIs that are protected must be allowlisted. If you do not put this entry (`security.redirects.allowed_domains`), we will default to the domain (and all subdomains) of whatveer you put for `server.domain`. Keep in mind that any domains listed in here also automatically allow subdomain matches at any level (e.g. `example.com` will allow `foo.example.com` and `bar.foo.example.com`). You can also set `security.redirects.allow_all` to disable this check BUT YOU DO SO AT YOUR OWN RISK.
 
 #### Docker Tagging
 
@@ -132,9 +139,10 @@ security:
       - "127.0.0.1"
 ```
 
-## Hidden Options
+## Debug Signals
 
-These exist, document later (including the secret debugging commands).
+While AuthThingie2 is running (on a *nix OS), you can send signals to the process to enable some debugging information:
 
-
+- `SIGUSR1` publishes `/debug` to anyone (including unauthenticated users). In normal operation, `/debug` has some configuation/build information that might be useful for debugging configurations and is only available to logged in admin users. `SIGUSR1` will make it availble to ANYONE. Restart the app to make `/debug` admin-only again.
+- `SIGUSR2` enables debug logging in the logs
 

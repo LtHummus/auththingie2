@@ -17,6 +17,7 @@ import (
 	"github.com/lthummus/auththingie2/internal/handlers"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
+	"github.com/lthummus/auththingie2/internal/redirects"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -46,6 +47,13 @@ func RunServer() {
 		config.RunErrorServer(configErrors)
 		os.Exit(1)
 	}
+	ruriv, err := redirects.NewFromConfig(viper.GetViper())
+	if err != nil {
+		log.Warn().Err(err).Msg("could not initialize redirect uri handler")
+		config.RunErrorServer([]string{err.Error()})
+		os.Exit(1)
+	}
+
 	f, err := rules.NewFromConfig()
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
@@ -93,11 +101,12 @@ func RunServer() {
 	pwv := pwvalidate.NewValidator(database, ll)
 
 	e := handlers.Env{
-		Analyzer:          f,
-		Database:          database,
-		WebAuthn:          wan,
-		LoginLimiter:      ll,
-		PasswordValidator: pwv,
+		Analyzer:             f,
+		Database:             database,
+		WebAuthn:             wan,
+		LoginLimiter:         ll,
+		PasswordValidator:    pwv,
+		RedirectURLValidator: ruriv,
 	}
 	log.Info().Msg("services initialized")
 
