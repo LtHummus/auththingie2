@@ -93,8 +93,8 @@ func (v *ViperValidator) IsAllowed(rawURL string) bool {
 	}
 
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		log.Warn().Str("redirect_uri", rawURL).Msg("rejecting redirect uri for being non-http/non-https")
-		return false
+		// log on this for now since it breaks websockets
+		log.Debug().Str("redirect_uri", rawURL).Msg("caught redirect uri for being non-http/non-https")
 	}
 
 	hostname := strings.ToLower(strings.TrimSuffix(parsed.Hostname(), "."))

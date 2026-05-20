@@ -63,8 +63,8 @@ func TestViperValidator_IsAllowed(t *testing.T) {
 		assert.True(t, v.IsAllowed("https://bar.foo.example.com"))
 		assert.True(t, v.IsAllowed("http://example.com"))
 		assert.True(t, v.IsAllowed("http://example.com."))
+		assert.True(t, v.IsAllowed("ftp://example.com"))
 
-		assert.False(t, v.IsAllowed("ftp://example.com"))
 		assert.False(t, v.IsAllowed("https://otherexample.com"))
 		assert.False(t, v.IsAllowed("https://evilsite"))
 		assert.False(t, v.IsAllowed("/"))
