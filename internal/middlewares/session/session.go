@@ -31,7 +31,7 @@ type Session struct {
 	CustomData map[string]any `json:"custom_data"`
 }
 
-func NewDefaultSession() (Session, error) {
+func NewDefaultSession(v *viper.Viper) (Session, error) {
 	id, err := generateSessionID()
 	if err != nil {
 		log.Error().Err(err).Msg("could not generate session id")
@@ -42,12 +42,12 @@ func NewDefaultSession() (Session, error) {
 		SessionID:    id,
 		CreationTime: time.Now(),
 		CustomData:   map[string]any{},
-		Expires:      time.Now().Add(SessionLifetime()),
+		Expires:      time.Now().Add(SessionLifetime(v)),
 	}, nil
 }
 
-func CookieLifetime() time.Duration {
-	d := viper.GetDuration(config.DefaultCookieLifetime)
+func CookieLifetime(v *viper.Viper) time.Duration {
+	d := v.GetDuration(config.DefaultCookieLifetime)
 	if d != 0 {
 		return d
 	}
@@ -55,8 +55,8 @@ func CookieLifetime() time.Duration {
 	return DefaultCookieLifetime
 }
 
-func SessionLifetime() time.Duration {
-	d := viper.GetDuration(config.DefaultSessionLifetime)
+func SessionLifetime(v *viper.Viper) time.Duration {
+	d := v.GetDuration(config.DefaultSessionLifetime)
 	if d != 0 {
 		return d
 	}
@@ -72,13 +72,13 @@ func (s *Session) Expired() bool {
 	return s.Expires.Before(time.Now())
 }
 
-func (s *Session) PlaceUserInSession(u *user.User) {
+func (s *Session) PlaceUserInSession(u *user.User, v *viper.Viper) {
 	if u.Disabled {
 		log.Panic().Str("username", u.Username).Msg("attempted to place disabled user in session")
 	}
 
 	s.UserID = u.Id
-	s.Expires = time.Now().Add(SessionLifetime())
+	s.Expires = time.Now().Add(SessionLifetime(v))
 	s.LoginTime = time.Now()
 	log.Debug().Str("username", u.Username).Time("expires", s.Expires).Time("login_time", s.LoginTime).Msg("placing in session")
 

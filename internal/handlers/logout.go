@@ -14,7 +14,7 @@ func (e *Env) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, err := session2.NewDefaultSession()
+	sess, err := session2.NewDefaultSession(e.Configuration)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not create default session")
 		http.Error(w, "could not create default session", http.StatusInternalServerError)

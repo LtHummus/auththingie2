@@ -138,7 +138,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(u)
+	sess.PlaceUserInSession(u, e.Configuration)
 
 	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {

@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/argon"
+	"github.com/lthummus/auththingie2/internal/config"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -309,7 +310,10 @@ func makeTestRequest(t *testing.T, method string, path string, body io.Reader, o
 	tcd := &testConnectionData{}
 	tcd.req = httptest.NewRequest(method, path, body)
 
-	sess, err := session2.NewDefaultSession()
+	v := viper.New()
+	v.Set(config.DefaultSessionLifetime, 5*time.Minute)
+	
+	sess, err := session2.NewDefaultSession(v)
 	require.NoError(t, err)
 	tcd.sess = &sess
 	tcd.sc = securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())

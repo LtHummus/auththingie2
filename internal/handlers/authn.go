@@ -258,7 +258,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(foundUser)
+	sess.PlaceUserInSession(foundUser, e.Configuration)
 
 	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r)).Msg("successful passkey auth")
 

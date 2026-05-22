@@ -42,7 +42,7 @@ func buildUserCookie(t *testing.T, e *Env, user *user.User) *session2.Session {
 		user.Id = strings.Trim(uuid.New().String(), "-")
 	}
 
-	sess, err := session2.NewDefaultSession()
+	sess, err := session2.NewDefaultSession(e.Configuration)
 	require.NoError(t, err)
 
 	if user != nil {

@@ -155,7 +155,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(user)
+	sess.PlaceUserInSession(user, e.Configuration)
 
 	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {

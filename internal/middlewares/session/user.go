@@ -123,7 +123,7 @@ func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator
 	return dbu, UserSourceBasicAuth
 }
 
-func generateCookie(value string, domain string) *http.Cookie {
+func generateCookie(value string, domain string, lifetime time.Duration) *http.Cookie {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    value,
@@ -132,7 +132,7 @@ func generateCookie(value string, domain string) *http.Cookie {
 		Domain:   domain,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(CookieLifetime().Seconds()),
+		MaxAge:   int(lifetime.Seconds()),
 	}
 }
 
@@ -162,7 +162,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session, v *viper.Vi
 		return err
 	}
 
-	http.SetCookie(w, generateCookie(encoded, v.GetString("server.domain")))
+	http.SetCookie(w, generateCookie(encoded, v.GetString("server.domain"), CookieLifetime(v)))
 
 	return nil
 }
@@ -218,7 +218,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if sess == nil {
 		// no session found
-		newSession, err := NewDefaultSession()
+		newSession, err := NewDefaultSession(m.cfg)
 		if err != nil {
 			log.Error().Err(err).Msg("could not create new session")
 			http.Error(w, "could not create new session", http.StatusInternalServerError)
@@ -230,8 +230,8 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("could not encode session data")
 		}
 
-		newCookie := generateCookie(encoded, m.cfg.GetString("server.domain"))
-		log.Debug().Dur("session_lifetime", SessionLifetime()).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
+		newCookie := generateCookie(encoded, m.cfg.GetString("server.domain"), CookieLifetime(m.cfg))
+		log.Debug().Dur("session_lifetime", SessionLifetime(m.cfg)).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
 
 		http.SetCookie(w, newCookie)
 	}
