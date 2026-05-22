@@ -77,6 +77,11 @@ func (s *Session) PlaceUserInSession(u *user.User, v *viper.Viper) {
 		log.Panic().Str("username", u.Username).Msg("attempted to place disabled user in session")
 	}
 
+	newSessionID, err := generateSessionID()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not regenerate session ID")
+	}
+	s.SessionID = newSessionID
 	s.UserID = u.Id
 	s.Expires = time.Now().Add(SessionLifetime(v))
 	s.LoginTime = time.Now()

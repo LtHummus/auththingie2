@@ -54,6 +54,8 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 		s, err := NewDefaultSession(v)
 		require.NoError(t, err)
 
+		oldSessionID := s.SessionID
+
 		s.PlaceUserInSession(&user.User{
 			Username: "foo",
 			Id:       "1234",
@@ -62,6 +64,7 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 		assert.Equal(t, "1234", s.UserID)
 		assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
 		assert.WithinDuration(t, time.Now(), s.CreationTime, 1*time.Second)
+		assert.NotEqual(t, oldSessionID, s.SessionID)
 	})
 
 	t.Run("panic on disabled user", func(t *testing.T) {
