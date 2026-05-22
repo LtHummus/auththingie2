@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/db"
@@ -21,21 +22,23 @@ var fakeArgonHash string
 
 func init() {
 	var err error
-	fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password")
+	fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password", viper.GetViper())
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not generate fake hash -- is your argon configuration ok?")
 	}
 }
 
 type ValidatorImpl struct {
-	db db.DB
-	ll loginlimit.LoginLimiter
+	db  db.DB
+	ll  loginlimit.LoginLimiter
+	cfg *viper.Viper
 }
 
-func NewValidator(db db.DB, ll loginlimit.LoginLimiter) *ValidatorImpl {
+func NewValidator(db db.DB, ll loginlimit.LoginLimiter, cfg *viper.Viper) *ValidatorImpl {
 	return &ValidatorImpl{
-		db: db,
-		ll: ll,
+		db:  db,
+		ll:  ll,
+		cfg: cfg,
 	}
 }
 
@@ -108,9 +111,9 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 		return nil, v.generateInvalidCredentialsError(sourceIP, username, sourceIPKey, accountKey)
 	}
 
-	if argon.NeedsMigration(u.PasswordHash) {
+	if argon.NeedsMigration(u.PasswordHash, v.cfg) {
 		go func() { // #nosec G118 -- we want this to run in the background
-			pwmigrate.MigrateUser(context.Background(), u, password, v.db)
+			pwmigrate.MigrateUser(context.Background(), u, password, v.db, v.cfg)
 		}()
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/argon"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -280,6 +281,12 @@ func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockL
 	assert.NoError(t, err)
 
 	v := viper.New()
+	v.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	v.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	v.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	v.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	v.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
 	return a, db, ll, pwv, mruriv, v, &Env{
 		Database:             db,
 		Analyzer:             a,

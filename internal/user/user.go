@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 
@@ -127,14 +128,14 @@ func (u *User) TOTPEnabled() bool {
 	return u.TOTPSeed != nil
 }
 
-func (u *User) SetPassword(password string) error {
+func (u *User) SetPassword(password string, v *viper.Viper) error {
 	var err error
 	password, err = cleanPassword(password)
 	if err != nil {
 		return ErrInvalidPasswordChars
 	}
 
-	hash, err := argon.GenerateFromPassword(password)
+	hash, err := argon.GenerateFromPassword(password, v)
 	if err != nil {
 		log.Error().Err(err).Msg("could not hash password")
 		return err

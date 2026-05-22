@@ -161,14 +161,14 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	analyzer, err := rules.NewFromConfig()
+	analyzer, err := rules.NewFromConfig(viper.GetViper())
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize rules engine")
 		http.Error(w, "could not initialize rules engine -- see logs", http.StatusInternalServerError)
 		return
 	}
 
-	newDatabase, err := sqlite.NewSQLiteFromConfig()
+	newDatabase, err := sqlite.NewSQLiteFromConfig(viper.GetViper())
 	if err != nil {
 		log.Error().Err(err).Str("db_file", dbFilePath).Msg("could not initialize sqlite database")
 		http.Error(w, "could not initialize database -- see logs", http.StatusInternalServerError)

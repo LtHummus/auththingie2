@@ -39,6 +39,8 @@ var (
 )
 
 type ViperConfigAnalyzer struct {
+	cfg *viper.Viper
+
 	lock       sync.RWMutex
 	rules      []Rule
 	errors     []string
@@ -69,8 +71,10 @@ func ruleConverter(r map[string]any) yaml.MapSlice {
 	return *ms
 }
 
-func NewFromConfig() (*ViperConfigAnalyzer, error) {
-	a := &ViperConfigAnalyzer{}
+func NewFromConfig(v *viper.Viper) (*ViperConfigAnalyzer, error) {
+	a := &ViperConfigAnalyzer{
+		cfg: v,
+	}
 	config.RegisterForUpdates(func(event fsnotify.Event) {
 		log.Info().Msg("detected config file change")
 		err := a.UpdateFromConfigFile()
@@ -95,7 +99,7 @@ func (a *ViperConfigAnalyzer) UpdateFromConfigFile() error {
 
 	a.errors = nil
 
-	err := viper.UnmarshalKey("Rules", &rules)
+	err := a.cfg.UnmarshalKey("Rules", &rules)
 	if err != nil {
 		log.Error().Err(err).Msg("could not unmarshal Rules")
 		a.errors = []string{fmt.Sprintf("could not load rules configuration: %s", err.Error())}

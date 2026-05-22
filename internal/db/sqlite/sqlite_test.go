@@ -30,14 +30,15 @@ func buildTestDatabase(t *testing.T) *SQLite {
 
 	dbFile := filepath.Join(tmpDir, dbName)
 
-	viper.Set("db.file", dbFile)
+	v := viper.New()
+
+	v.Set("db.file", dbFile)
 
 	t.Cleanup(func() {
-		viper.Set("db.file", "")
 		os.RemoveAll(tmpDir)
 	})
 
-	db, err := NewSQLiteFromConfig()
+	db, err := NewSQLiteFromConfig(v)
 	require.NoError(t, err)
 
 	_, err = db.db.Exec(`INSERT INTO users (id, username, password, roles, admin, totp_seed, password_timestamp) VALUES ('8744ac1b-9074-4a70-a202-5ad6d4a6e5e0', 'ben', '$argon2id$v=19$m=65536,t=3,p=2$f5DrCPQlwRJ5q1fA4K+i/g$c8XhJISMUI3wjIUULHvn0HIJinvOBBb4KnvOcvuJ4e0', '[]', 1, null, 1704055267)`)
@@ -381,12 +382,18 @@ func TestSQLite_GetAllUsers(t *testing.T) {
 
 func TestSQLite_UpdatePassword(t *testing.T) {
 	db := buildTestDatabase(t)
+	cfg := viper.New()
+	cfg.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	cfg.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	cfg.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	cfg.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	cfg.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
 
 	t.Run("basic stuff", func(t *testing.T) {
 		u, err := db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
 		assert.NoError(t, err)
 
-		err = u.SetPassword("newpassword")
+		err = u.SetPassword("newpassword", cfg)
 		assert.NoError(t, err)
 
 		err = db.UpdatePassword(context.TODO(), u)

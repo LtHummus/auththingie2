@@ -44,14 +44,13 @@ rules:
 
 func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(sampleRules))
 
-		viper.SetConfigType("yaml")
-		_ = viper.ReadConfig(strings.NewReader(sampleRules))
-
-		a := ViperConfigAnalyzer{}
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
 		assert.Empty(t, a.rules)
 
 		err := a.UpdateFromConfigFile()
@@ -67,21 +66,20 @@ func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 	})
 
 	t.Run("rules contain errors", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
-		viper.SetConfigType("yaml")
 		badRules := `
 rules:
     - name: bad
       source_address: abcdefg
 `
 
-		viper.SetConfigType("yaml")
-		_ = viper.ReadConfig(strings.NewReader(badRules))
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(badRules))
 
-		a := ViperConfigAnalyzer{}
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
 		err := a.UpdateFromConfigFile()
 		assert.Error(t, err)
 
@@ -91,14 +89,14 @@ rules:
 
 func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 	t.Run("base case", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
-		viper.SetConfigType("yaml")
-		_ = viper.ReadConfig(strings.NewReader(sampleRules))
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(sampleRules))
 
-		a := ViperConfigAnalyzer{}
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
 		assert.Empty(t, a.rules)
 
 		err := a.UpdateFromConfigFile()
@@ -117,14 +115,14 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 	})
 
 	t.Run("no rule matched", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
-		viper.SetConfigType("yaml")
-		_ = viper.ReadConfig(strings.NewReader(sampleRules))
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(sampleRules))
 
-		a := ViperConfigAnalyzer{}
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
 		assert.Empty(t, a.rules)
 
 		r := a.MatchesRule(&RequestInfo{

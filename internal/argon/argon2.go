@@ -34,6 +34,8 @@ var (
 )
 
 func init() {
+	// this touches the global viper instance even though I'm trying to move away from that. This should be ok in this instance
+	// because we want to set some sensible defaults that we'll use later.
 	viper.SetDefault(MemoryKey, DefaultMemory)
 	viper.SetDefault(IterationKey, DefaultIterations)
 	viper.SetDefault(ParallelismKey, DefaultParallelism)
@@ -41,15 +43,15 @@ func init() {
 	viper.SetDefault(KeyLengthKey, DefaultKeyLength)
 }
 
-func GenerateFromPassword(password string) (string, error) {
-	iterationCount := viper.GetUint32(IterationKey)
-	memoryCount := viper.GetUint32(MemoryKey)
-	parallelismCount, err := safeCastUint8(viper.GetInt(ParallelismKey))
+func GenerateFromPassword(password string, v *viper.Viper) (string, error) {
+	iterationCount := v.GetUint32(IterationKey)
+	memoryCount := v.GetUint32(MemoryKey)
+	parallelismCount, err := safeCastUint8(v.GetInt(ParallelismKey))
 	if err != nil {
 		return "", fmt.Errorf("argon2: GenerateFromPassword: invalid argon configuration: %w", err)
 	}
-	keyLength := viper.GetUint32(KeyLengthKey)
-	saltLength := viper.GetInt(SaltLengthKey)
+	keyLength := v.GetUint32(KeyLengthKey)
+	saltLength := v.GetInt(SaltLengthKey)
 
 	log.Debug().
 		Uint32("iteration_count", iterationCount).
@@ -61,7 +63,7 @@ func GenerateFromPassword(password string) (string, error) {
 
 	generatedSalt := securecookie.GenerateRandomKey(saltLength)
 	if generatedSalt == nil {
-		log.Error().Int("salt_length_bytes", viper.GetInt(SaltLengthKey)).Msg("could not generate random salt")
+		log.Error().Int("salt_length_bytes", v.GetInt(SaltLengthKey)).Msg("could not generate random salt")
 		return "", errors.New("could not generate salt")
 	}
 
@@ -79,8 +81,8 @@ func GenerateFromPassword(password string) (string, error) {
 		encodedHash), nil
 }
 
-func NeedsMigration(encodedHash string) bool {
-	if viper.GetBool("security.disable_migrate_on_login") {
+func NeedsMigration(encodedHash string, v *viper.Viper) bool {
+	if v.GetBool("security.disable_migrate_on_login") {
 		return false
 	}
 
@@ -94,16 +96,16 @@ func NeedsMigration(encodedHash string) bool {
 		return true
 	}
 
-	wantedParallism, err := safeCastUint8(viper.GetInt(ParallelismKey))
+	wantedParallism, err := safeCastUint8(v.GetInt(ParallelismKey))
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid argon configuration. parallelism must fit in to a uint8")
 	}
 
-	return memory != viper.GetUint32(MemoryKey) ||
-		iterations != viper.GetUint32(IterationKey) ||
+	return memory != v.GetUint32(MemoryKey) ||
+		iterations != v.GetUint32(IterationKey) ||
 		parallelism != wantedParallism ||
-		saltLength != viper.GetUint32(SaltLengthKey) ||
-		keyLength != viper.GetUint32(KeyLengthKey)
+		saltLength != v.GetUint32(SaltLengthKey) ||
+		keyLength != v.GetUint32(KeyLengthKey)
 }
 
 func decodeHashParts(encodedHash string) (uint32, uint32, uint8, []byte, uint32, []byte, uint32, error) {

@@ -54,7 +54,7 @@ func RunServer() {
 		os.Exit(1)
 	}
 
-	f, err := rules.NewFromConfig()
+	f, err := rules.NewFromConfig(viper.GetViper())
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
@@ -73,7 +73,7 @@ func RunServer() {
 	}
 	config.Lock.RUnlock()
 
-	database, err := sqlite.NewSQLiteFromConfig()
+	database, err := sqlite.NewSQLiteFromConfig(viper.GetViper())
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize database")
 	}
@@ -98,7 +98,7 @@ func RunServer() {
 	}
 
 	ll := loginlimit.NewInMemoryLimiter()
-	pwv := pwvalidate.NewValidator(database, ll)
+	pwv := pwvalidate.NewValidator(database, ll, viper.GetViper())
 
 	e := handlers.Env{
 		Analyzer:             f,
@@ -107,6 +107,7 @@ func RunServer() {
 		LoginLimiter:         ll,
 		PasswordValidator:    pwv,
 		RedirectURLValidator: ruriv,
+		Configuration:        viper.GetViper(),
 	}
 	log.Info().Msg("services initialized")
 
