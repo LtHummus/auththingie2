@@ -21,7 +21,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPage(t *testing.T) {
 	render.Init()
 
 	t.Run("just rendeer", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/scratch", nil)
 		w := httptest.NewRecorder()
@@ -40,7 +40,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	render.Init()
 
 	t.Run("CSRF detection", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -58,7 +58,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("missing username", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "")
@@ -74,7 +74,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("missing password", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -92,7 +92,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("password mismatch", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -110,7 +110,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("invalid characters test", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -129,7 +129,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("user creation fails", func(t *testing.T) {
-		db, _, e := makeTestEnv(t)
+		db, _, _, e := makeTestEnv(t)
 
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("nope"))
 
@@ -149,7 +149,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 	})
 
 	t.Run("everything works", func(t *testing.T) {
-		db, _, e := makeTestEnv(t)
+		db, _, _, e := makeTestEnv(t)
 
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 

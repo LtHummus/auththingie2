@@ -35,6 +35,7 @@ var initCache = sync.OnceFunc(func() {
 type ftueEnv struct {
 	database db.DB
 	analyzer rules.Analyzer
+	config   *viper.Viper
 }
 
 type ftueParams struct {
