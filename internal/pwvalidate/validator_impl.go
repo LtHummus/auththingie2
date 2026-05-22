@@ -104,7 +104,7 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 		return nil, v.generateInvalidCredentialsError(sourceIP, username, sourceIPKey, accountKey)
 	}
 
-	err = u.CheckPassword(password)
+	err = u.CheckPassword(password, v.cfg)
 	if err != nil {
 		log.Warn().Str("ip", sourceIP).Str("username", username).Err(err).Msg("invalid login")
 

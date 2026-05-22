@@ -213,7 +213,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 	})
 
 	t.Run("everything worked", func(t *testing.T) {
-		_, db, _, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, cfg, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("old_pw", "test1")
@@ -235,7 +235,7 @@ func TestEnv_HandleSelfConfigPasswordPost(t *testing.T) {
 
 		updatedUser := db.Mock.Calls[1].Arguments[1].(*user.User)
 
-		assert.NoError(t, updatedUser.CheckPassword("password1"))
+		assert.NoError(t, updatedUser.CheckPassword("password1", cfg))
 
 		changedTime := time.Unix(updatedUser.PasswordTimestamp, 0)
 		assert.WithinDuration(t, time.Now(), changedTime, 2*time.Second)

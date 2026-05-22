@@ -48,7 +48,7 @@ func (e *Env) HandleSelfConfigPasswordPost(w http.ResponseWriter, r *http.Reques
 
 	oldPw := r.FormValue("old_pw")
 
-	err := u.CheckPassword(oldPw)
+	err := u.CheckPassword(oldPw, e.Configuration)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{

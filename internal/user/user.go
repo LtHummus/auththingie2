@@ -54,13 +54,13 @@ type AdminListUser struct {
 	Disabled bool
 }
 
-func (u *User) CheckPassword(candidate string) error {
+func (u *User) CheckPassword(candidate string, v *viper.Viper) error {
 	if len(u.PasswordHash) == 0 {
 		return ErrNoPasswordSet
 	}
 
 	var err error
-	candidate, err = cleanPassword(candidate)
+	candidate, err = cleanPassword(candidate, v)
 	if err != nil {
 		return ErrInvalidPasswordChars
 	}
@@ -130,7 +130,7 @@ func (u *User) TOTPEnabled() bool {
 
 func (u *User) SetPassword(password string, v *viper.Viper) error {
 	var err error
-	password, err = cleanPassword(password)
+	password, err = cleanPassword(password, v)
 	if err != nil {
 		return ErrInvalidPasswordChars
 	}

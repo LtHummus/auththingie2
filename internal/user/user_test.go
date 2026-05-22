@@ -34,29 +34,36 @@ func init() {
 }
 
 func TestUser_CheckPassword(t *testing.T) {
+	cfg := viper.New()
+	cfg.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	cfg.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	cfg.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	cfg.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	cfg.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
 	t.Run("bcrypt", func(t *testing.T) {
 		u := User{}
 
-		assert.Equal(t, ErrNoPasswordSet, u.CheckPassword(string([]byte{0x01})))
+		assert.Equal(t, ErrNoPasswordSet, u.CheckPassword(string([]byte{0x01}), cfg))
 
 		u.PasswordHash = string(passwordBcrypt)
-		assert.Equal(t, ErrIncorrectPassword, u.CheckPassword("p@ssw0rd"))
-		assert.NoError(t, u.CheckPassword("password"))
+		assert.Equal(t, ErrIncorrectPassword, u.CheckPassword("p@ssw0rd", cfg))
+		assert.NoError(t, u.CheckPassword("password", cfg))
 
 		u.PasswordHash = string([]byte{0x01, 0x02})
-		assert.Equal(t, ErrInvalidHash, u.CheckPassword("password"))
+		assert.Equal(t, ErrInvalidHash, u.CheckPassword("password", cfg))
 	})
 
 	t.Run("argon", func(t *testing.T) {
 		u := User{}
-		assert.ErrorIs(t, ErrNoPasswordSet, u.CheckPassword("aaa"))
+		assert.ErrorIs(t, ErrNoPasswordSet, u.CheckPassword("aaa", cfg))
 
 		u.PasswordHash = passwordArgon
-		assert.ErrorIs(t, ErrIncorrectPassword, u.CheckPassword("wrongpw"))
-		assert.NoError(t, u.CheckPassword("password"))
+		assert.ErrorIs(t, ErrIncorrectPassword, u.CheckPassword("wrongpw", cfg))
+		assert.NoError(t, u.CheckPassword("password", cfg))
 
 		u.PasswordHash = "nope"
-		assert.ErrorIs(t, ErrInvalidHash, u.CheckPassword("password"))
+		assert.ErrorIs(t, ErrInvalidHash, u.CheckPassword("password", cfg))
 	})
 }
 
@@ -225,6 +232,6 @@ func FuzzUser_SetPassword(f *testing.F) {
 		err := u.SetPassword(input, cfg)
 		assert.NoError(t, err)
 
-		assert.NoErrorf(t, u.CheckPassword(input), "failure setting password to %s", input)
+		assert.NoErrorf(t, u.CheckPassword(input, cfg), "failure setting password to %s", input)
 	})
 }

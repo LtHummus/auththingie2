@@ -44,7 +44,7 @@ func TestCleanPassword(t *testing.T) {
 
 		for _, curr := range testCases {
 			t.Run(curr.name, func(t *testing.T) {
-				output, err := cleanPassword(curr.input)
+				output, err := cleanPassword(curr.input, viper.New())
 				require.NoError(t, err)
 				assert.Equal(t, curr.output, output)
 			})
@@ -69,22 +69,20 @@ func TestCleanPassword(t *testing.T) {
 
 		for _, curr := range testCases {
 			t.Run(curr.name, func(t *testing.T) {
-				_, err := cleanPassword(curr.input)
+				_, err := cleanPassword(curr.input, viper.New())
 				assert.Error(t, err)
 			})
 		}
 	})
 
 	t.Run("disable cleaning if config is set that way", func(t *testing.T) {
-		viper.Set("security.disable_precis", true)
-		t.Cleanup(func() {
-			viper.Set("security.disable_precis", false)
-		})
+		v := viper.New()
+		v.Set("security.disable_precis", true)
 
 		// this is a decomposed e with accent, which would normally be normalized and composed (NFC) as part
 		// of precis processing, but we've disabled it
 		input := "héllo"
-		output, err := cleanPassword(input)
+		output, err := cleanPassword(input, v)
 		require.NoError(t, err)
 		assert.Equal(t, input, output)
 	})
