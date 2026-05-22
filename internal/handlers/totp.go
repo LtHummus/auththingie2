@@ -157,7 +157,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(user)
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		http.Error(w, "could not write session data", http.StatusInternalServerError)

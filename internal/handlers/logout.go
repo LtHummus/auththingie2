@@ -21,7 +21,7 @@ func (e *Env) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = session2.WriteSession(w, r, sess)
+	err = session2.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not sign user out")
 		http.Error(w, "could not sign user out", http.StatusInternalServerError)

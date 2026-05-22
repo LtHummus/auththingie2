@@ -252,7 +252,10 @@ func TestWriteSession(t *testing.T) {
 			"hello": "world",
 		}
 
-		err := WriteSession(w, r, *s)
+		v := viper.New()
+		v.Set("server.domain", "example.com")
+
+		err := WriteSession(w, r, *s, v)
 		assert.NoError(t, err)
 
 		resp := w.Result()
@@ -275,7 +278,7 @@ func TestWriteSession(t *testing.T) {
 		s := Session{}
 
 		assert.Panics(t, func() {
-			_ = WriteSession(w, r, s)
+			_ = WriteSession(w, r, s, viper.New())
 		})
 	})
 }
@@ -283,6 +286,7 @@ func TestWriteSession(t *testing.T) {
 func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.MockDB, *Middleware) {
 	db := mocks.NewMockDB(t)
 	sc := securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+	v := viper.New()
 
 	return sc, db, &Middleware{
 		sc: sc,
@@ -291,6 +295,7 @@ func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.Mo
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("hi!"))
 		}),
+		cfg: v,
 	}
 }
 

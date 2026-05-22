@@ -39,6 +39,7 @@ type Middleware struct {
 	sc      *securecookie.SecureCookie
 	db      db.DB
 	handler http.Handler
+	cfg     *viper.Viper
 }
 
 type sessionData struct {
@@ -53,7 +54,7 @@ func init() {
 	gob.Register(Session{})
 }
 
-func NewMiddleware(next http.Handler, db db.DB) *Middleware {
+func NewMiddleware(next http.Handler, db db.DB, v *viper.Viper) *Middleware {
 	hk := salt.GenerateSigningKey()
 	ek := salt.GenerateEncryptionKey()
 	sc := securecookie.New(hk, ek)
@@ -61,6 +62,7 @@ func NewMiddleware(next http.Handler, db db.DB) *Middleware {
 		sc:      sc,
 		handler: next,
 		db:      db,
+		cfg:     v,
 	}
 }
 
@@ -121,20 +123,20 @@ func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator
 	return dbu, UserSourceBasicAuth
 }
 
-func generateCookie(value string) *http.Cookie {
+func generateCookie(value string, domain string) *http.Cookie {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    value,
 		Secure:   true,
 		HttpOnly: true,
-		Domain:   viper.GetString("server.domain"),
+		Domain:   domain,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(CookieLifetime().Seconds()),
 	}
 }
 
-func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
+func WriteSession(w http.ResponseWriter, r *http.Request, s Session, v *viper.Viper) error {
 	// see if we have already set a cookie
 	//allCookies := w.Header().Values("Set-Cookie")
 
@@ -160,7 +162,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
 		return err
 	}
 
-	http.SetCookie(w, generateCookie(encoded))
+	http.SetCookie(w, generateCookie(encoded, v.GetString("server.domain")))
 
 	return nil
 }
@@ -228,7 +230,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("could not encode session data")
 		}
 
-		newCookie := generateCookie(encoded)
+		newCookie := generateCookie(encoded, m.cfg.GetString("server.domain"))
 		log.Debug().Dur("session_lifetime", SessionLifetime()).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
 
 		http.SetCookie(w, newCookie)

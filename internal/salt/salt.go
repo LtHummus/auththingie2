@@ -16,6 +16,11 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+// note to future self: i have taken efforts to change all global usages of `viper` in to local ones. I have _NOT_ changed
+// this package, because ideally i would like to get rid of the salt file entirely and change key derivation to use
+// HKDF instead of the current methods. This would fundamentally change how this package works, so I am leaving it alone
+// for now
+
 const (
 	saltLength = 32
 	version    = 1

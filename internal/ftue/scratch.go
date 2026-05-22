@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -39,7 +38,7 @@ func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Re
 		Admin:    true,
 	}
 
-	err := u.SetPassword(password, viper.GetViper())
+	err := u.SetPassword(password, fe.config)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "ftuescratch.gohtml", &ftueParams{

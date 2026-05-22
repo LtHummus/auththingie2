@@ -50,7 +50,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	authId := generateAuthID()
 	s.CustomData[authenticationIDSessionKey] = authId
 
-	err := session.WriteSession(w, r, s)
+	err := session.WriteSession(w, r, s, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not update session")
 		render.RenderJSONError(w, "Could not update user session", "authn.enroll.could_not_update_session", http.StatusInternalServerError)
@@ -168,7 +168,7 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 
 	s := session.GetSessionFromRequest(r)
 	s.CustomData[authenticationIDSessionKey] = authID
-	err = session.WriteSession(w, r, s)
+	err = session.WriteSession(w, r, s, e.Configuration)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not write session data")
 		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_write_session", http.StatusInternalServerError)
@@ -262,7 +262,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 
 	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r)).Msg("successful passkey auth")
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_update_session", http.StatusInternalServerError)

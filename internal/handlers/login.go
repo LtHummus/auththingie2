@@ -140,7 +140,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	sess := session.GetSessionFromRequest(r)
 	sess.PlaceUserInSession(u)
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		http.Error(w, "could not write session data", http.StatusInternalServerError)
