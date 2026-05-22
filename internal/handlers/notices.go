@@ -3,8 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/spf13/viper"
-
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -22,7 +20,7 @@ func (e *Env) ShowNotices(w http.ResponseWriter, r *http.Request) {
 		redirectURL = "/"
 	}
 
-	if viper.GetBool("unsafe_hide_admin_messages") {
+	if e.Configuration.GetBool("unsafe_hide_admin_messages") {
 		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in getRedirectURIFromRequest
 		return
 	}

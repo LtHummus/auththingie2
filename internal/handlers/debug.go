@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -62,11 +61,11 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	configTable := table.NewWriter()
 	configTable.AppendHeader(table.Row{"Key", "Value"})
 	configTable.AppendRows([]table.Row{
-		{"Config File", viper.ConfigFileUsed()},
-		{"TLS Enabled", viper.GetBool("server.tls.enabled")},
+		{"Config File", e.Configuration.ConfigFileUsed()},
+		{"TLS Enabled", e.Configuration.GetBool("server.tls.enabled")},
 		{"Salt File Path", salt.GetSaltPath()},
 	})
-	absDbFile, err := filepath.Abs(viper.GetString("db.file"))
+	absDbFile, err := filepath.Abs(e.Configuration.GetString("db.file"))
 	if err != nil {
 		configTable.AppendRow(table.Row{"DB File Path", fmt.Sprintf("Unable to get: %s", err.Error())})
 	} else {

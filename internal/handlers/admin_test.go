@@ -26,7 +26,7 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 	render.Init()
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -38,7 +38,7 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 	})
 
 	t.Run("render if admin", func(t *testing.T) {
-		a, db, _, _, _, e := makeTestEnv(t)
+		a, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetAllUsers", mock.Anything).Return([]*user.AdminListUser{
 			{
@@ -74,7 +74,7 @@ func TestEnv_HandleAdminPage(t *testing.T) {
 	})
 
 	t.Run("db failure", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetAllUsers", mock.Anything).Return(nil, errors.New("whoops"))
 
@@ -92,7 +92,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	render.Init()
 
 	t.Run("basic test", func(t *testing.T) {
-		a, db, _, _, _, e := makeTestEnv(t)
+		a, db, _, _, _, _, e := makeTestEnv(t)
 
 		a.On("MatchesRule", &rules.RequestInfo{
 			Method:     http.MethodGet,
@@ -116,7 +116,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	})
 
 	t.Run("fail if no url provided", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/ruletest", nil, withUser(sampleAdminUser, db))
 
@@ -129,7 +129,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	})
 
 	t.Run("fail if URL invalid", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("url", ":blahblah")
@@ -145,7 +145,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	})
 
 	t.Run("fail if source IP invalid", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -162,7 +162,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	})
 
 	t.Run("fail if logged in non-admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -177,7 +177,7 @@ func TestEnv_HandleTestRule(t *testing.T) {
 	})
 
 	t.Run("fail if logged in non-admin", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("url", "https://test.example.com")
@@ -197,7 +197,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	render.Init()
 
 	t.Run("not logged in should fail", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
@@ -214,7 +214,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("non admin user should fail", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
@@ -231,7 +231,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("check CSRF protection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 		v := url.Values{}
 		v.Add("new-tag", "test-tag")
 
@@ -246,7 +246,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("database error", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, errors.New("oh no"))
 
@@ -265,7 +265,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(nil, nil)
 
@@ -284,7 +284,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("no tag specified", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -306,7 +306,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("very long tag name", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -329,7 +329,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("tag contains invalid characters", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -352,7 +352,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("tag already exists specified", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -375,7 +375,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("database error on save", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -399,7 +399,7 @@ func TestEnv_HandleUserPatchTagsModification(t *testing.T) {
 	})
 
 	t.Run("everything worked", func(t *testing.T) {
-		a, db, _, _, _, e := makeTestEnv(t)
+		a, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "test").Return(&user.User{
 			Id:       "test",
@@ -434,7 +434,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	render.Init()
 
 	t.Run("detect CSRF detection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, isHTMXRequest())
 		r.Header.Set("Sec-Fetch-Site", "badvalue")
@@ -447,7 +447,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, isHTMXRequest())
 		w := httptest.NewRecorder()
@@ -459,7 +459,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodDelete, "/admin/users/testuser/tags/dtag", nil, withUser(sampleNonAdminUser, db), isHTMXRequest())
 		w := httptest.NewRecorder()
@@ -471,7 +471,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("handle database error gracefully", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, errors.New("oh no!"))
 
@@ -485,7 +485,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("handle target user not found gracefully", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(nil, nil)
 
@@ -499,7 +499,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("handle db error on save", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
 			Id:       "testuser",
@@ -522,7 +522,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 	})
 
 	t.Run("everything worked ok", func(t *testing.T) {
-		a, db, _, _, _, e := makeTestEnv(t)
+		a, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "testuser").Return(&user.User{
 			Id:       "testuser",
@@ -548,7 +548,7 @@ func TestEnv_HandleUserTagDelete(t *testing.T) {
 
 func TestBuildMissingRoles(t *testing.T) {
 	t.Run("sample input", func(t *testing.T) {
-		a, _, _, _, _, e := makeTestEnv(t)
+		a, _, _, _, _, _, e := makeTestEnv(t)
 
 		a.On("KnownRoles").Return([]string{"aaa", "bbb", "ccc", "ddd"})
 
@@ -565,7 +565,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	render.Init()
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil)
 		w := httptest.NewRecorder()
@@ -577,7 +577,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	})
 
 	t.Run("fail if non-admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/myuser", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -589,7 +589,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	})
 
 	t.Run("handle database error", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("noooo"))
 
@@ -603,7 +603,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	})
 
 	t.Run("handle user does not exist", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
@@ -617,7 +617,7 @@ func TestEnv_RenderUserEditPage(t *testing.T) {
 	})
 
 	t.Run("everything works ok", func(t *testing.T) {
-		a, db, _, _, _, e := makeTestEnv(t)
+		a, db, _, _, _, _, e := makeTestEnv(t)
 
 		a.On("KnownRoles").Return([]string{"a", "b", "c"})
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
@@ -643,7 +643,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 
 	t.Run("detect CSRF protection", func(t *testing.T) {
 		t.Run("fail if not logged in", func(t *testing.T) {
-			_, _, _, _, _, e := makeTestEnv(t)
+			_, _, _, _, _, _, e := makeTestEnv(t)
 
 			r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil)
 			r.Header.Set("Sec-Fetch-Site", "foo")
@@ -658,7 +658,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil)
 		w := httptest.NewRecorder()
@@ -670,7 +670,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -682,7 +682,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("database error on user retrieval", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("womp womp"))
 
@@ -696,7 +696,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("handle user not found", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -714,7 +714,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("could not save user", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -736,7 +736,7 @@ func TestEnv_HandleEditUserSubmission(t *testing.T) {
 	})
 
 	t.Run("All OK", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("new-pwd", "anewpassword")
@@ -768,7 +768,7 @@ func TestEnv_HandleCreateUserPage(t *testing.T) {
 	render.Init()
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil)
 		w := httptest.NewRecorder()
@@ -779,7 +779,7 @@ func TestEnv_HandleCreateUserPage(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -790,7 +790,7 @@ func TestEnv_HandleCreateUserPage(t *testing.T) {
 	})
 
 	t.Run("all ok", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodGet, "/admin/users/create", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
@@ -807,7 +807,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	render.Init()
 
 	t.Run("check CSRF detection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil)
 		r.Header.Set("Origin", "https://bad.example.com")
@@ -821,7 +821,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil)
 		w := httptest.NewRecorder()
@@ -833,7 +833,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/create", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -845,7 +845,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if no username", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("pw1", "apass")
@@ -862,7 +862,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if pw is blank", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "newuser")
@@ -880,7 +880,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if password is invalid", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
 
@@ -904,7 +904,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail if passwords do not match", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "newuser")
@@ -922,7 +922,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("check for existing user fails", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, errors.New("wheee"))
 
@@ -942,7 +942,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("user already exists", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(&user.User{}, nil)
 
@@ -962,7 +962,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("fail to save user", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("whoops"))
@@ -983,7 +983,7 @@ func TestEnv_HandleCreateUserPost(t *testing.T) {
 	})
 
 	t.Run("everything worked", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByUsername", mock.Anything, "newuser").Return(nil, nil)
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
@@ -1016,7 +1016,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	seed := "sampletotpseed"
 
 	t.Run("detect CSRF protection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil)
 		r.Header.Set("Sec-Fetch-Site", "cross-site")
@@ -1029,7 +1029,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil)
 		w := httptest.NewRecorder()
@@ -1041,7 +1041,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/someid/totp_unenroll", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1053,7 +1053,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("fail if attempting to unenroll self", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/totp_unenroll", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1065,7 +1065,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("fail to get user to modify", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, errors.New("whe"))
 
@@ -1079,7 +1079,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(nil, nil)
 
@@ -1093,7 +1093,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("failed to save user", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
 			Id:       "myuser",
@@ -1112,7 +1112,7 @@ func TestEnv_HandleAdminUnenrollTOTP(t *testing.T) {
 	})
 
 	t.Run("all ok", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("GetUserByGuid", mock.Anything, "myuser").Return(&user.User{
 			Id:       "myuser",
@@ -1141,7 +1141,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	render.Init()
 
 	t.Run("detect CSRF protection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil)
 		r.Header.Set("Sec-Fetch-Site", "cross-site")
@@ -1154,7 +1154,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil)
 		w := httptest.NewRecorder()
@@ -1166,7 +1166,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, "/admin/users/myuser/delete", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1178,7 +1178,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	})
 
 	t.Run("attempt to delete self", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPost, fmt.Sprintf("/admin/users/%s/delete", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1190,7 +1190,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	})
 
 	t.Run("deletion failure", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(errors.New("no delete for you"))
 
@@ -1204,7 +1204,7 @@ func TestEnv_HandleUserDelete(t *testing.T) {
 	})
 
 	t.Run("everything ok", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("DeleteUser", mock.Anything, "myuser").Return(nil)
 
@@ -1225,7 +1225,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	render.Init()
 
 	t.Run("CSRF protection detect", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil)
 		r.Header.Set("Sec-Fetch-Site", "askdjasdfkjsdfkjdsf")
@@ -1238,7 +1238,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("fail if not logged in", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil)
 		w := httptest.NewRecorder()
@@ -1250,7 +1250,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("fail if not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPatch, "/admin/users/myuser/disable", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1262,7 +1262,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("attempt to modify self", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		r := makeTestRequest(t, http.MethodPatch, fmt.Sprintf("/admin/users/%s/disable", sampleAdminUser.Id), nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
@@ -1274,7 +1274,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("modification failure", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(errors.New("no modify for you"))
 
@@ -1288,7 +1288,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("everything ok for disable", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		db.On("SetUserEnabled", mock.Anything, "myuser", false).Return(nil)
 
@@ -1302,7 +1302,7 @@ func TestEnv_HandleUserDisableEnable(t *testing.T) {
 	})
 
 	t.Run("everything ok for enable", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("enabled", "on")

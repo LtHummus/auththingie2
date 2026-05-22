@@ -13,6 +13,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -265,7 +266,7 @@ func setupSalts(t *testing.T) {
 	salt.CheckOrMakeSalt()
 }
 
-func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *mocks.MockPasswordValidator, *mocks.MockRedirectURIValidator, *Env) {
+func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *mocks.MockPasswordValidator, *mocks.MockRedirectURIValidator, *viper.Viper, *Env) {
 	a := mocks.NewMockAnalyzer(t)
 	db := mocks.NewMockDB(t)
 	ll := mocks.NewMockLoginLimiter(t)
@@ -277,13 +278,16 @@ func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockL
 		RPOrigins:     []string{"https://example.com"},
 	})
 	assert.NoError(t, err)
-	return a, db, ll, pwv, mruriv, &Env{
+
+	v := viper.New()
+	return a, db, ll, pwv, mruriv, v, &Env{
 		Database:             db,
 		Analyzer:             a,
 		WebAuthn:             wa,
 		LoginLimiter:         ll,
 		PasswordValidator:    pwv,
 		RedirectURLValidator: mruriv,
+		Configuration:        v,
 	}
 }
 

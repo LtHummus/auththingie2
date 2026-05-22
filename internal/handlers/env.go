@@ -28,6 +28,7 @@ type Env struct {
 	LoginLimiter         loginlimit.LoginLimiter
 	PasswordValidator    pwvalidate.PasswordValidator
 	RedirectURLValidator redirects.Validator
+	Configuration        *viper.Viper
 }
 
 const (

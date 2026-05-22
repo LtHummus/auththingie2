@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -28,7 +27,7 @@ func (e *Env) HandleSelfConfigGet(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, "self_config.gohtml", &selfEditPageParams{
 		User:           u,
-		EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
 	})
 }
 

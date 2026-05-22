@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +16,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	render.Init()
 
 	t.Run("non admin should error", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil)
 		w := httptest.NewRecorder()
 
@@ -27,7 +26,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	})
 
 	t.Run("error out if logged in and not admin", func(t *testing.T) {
-		_, db, _, _, _, e := makeTestEnv(t)
+		_, db, _, _, _, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -43,7 +42,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, ruriv, e := makeTestEnv(t)
+		_, db, _, _, ruriv, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -63,7 +62,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 
 		notices.AddMessage("test", "This is a test message")
 
-		_, db, _, _, ruriv, e := makeTestEnv(t)
+		_, db, _, _, ruriv, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -77,7 +76,7 @@ func TestEnv_ShowNotices(t *testing.T) {
 	})
 
 	t.Run("redirect if there are no messages", func(t *testing.T) {
-		_, db, _, _, ruriv, e := makeTestEnv(t)
+		_, db, _, _, ruriv, _, e := makeTestEnv(t)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
@@ -94,14 +93,12 @@ func TestEnv_ShowNotices(t *testing.T) {
 	t.Run("redirect if there are messages, but user is suppressing them", func(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
-			viper.Set("unsafe_hide_admin_messages", false)
 		})
-
-		viper.Set("unsafe_hide_admin_messages", true)
 
 		notices.AddMessage("hi", "hi")
 
-		_, db, _, _, ruriv, e := makeTestEnv(t)
+		_, db, _, _, ruriv, v, e := makeTestEnv(t)
+		v.Set("unsafe_hide_admin_messages", true)
 		r := makeTestRequest(t, http.MethodGet, "/admin/notices?redirect_uri=https://example.com", nil, withUser(sampleAdminUser, db))
 		w := httptest.NewRecorder()
 
