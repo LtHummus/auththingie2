@@ -50,6 +50,8 @@ type dockerAPI interface {
 type dockerProvider struct {
 	client dockerAPI
 
+	v *viper.Viper
+
 	eventStreamInitialized atomic.Bool
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
@@ -62,12 +64,12 @@ func (dp *dockerProvider) Active() bool {
 	return dp.eventStreamInitialized.Load()
 }
 
-func newDockerProvider(ctx context.Context) *dockerProvider {
-	if !viper.GetBool(trustedProxyDockerEnabledConfigKey) {
+func newDockerProvider(ctx context.Context, v *viper.Viper) *dockerProvider {
+	if !v.GetBool(trustedProxyDockerEnabledConfigKey) {
 		return nil
 	}
 
-	dockerEndpoint := viper.GetString(trustedProxyDockerEndpointConfigKey)
+	dockerEndpoint := v.GetString(trustedProxyDockerEndpointConfigKey)
 	if dockerEndpoint == "" {
 		dockerEndpoint = defaultDockerEndpoint
 	}
@@ -89,6 +91,7 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 
 	dp := &dockerProvider{
 		client:    dockerClient,
+		v:         v,
 		activeIPs: map[string][]net.IP{},
 
 		cleanup: make(chan struct{}),

@@ -39,8 +39,8 @@ var (
 	providerLock          sync.RWMutex
 )
 
-func Initialize(ctx context.Context) error {
-	err := initFromConfig(ctx)
+func Initialize(ctx context.Context, v *viper.Viper) error {
+	err := initFromConfig(ctx, v)
 	if err != nil {
 		log.Error().Err(err).Msg("No Trusted Proxy configuration! Please configure this! See README for details")
 		return fmt.Errorf("trueip: Intialize: no trusted proxy configuration. Please configure this. See README for details")
@@ -48,7 +48,7 @@ func Initialize(ctx context.Context) error {
 
 	config.RegisterForUpdates(func(event fsnotify.Event) {
 		log.Debug().Msg("reloading trusted proxy config")
-		if err := initFromConfig(context.Background()); err != nil {
+		if err := initFromConfig(context.Background(), v); err != nil {
 			log.Warn().Err(err).Msg("invalid proxy configuration")
 		}
 	})
@@ -70,7 +70,7 @@ func TearDown(ctx context.Context) {
 	trustedProxyProviders = nil
 }
 
-func initFromConfig(ctx context.Context) error {
+func initFromConfig(ctx context.Context, v *viper.Viper) error {
 	providerLock.Lock()
 	defer providerLock.Unlock()
 
@@ -84,11 +84,11 @@ func initFromConfig(ctx context.Context) error {
 	}
 
 	var newTrustedProviders []trustedProxyProvider
-	if dp := newDockerProvider(ctx); dp != nil {
+	if dp := newDockerProvider(ctx, v); dp != nil {
 		newTrustedProviders = append(newTrustedProviders, dp)
 	}
 
-	if vp := newViperProvider(); vp != nil {
+	if vp := newViperProvider(v); vp != nil {
 		newTrustedProviders = append(newTrustedProviders, vp)
 	}
 

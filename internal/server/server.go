@@ -58,7 +58,7 @@ func RunServer() {
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
-	err = trueip.Initialize(context.Background())
+	err = trueip.Initialize(context.Background(), viper.GetViper())
 	if err != nil {
 		log.Error().Err(err).Msg("invalid trusted proxy configuration")
 		config.RunErrorServer([]string{err.Error()})

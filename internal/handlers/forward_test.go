@@ -140,8 +140,9 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 }
 
 func TestEnv_HandleCheckRequest(t *testing.T) {
-	viper.Set("security.trusted_proxies.network", []string{"127.0.0.1"})
-	trueip.Initialize(t.Context())
+	v := viper.New()
+	v.Set("security.trusted_proxies.network", []string{"127.0.0.1"})
+	trueip.Initialize(t.Context(), v)
 	t.Cleanup(func() {
 		trueip.TearDown(t.Context())
 	})

@@ -163,17 +163,15 @@ func Test_isTrustedProxy(t *testing.T) {
 
 func Test_Initialization(t *testing.T) {
 	t.Run("basic path including config file change", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
 		// we are doing things using viper this way and calling `initFromConfig` directly because attaching all of the
 		// listeners to the underlying systems (i.e. config.RegisterForUpdates) is not worth it. This does mean that we
 		// aren't testing to make sure that we register ourselves as a listener, but that's a small price to pay for
 		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
-		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
+		v.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
 
-		err := initFromConfig(t.Context())
+		err := initFromConfig(t.Context(), v)
 		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
@@ -182,8 +180,8 @@ func Test_Initialization(t *testing.T) {
 		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
 		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
 
-		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
-		err = initFromConfig(t.Context())
+		v.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		err = initFromConfig(t.Context(), v)
 		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
@@ -195,10 +193,9 @@ func Test_Initialization(t *testing.T) {
 
 	t.Run("return error if init with no configuration", func(t *testing.T) {
 		t.Cleanup(func() {
-			viper.Reset()
 			notices.Reset()
 		})
-		err := initFromConfig(t.Context())
+		err := initFromConfig(t.Context(), viper.New())
 		assert.Error(t, err)
 	})
 }

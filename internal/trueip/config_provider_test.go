@@ -42,17 +42,17 @@ func TestViperProvider_IsProxyTrusted(t *testing.T) {
 
 func TestViperProvider_updateTrustedProxies(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
-		viper.Set(trustedProxyHeadersConfigKey, []string{
+		v.Set(trustedProxyHeadersConfigKey, []string{
 			"127.0.0.1",
 			"172.16.0.0/12",
 			"blahblah", // this should be cleanly ignored
 		})
 
-		vp := &viperProvider{}
+		vp := &viperProvider{
+			v: v,
+		}
 		vp.updateTrustedProxies()
 
 		assert.Len(t, vp.trustedProxyIPs, 1)
@@ -65,17 +65,17 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 	})
 
 	t.Run("ignore updates if they happen too quickly", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
 		synctest.Test(t, func(t *testing.T) {
-			viper.Set(trustedProxyHeadersConfigKey, []string{
+			v.Set(trustedProxyHeadersConfigKey, []string{
 				"127.0.0.1",
 				"172.16.0.0/12",
 			})
 
-			vp := &viperProvider{}
+			vp := &viperProvider{
+				v: v,
+			}
 			vp.updateTrustedProxies()
 
 			assert.True(t, vp.IsProxyTrusted(net.ParseIP("127.0.0.1")))
