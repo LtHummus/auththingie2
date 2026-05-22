@@ -134,6 +134,8 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	sessionCache.Delete(authID)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(`{"failed":false}`))
@@ -242,6 +244,8 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	}
 
 	log.Info().Str("username", foundUser.Username).Msg("logged in via passkey")
+
+	sessionCache.Delete(authID)
 
 	err = e.Database.UpdateCredentialOnLogin(r.Context(), cred)
 	if err != nil {

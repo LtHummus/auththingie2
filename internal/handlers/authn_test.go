@@ -68,6 +68,8 @@ func TestWebAuthnFlow(t *testing.T) {
 		_, db, _, _, _, e := makeTestEnv(t)
 		mux := e.BuildRouter()
 
+		assert.Equal(t, 0, sessionCache.Len())
+
 		// call out to request a challenge for a new key
 		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleNonAdminUser, db))
 		w1 := httptest.NewRecorder()
@@ -80,6 +82,8 @@ func TestWebAuthnFlow(t *testing.T) {
 		var sess *session2.Session
 		err := sc.Decode(session2.SessionCookieName, w1.Result().Cookies()[0].Value, &sess)
 		assert.NoError(t, err)
+
+		assert.Equal(t, 1, sessionCache.Len())
 
 		// use the response data to generate some attestation options
 		opts, err := virtualwebauthn.ParseAttestationOptions(w1.Body.String())
@@ -109,6 +113,9 @@ func TestWebAuthnFlow(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w2.Result().StatusCode)
 		assert.Equal(t, `{"failed":false}`, w2.Body.String())
 
+		// make sure we delete webauthn session info from cache to prevent reuse
+		assert.Equal(t, 0, sessionCache.Len())
+
 		addedCredential := db.Mock.Calls[2].Arguments[2].(*webauthn.Credential)
 
 		assert.Equal(t, cred.ID, addedCredential.ID)
@@ -134,6 +141,7 @@ func TestWebAuthnFlow(t *testing.T) {
 		assertOptions, err := virtualwebauthn.ParseAssertionOptions(w3.Body.String())
 		assert.NoError(t, err)
 		assert.NotNil(t, assertOptions)
+		assert.Equal(t, 1, sessionCache.Len())
 
 		// sign the challenge and send the response
 		assertionResponse := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *assertOptions)
@@ -151,6 +159,8 @@ func TestWebAuthnFlow(t *testing.T) {
 
 		// make sure we're logged in
 		assert.Equal(t, http.StatusOK, w4.Result().StatusCode)
+
+		assert.Equal(t, 0, sessionCache.Len())
 
 		assert.Len(t, w4.Result().Cookies(), 1)
 
