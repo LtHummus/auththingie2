@@ -130,7 +130,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator)
+	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, viper.GetBool("security.disableBasicAuth"))
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {

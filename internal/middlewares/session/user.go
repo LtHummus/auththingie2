@@ -91,10 +91,15 @@ func GetUserFromRequest(r *http.Request) *user.User {
 	return info.(*sessionData).user
 }
 
-func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator) (*user.User, UserSource) {
+func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator, disableBasicAuth bool) (*user.User, UserSource) {
 	u := GetUserFromRequest(r)
 	if u != nil {
 		return u, UserSourceSession
+	}
+
+	if disableBasicAuth {
+		// if basic auth is disabled, just pretend the basic auth credentials were never sent
+		return nil, UserSourceInvalidUser
 	}
 
 	username, pass, exists := r.BasicAuth()
