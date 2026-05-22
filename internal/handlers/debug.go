@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -104,7 +105,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"X-Forwarded-Host", r.Header.Get("X-Forwarded-Host")},
 		{"X-Real-Ip", r.Header.Get("X-Real-Ip")},
 		{"X-Forwarded-Server", r.Header.Get("X-Forwarded-Server")},
-		{"trueip.Find", trueip.Find(r)},
+		{"trueip.Find", trueip.Find(r, viper.GetViper())},
 	})
 
 	userTable := table.NewWriter()

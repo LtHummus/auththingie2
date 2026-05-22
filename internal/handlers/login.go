@@ -75,7 +75,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := e.getRedirectURIFromRequest(r)
 
-	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
+	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r, e.Configuration))
 	if err != nil {
 		if _, ok := errors.AsType[pwvalidate.PasswordValidatorError](err); !ok {
 			// if there's not an auth error, just render something generic
@@ -147,7 +147,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r, e.Configuration)).Str("username", u.Username).Msg("successful login")
 
 	if redirectURL == "" {
 		redirectURL = "/"

@@ -168,11 +168,11 @@ func IsFromTrustedProxy(r *http.Request) bool {
 	return isTrustedProxy(r)
 }
 
-func Find(r *http.Request) string {
+func Find(r *http.Request, v *viper.Viper) string {
 	providerLock.RLock()
 	defer providerLock.RUnlock()
 	upstreamTrusted := isTrustedProxy(r)
-	if trustedHeaderName := viper.GetString(trustedIpHeaderConfigKey); upstreamTrusted && trustedHeaderName != "" {
+	if trustedHeaderName := v.GetString(trustedIpHeaderConfigKey); upstreamTrusted && trustedHeaderName != "" {
 		if trustedContents := r.Header.Get(trustedHeaderName); trustedContents != "" {
 			return trustedContents
 		}

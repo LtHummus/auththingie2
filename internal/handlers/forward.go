@@ -133,7 +133,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {
-		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials or account locked")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Msg("invalid basic auth credentials or account locked")
 		http.Error(w, "invalid credentials or account locked", http.StatusForbidden)
 		return
 	}
@@ -146,19 +146,19 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == session.UserSourceBasicAuth && user.TOTPEnabled() {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
 		http.Error(w, "Can not use basic auth with TOTP enabled", http.StatusForbidden)
 		return
 	}
 
 	if source == session.UserSourceBasicAuth && len(user.StoredCredentials) > 0 {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
 		http.Error(w, "Can not use basic auth with passkeys enabled", http.StatusForbidden)
 		return
 	}
 
 	if user.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("account disabled, forwarding to message")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("account disabled, forwarding to message")
 		http.Redirect(w, r, fmt.Sprintf("%s/disabled", e.Configuration.GetString("server.auth_url")), http.StatusFound)
 		return
 	}

@@ -85,7 +85,7 @@ func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTick
 }
 
 func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data totp2.LoginTicket) {
-	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r))
+	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r, e.Configuration))
 	accountKey := fmt.Sprintf("totp_user_guid|%s", data.UserID)
 
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
@@ -149,7 +149,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
 
 	if user.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted login of disabled account")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted login of disabled account")
 		e.handleTotpPrompt(w, r, data, "Account is disabled")
 		return
 	}
@@ -164,7 +164,7 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 		return
 	}
 
-	log.Info().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("successful login")
 	if redirectURI == "" {
 		redirectURI = "/"
 	}

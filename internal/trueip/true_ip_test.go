@@ -58,7 +58,7 @@ func TestFind(t *testing.T) {
 			RemoteAddr: "1.2.3.4:59884",
 		}
 
-		assert.Equal(t, "1.2.3.4", Find(r))
+		assert.Equal(t, "1.2.3.4", Find(r, viper.New()))
 	})
 
 	t.Run("trust XFF if proxy is trusted", func(t *testing.T) {
@@ -70,7 +70,7 @@ func TestFind(t *testing.T) {
 
 		r.Header.Set("X-Forwarded-For", "9.9.9.9")
 
-		assert.Equal(t, "9.9.9.9", Find(r))
+		assert.Equal(t, "9.9.9.9", Find(r, viper.New()))
 	})
 
 	t.Run("do not trust XFF is proxy is untrusted", func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestFind(t *testing.T) {
 
 		r.Header.Set("X-Forwarded-For", "9.9.9.9")
 
-		assert.Equal(t, "1.2.3.4", Find(r))
+		assert.Equal(t, "1.2.3.4", Find(r, viper.New()))
 	})
 
 	t.Run("always take last XFF header", func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestFind(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, "2.2.2.2", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r, viper.New()))
 	})
 
 	t.Run("take rightmost entry in XFF", func(t *testing.T) {
@@ -107,39 +107,35 @@ func TestFind(t *testing.T) {
 		}
 		r.Header.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
 
-		assert.Equal(t, "2.2.2.2", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r, viper.New()))
 	})
 
 	t.Run("use custom trust header if configured and present and proxy is trusted", func(t *testing.T) {
 		trustIPForProxy(t, "127.0.0.1")
-		t.Cleanup(func() {
-			viper.Reset()
-		})
 		r := &http.Request{
 			RemoteAddr: "127.0.0.1:5999",
 			Header:     map[string][]string{},
 		}
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v := viper.New()
+		v.Set(trustedIpHeaderConfigKey, "x-real-ip")
 
-		assert.Equal(t, "1.1.1.1", Find(r))
+		assert.Equal(t, "1.1.1.1", Find(r, v))
 	})
 
 	t.Run("ignore set trust header if not coming from proxy", func(t *testing.T) {
 		trustIPForProxy(t, "127.0.0.1")
-		t.Cleanup(func() {
-			viper.Reset()
-		})
 		r := &http.Request{
 			RemoteAddr: "127.0.0.5:5999",
 			Header:     map[string][]string{},
 		}
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v := viper.New()
+		v.Set(trustedIpHeaderConfigKey, "x-real-ip")
 
-		assert.Equal(t, "127.0.0.5", Find(r))
+		assert.Equal(t, "127.0.0.5", Find(r, v))
 	})
 }
 

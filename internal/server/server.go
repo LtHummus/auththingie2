@@ -97,7 +97,7 @@ func RunServer() {
 		log.Fatal().Err(err).Msg("could not initialize webauthn")
 	}
 
-	ll := loginlimit.NewInMemoryLimiter()
+	ll := loginlimit.NewInMemoryLimiter(viper.GetViper())
 	pwv := pwvalidate.NewValidator(database, ll, viper.GetViper())
 
 	e := handlers.Env{

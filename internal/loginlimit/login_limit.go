@@ -41,10 +41,10 @@ type InMemoryLoginLimiter struct {
 	accountLocks  map[string]time.Time
 }
 
-func NewInMemoryLimiter() *InMemoryLoginLimiter {
-	failureLimit := viper.GetInt(ConfigKeyLoginFailureLimit)
-	lookbackTime := viper.GetDuration(ConfigKeyLookbackTime)
-	lockDuration := viper.GetDuration(ConfigKeyLockDuration)
+func NewInMemoryLimiter(v *viper.Viper) *InMemoryLoginLimiter {
+	failureLimit := v.GetInt(ConfigKeyLoginFailureLimit)
+	lookbackTime := v.GetDuration(ConfigKeyLookbackTime)
+	lockDuration := v.GetDuration(ConfigKeyLockDuration)
 
 	// we do it this way so we don't mistakenly pollute the config file with our values
 	if failureLimit == 0 {
