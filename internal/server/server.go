@@ -31,13 +31,17 @@ import (
 func RunServer() {
 	render.Init()
 
+	// TODO: rethink this so potentially a configuration can be passed in to this. Maybe this check should be done
+	//       at a layer above this so the server doesn't have to be responsible for determining to run the first
+	//       time setup? Might make this more testable, which is a bonus
 	err := config.Init()
-
 	if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 		log.Warn().Msg("no config file found; starting FTUE")
 		ftue.RunFTUEServer(ftue.StepStartFromBeginning)
 		return
 	}
+
+	cfg := viper.GetViper()
 
 	salt.CheckOrMakeSalt()
 
@@ -47,18 +51,18 @@ func RunServer() {
 		config.RunErrorServer(configErrors)
 		os.Exit(1)
 	}
-	ruriv, err := redirects.NewFromConfig(viper.GetViper())
+	ruriv, err := redirects.NewFromConfig(cfg)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not initialize redirect uri handler")
 		config.RunErrorServer([]string{err.Error()})
 		os.Exit(1)
 	}
 
-	f, err := rules.NewFromConfig(viper.GetViper())
+	f, err := rules.NewFromConfig(cfg)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not parse rules from config")
 	}
-	err = trueip.Initialize(context.Background(), viper.GetViper())
+	err = trueip.Initialize(context.Background(), cfg)
 	if err != nil {
 		log.Error().Err(err).Msg("invalid trusted proxy configuration")
 		config.RunErrorServer([]string{err.Error()})
@@ -66,14 +70,14 @@ func RunServer() {
 	}
 
 	config.Lock.RLock()
-	port := viper.GetInt("server.port")
+	port := cfg.GetInt("server.port")
 	if port == 0 {
 		log.Warn().Msg("no port specified, using port 9000")
 		port = 9000
 	}
 	config.Lock.RUnlock()
 
-	database, err := sqlite.NewSQLiteFromConfig(viper.GetViper())
+	database, err := sqlite.NewSQLiteFromConfig(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize database")
 	}
@@ -90,15 +94,15 @@ func RunServer() {
 
 	wan, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "AuthThingie 2",
-		RPID:          viper.GetString("server.domain"),
-		RPOrigins:     []string{viper.GetString("server.auth_url")},
+		RPID:          cfg.GetString("server.domain"),
+		RPOrigins:     []string{cfg.GetString("server.auth_url")},
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize webauthn")
 	}
 
-	ll := loginlimit.NewInMemoryLimiter(viper.GetViper())
-	pwv := pwvalidate.NewValidator(database, ll, viper.GetViper())
+	ll := loginlimit.NewInMemoryLimiter(cfg)
+	pwv := pwvalidate.NewValidator(database, ll, cfg)
 
 	e := handlers.Env{
 		Analyzer:             f,
@@ -107,7 +111,7 @@ func RunServer() {
 		LoginLimiter:         ll,
 		PasswordValidator:    pwv,
 		RedirectURLValidator: ruriv,
-		Configuration:        viper.GetViper(),
+		Configuration:        cfg,
 	}
 	log.Info().Msg("services initialized")
 
@@ -137,9 +141,9 @@ func RunServer() {
 
 	log.Info().Int("port", port).Msg("starting server")
 	go func() {
-		if viper.GetBool("server.tls.enabled") {
-			keyFile := viper.GetString("server.tls.key_file")
-			certFile := viper.GetString("server.tls.cert_file")
+		if cfg.GetBool("server.tls.enabled") {
+			keyFile := cfg.GetString("server.tls.key_file")
+			certFile := cfg.GetString("server.tls.cert_file")
 			log.Info().Int("port", port).Str("key_file", keyFile).Str("cert_file", certFile).Msg("starting with tls enabled")
 			if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Panic().Err(err).Msg("error starting server")
