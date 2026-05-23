@@ -129,7 +129,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, e.Configuration.GetBool("security.disableBasicAuth"))
+	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, e.Configuration.GetBool("security.disable_basic_auth"))
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {

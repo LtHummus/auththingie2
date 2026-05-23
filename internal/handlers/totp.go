@@ -155,7 +155,12 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(user, e.Configuration)
+	err = sess.PlaceUserInSession(user, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not place user in session")
+		http.Error(w, "could not place user in session", http.StatusInternalServerError)
+		return
+	}
 
 	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {

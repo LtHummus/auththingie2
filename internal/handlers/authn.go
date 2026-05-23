@@ -258,7 +258,12 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(foundUser, e.Configuration)
+	err = sess.PlaceUserInSession(foundUser, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not log user in")
+		render.RenderJSONError(w, "Could not log user in", "authn.login.could_not_place_user", http.StatusInternalServerError)
+		return
+	}
 
 	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r, e.Configuration)).Msg("successful passkey auth")
 

@@ -138,7 +138,12 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(u, e.Configuration)
+	err = sess.PlaceUserInSession(u, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate new session")
+		http.Error(w, "could not generate new session", http.StatusInternalServerError)
+		return
+	}
 
 	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {

@@ -3,6 +3,7 @@ package session
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -72,21 +73,23 @@ func (s *Session) Expired() bool {
 	return s.Expires.Before(time.Now())
 }
 
-func (s *Session) PlaceUserInSession(u *user.User, v *viper.Viper) {
+func (s *Session) PlaceUserInSession(u *user.User, v *viper.Viper) error {
 	if u.Disabled {
 		log.Panic().Str("username", u.Username).Msg("attempted to place disabled user in session")
 	}
 
 	newSessionID, err := generateSessionID()
 	if err != nil {
-		log.Warn().Err(err).Msg("could not regenerate session ID")
+		return fmt.Errorf("session: PlaceUserInSession: could not generate session ID: %w", err)
 	}
+
 	s.SessionID = newSessionID
 	s.UserID = u.Id
 	s.Expires = time.Now().Add(SessionLifetime(v))
 	s.LoginTime = time.Now()
 	log.Debug().Str("username", u.Username).Time("expires", s.Expires).Time("login_time", s.LoginTime).Msg("placing in session")
 
+	return nil
 }
 
 func generateSessionID() (string, error) {

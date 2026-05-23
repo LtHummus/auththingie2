@@ -56,10 +56,11 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 
 		oldSessionID := s.SessionID
 
-		s.PlaceUserInSession(&user.User{
+		err = s.PlaceUserInSession(&user.User{
 			Username: "foo",
 			Id:       "1234",
 		}, v)
+		require.NoError(t, err)
 
 		assert.Equal(t, "1234", s.UserID)
 		assert.WithinDuration(t, time.Now().Add(DefaultSessionLifetime), s.Expires, 1*time.Second)
@@ -82,7 +83,7 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			s.PlaceUserInSession(u, v)
+			_ = s.PlaceUserInSession(u, v)
 		})
 	})
 }
