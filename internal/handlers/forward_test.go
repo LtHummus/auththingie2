@@ -53,8 +53,8 @@ func buildUserCookie(t *testing.T, e *Env, user *user.User) *session2.Session {
 }
 
 func setAttachHeaders(t *testing.T, v *viper.Viper) {
-	v.Set(config.AttachUserIDAuthResponseHeader, "Id-Header")
-	v.Set(config.AttachUsernameAuthResponseHeader, "Username-Header")
+	v.Set(config.ConfigKeyAttachUserIDAuthResponseHeader, "Id-Header")
+	v.Set(config.ConfigKeyAttachUsernameAuthResponseHeader, "Username-Header")
 }
 
 func validateHeaders(t *testing.T, id string, username string, r *http.Response) {
@@ -141,7 +141,7 @@ func TestEnv_HandleNotAllowed(t *testing.T) {
 
 func TestEnv_HandleCheckRequest(t *testing.T) {
 	v := viper.New()
-	v.Set("security.trusted_proxies.network", []string{"127.0.0.1"})
+	v.Set(config.ConfigKeyTrustedProxyNetwork, []string{"127.0.0.1"})
 	trueip.Initialize(t.Context(), v)
 	t.Cleanup(func() {
 		trueip.TearDown(t.Context())

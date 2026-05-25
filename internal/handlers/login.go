@@ -63,7 +63,7 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, "login.gohtml", &loginPageParams{
 			RedirectURI:    e.getRedirectURIFromRequest(r),
 			Message:        getMessageFromRequest(r),
-			EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+			EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 		})
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -82,7 +82,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		}
@@ -92,21 +92,21 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Invalid username or password. This account has been locked due to multiple failures",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "This IP has had too many login failures recently. Try again later",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          fmt.Sprintf("Invalid username or password. You have %d more attempts before the account is temporarily locked", iupe.AccountRemainingBeforeLocked),
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
@@ -116,7 +116,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 				render.Render(w, "login.gohtml", &loginPageParams{
 					Error:          "Account is disabled",
 					RedirectURI:    redirectURL,
-					EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+					EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 				})
 				return
 			}
@@ -125,7 +125,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		}

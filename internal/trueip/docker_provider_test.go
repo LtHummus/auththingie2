@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/mocks"
 )
 
@@ -396,8 +397,8 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 				}
 			}))
 
-			v.Set(trustedProxyDockerEnabledConfigKey, true)
-			v.Set(trustedProxyDockerEndpointConfigKey, srv.URL)
+			v.Set(config.ConfigKeyTrustedProxyDockerEnabled, true)
+			v.Set(config.ConfigKeyTrustedProxyDockerEndpoint, srv.URL)
 
 			dp := newDockerProvider(ctx, v)
 			assert.NotNil(t, dp)

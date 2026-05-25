@@ -3,6 +3,8 @@ package user
 import (
 	"github.com/spf13/viper"
 	"golang.org/x/text/secure/precis"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func cleanPassword(input string, v *viper.Viper) (string, error) {
@@ -11,7 +13,7 @@ func cleanPassword(input string, v *viper.Viper) (string, error) {
 	// exists as a safety hatch for admins to disable precis processing for passwords to allow people back in to their
 	// accounts
 	//
-	if v.GetBool("security.disable_precis") {
+	if v.GetBool(config.ConfigKeyDisbalePRECIS) {
 		return input, nil
 	}
 	return precis.OpaqueString.String(input)

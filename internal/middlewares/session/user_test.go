@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -91,7 +92,7 @@ func TestGetUserFromRequest(t *testing.T) {
 }
 
 func TestGetUserFromRequestAllowFallback(t *testing.T) {
-	viper.Set("security.disable_migrate_on_login", true)
+	viper.Set(config.ConfigKeyDisablePasswordMigrateOnLogin, true)
 
 	t.Cleanup(func() {
 		viper.Reset()

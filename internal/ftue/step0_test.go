@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/render"
 )
 
@@ -143,11 +144,11 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		assert.FileExists(t, configFilePath)
 		assert.FileExists(t, dbPath)
 
-		assert.Equal(t, dbPath, cfg.GetString("db.file"))
-		assert.Equal(t, "sqlite", cfg.GetString("db.kind"))
-		assert.Equal(t, "example.com", cfg.GetString("server.domain"))
-		assert.Equal(t, "auth.example.com", cfg.GetString("server.auth_url"))
-		assert.Equal(t, uint64(9000), cfg.GetUint64("server.port"))
+		assert.Equal(t, dbPath, cfg.GetString(config.ConfigKeyDBFile))
+		assert.Equal(t, "sqlite", cfg.GetString(config.ConfigKeyDBKind))
+		assert.Equal(t, "example.com", cfg.GetString(config.ConfigKeyServerDomain))
+		assert.Equal(t, "auth.example.com", cfg.GetString(config.ConfigKeyServerAuthURL))
+		assert.Equal(t, uint64(9000), cfg.GetUint64(config.ConfigKeyServerPort))
 
 		assert.NotNil(t, e.database)
 		assert.NotNil(t, e.analyzer)

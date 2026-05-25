@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/pbkdf2"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 // note to future self: i have taken efforts to change all global usages of `viper` in to local ones. I have _NOT_ changed
@@ -80,8 +82,8 @@ func CheckOrMakeSalt() {
 	iterationCount := getIterationCount()
 
 	start := time.Now()
-	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, iterationCount, 32, sha256.New)
-	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, iterationCount, 32, sha256.New)
+	signingKey = pbkdf2.Key([]byte(viper.GetString(config.ConfigKeyServerSecretKey)), salt.Signing, iterationCount, 32, sha256.New)
+	encryptionKey = pbkdf2.Key([]byte(viper.GetString(config.ConfigKeyServerSecretKey)), salt.Encryption, iterationCount, 32, sha256.New)
 
 	log.Info().Int("iteration_count", iterationCount).Dur("key_generation_time", time.Since(start)).Msg("generated signing and encryption keys")
 }

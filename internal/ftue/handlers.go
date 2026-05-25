@@ -97,7 +97,7 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	handler := cop.Handler(mux)
 
-	if !fe.config.GetBool(config.DisableSecurityHeaders) {
+	if !fe.config.GetBool(config.ConfigKeyDisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
 	} else {
 		log.Warn().Msg("not enabling security headers")

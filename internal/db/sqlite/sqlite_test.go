@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/argon"
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
@@ -32,7 +33,7 @@ func buildTestDatabase(t *testing.T) *SQLite {
 
 	v := viper.New()
 
-	v.Set("db.file", dbFile)
+	v.Set(config.ConfigKeyDBFile, dbFile)
 
 	t.Cleanup(func() {
 		os.RemoveAll(tmpDir)

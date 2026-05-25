@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
@@ -119,7 +120,7 @@ func TestFind(t *testing.T) {
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
 		v := viper.New()
-		v.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v.Set(config.ConfigKeyTrustedProxyIPHeader, "x-real-ip")
 
 		assert.Equal(t, "1.1.1.1", Find(r, v))
 	})
@@ -133,7 +134,7 @@ func TestFind(t *testing.T) {
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
 		v := viper.New()
-		v.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v.Set(config.ConfigKeyTrustedProxyIPHeader, "x-real-ip")
 
 		assert.Equal(t, "127.0.0.5", Find(r, v))
 	})
@@ -165,7 +166,7 @@ func Test_Initialization(t *testing.T) {
 		// listeners to the underlying systems (i.e. config.RegisterForUpdates) is not worth it. This does mean that we
 		// aren't testing to make sure that we register ourselves as a listener, but that's a small price to pay for
 		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
-		v.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
+		v.Set(config.ConfigKeyTrustedProxyNetwork, []string{"127.0.0.1"})
 
 		err := initFromConfig(t.Context(), v)
 		require.NoError(t, err)
@@ -176,7 +177,7 @@ func Test_Initialization(t *testing.T) {
 		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
 		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
 
-		v.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
+		v.Set(config.ConfigKeyTrustedProxyNetwork, []string{"127.0.0.9"})
 		err = initFromConfig(t.Context(), v)
 		require.NoError(t, err)
 

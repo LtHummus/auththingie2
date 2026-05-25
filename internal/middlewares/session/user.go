@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -162,7 +163,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session, v *viper.Vi
 		return err
 	}
 
-	http.SetCookie(w, generateCookie(encoded, v.GetString("server.domain"), CookieLifetime(v)))
+	http.SetCookie(w, generateCookie(encoded, v.GetString(config.ConfigKeyServerDomain), CookieLifetime(v)))
 
 	return nil
 }
@@ -230,7 +231,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("could not encode session data")
 		}
 
-		newCookie := generateCookie(encoded, m.cfg.GetString("server.domain"), CookieLifetime(m.cfg))
+		newCookie := generateCookie(encoded, m.cfg.GetString(config.ConfigKeyServerDomain), CookieLifetime(m.cfg))
 		log.Debug().Dur("session_lifetime", SessionLifetime(m.cfg)).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
 
 		http.SetCookie(w, newCookie)

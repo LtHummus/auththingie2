@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func TestGetSaltPath(t *testing.T) {
@@ -86,9 +88,9 @@ func TestCheckOrMakeSalt(t *testing.T) {
 		err := os.WriteFile(saltFile, []byte(data), 0600)
 		require.NoError(t, err)
 
-		viper.Set("server.secret_key", "test")
+		viper.Set(config.ConfigKeyServerSecretKey, "test")
 		t.Cleanup(func() {
-			viper.Set("server.secret_key", "")
+			viper.Set(config.ConfigKeyServerSecretKey, "")
 		})
 
 		CheckOrMakeSalt()

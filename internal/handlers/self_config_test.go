@@ -52,7 +52,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 	t.Run("don't render passkeys if disabled", func(t *testing.T) {
 		_, db, _, _, _, v, e := makeTestEnv(t)
 
-		v.Set(config.KeyPasskeysDisabled, true)
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 
 		r := makeTestRequest(t, http.MethodGet, "/edit_self", nil, withUser(sampleNonAdminUser, db))
 		w := httptest.NewRecorder()

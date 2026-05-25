@@ -88,7 +88,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 
 		ruriv.On("Sanitize", "").Return("/", true)
 
-		v.Set(config.KeyPasskeysDisabled, true)
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 
 		r := makeTestRequest(t, http.MethodGet, "/login", nil)
 		w := httptest.NewRecorder()

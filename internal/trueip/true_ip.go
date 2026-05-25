@@ -17,10 +17,6 @@ import (
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
-const (
-	trustedIpHeaderConfigKey = "security.real_ip_header"
-)
-
 type TrustedProxy struct {
 	Source      string
 	Description string
@@ -172,7 +168,7 @@ func Find(r *http.Request, v *viper.Viper) string {
 	providerLock.RLock()
 	defer providerLock.RUnlock()
 	upstreamTrusted := isTrustedProxy(r)
-	if trustedHeaderName := v.GetString(trustedIpHeaderConfigKey); upstreamTrusted && trustedHeaderName != "" {
+	if trustedHeaderName := v.GetString(config.ConfigKeyTrustedProxyIPHeader); upstreamTrusted && trustedHeaderName != "" {
 		if trustedContents := r.Header.Get(trustedHeaderName); trustedContents != "" {
 			return trustedContents
 		}

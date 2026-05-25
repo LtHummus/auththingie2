@@ -34,7 +34,7 @@ func init() {
 }
 
 func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Request) {
-	if e.Configuration.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to begin passkey registration when passkeys disabled")
 		http.Error(w, "Passkeys are disabled", http.StatusUnauthorized)
 		return
@@ -144,7 +144,7 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 }
 
 func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
-	if e.Configuration.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to begin passkey signin when passkeys disabled")
 		http.Error(w, "Passkeys are disabled", http.StatusNotFound)
 		return
@@ -320,7 +320,7 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 }
 
 func (e *Env) HandleRenderWebAuthnManage(w http.ResponseWriter, r *http.Request) {
-	if e.Configuration.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to get to passkey management with passkeys disabled")
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return

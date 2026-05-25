@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func TestViperProvider_IsProxyTrusted(t *testing.T) {
@@ -44,7 +46,7 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
 		v := viper.New()
 
-		v.Set(trustedProxyHeadersConfigKey, []string{
+		v.Set(config.ConfigKeyTrustedProxyNetwork, []string{
 			"127.0.0.1",
 			"172.16.0.0/12",
 			"blahblah", // this should be cleanly ignored
@@ -68,7 +70,7 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 		v := viper.New()
 
 		synctest.Test(t, func(t *testing.T) {
-			v.Set(trustedProxyHeadersConfigKey, []string{
+			v.Set(config.ConfigKeyTrustedProxyNetwork, []string{
 				"127.0.0.1",
 				"172.16.0.0/12",
 			})
@@ -83,7 +85,7 @@ func TestViperProvider_updateTrustedProxies(t *testing.T) {
 
 			time.Sleep(updateDebounceTime / 2)
 
-			viper.Set(trustedProxyHeadersConfigKey, []string{
+			viper.Set(config.ConfigKeyTrustedProxyNetwork, []string{
 				"127.0.0.1",
 				"172.16.0.0/12",
 				"192.168.0.0/16",

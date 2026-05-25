@@ -15,13 +15,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
-	trustedProxyDockerEnabledConfigKey  = "security.trusted_proxies.docker.enabled"
-	trustedProxyDockerEndpointConfigKey = "security.trusted_proxies.docker.endpoint"
-
 	defaultDockerEndpoint = "unix:///var/run/docker.sock"
 )
 
@@ -65,11 +63,11 @@ func (dp *dockerProvider) Active() bool {
 }
 
 func newDockerProvider(ctx context.Context, v *viper.Viper) *dockerProvider {
-	if !v.GetBool(trustedProxyDockerEnabledConfigKey) {
+	if !v.GetBool(config.ConfigKeyTrustedProxyDockerEnabled) {
 		return nil
 	}
 
-	dockerEndpoint := v.GetString(trustedProxyDockerEndpointConfigKey)
+	dockerEndpoint := v.GetString(config.ConfigKeyTrustedProxyDockerEndpoint)
 	if dockerEndpoint == "" {
 		dockerEndpoint = defaultDockerEndpoint
 	}

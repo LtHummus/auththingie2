@@ -104,7 +104,7 @@ func (e *Env) BuildRouter() http.Handler {
 
 	handler := cop.Handler(sessionMiddleware)
 
-	if !e.Configuration.GetBool(config.DisableSecurityHeaders) {
+	if !e.Configuration.GetBool(config.ConfigKeyDisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
 	} else {
 		log.Warn().Msg("not enabling security headers")

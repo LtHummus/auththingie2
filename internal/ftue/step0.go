@@ -147,12 +147,12 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 
 	fe.config.SetConfigFile(configFilePath)
 	fe.config.SetConfigType("yaml")
-	fe.config.Set("db.file", dbFilePath)
-	fe.config.Set("db.kind", "sqlite")
-	fe.config.Set("server.port", port)
-	fe.config.Set("server.secret_key", base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
-	fe.config.Set("server.auth_url", authURL)
-	fe.config.Set("server.domain", domain)
+	fe.config.Set(config.ConfigKeyDBFile, dbFilePath)
+	fe.config.Set(config.ConfigKeyDBKind, "sqlite")
+	fe.config.Set(config.ConfigKeyServerPort, port)
+	fe.config.Set(config.ConfigKeyServerSecretKey, base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
+	fe.config.Set(config.ConfigKeyServerAuthURL, authURL)
+	fe.config.Set(config.ConfigKeyServerDomain, domain)
 	err = fe.config.WriteConfig()
 	if err != nil {
 		log.Error().Err(err).Str("config_file_path", configFilePath).Msg("could not write config file")

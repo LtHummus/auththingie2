@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -20,7 +21,7 @@ func (e *Env) ShowNotices(w http.ResponseWriter, r *http.Request) {
 		redirectURL = "/"
 	}
 
-	if e.Configuration.GetBool("unsafe_hide_admin_messages") {
+	if e.Configuration.GetBool(config.ConfigKeyHideAdminMessages) {
 		http.Redirect(w, r, redirectURL, http.StatusFound) // #nosec G710 -- sanitized in getRedirectURIFromRequest
 		return
 	}

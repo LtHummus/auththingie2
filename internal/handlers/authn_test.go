@@ -320,7 +320,7 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 
 	t.Run("fail if passkeys is disabled", func(t *testing.T) {
 		_, _, _, _, _, v, e := makeTestEnv(t)
-		v.Set(config.KeyPasskeysDisabled, true)
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 
 		mux := e.BuildRouter()
 
@@ -395,7 +395,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 
 	t.Run("fail if passkeys is disabled", func(t *testing.T) {
 		_, _, _, _, _, v, e := makeTestEnv(t)
-		v.Set(config.KeyPasskeysDisabled, true)
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 		mux := e.BuildRouter()
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
@@ -452,7 +452,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 	t.Run("fail if passkeys disabled", func(t *testing.T) {
 		_, _, _, _, _, v, e := makeTestEnv(t)
 		mux := e.BuildRouter()
-		v.Set(config.KeyPasskeysDisabled, true)
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 
 		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil)
 		w := httptest.NewRecorder()

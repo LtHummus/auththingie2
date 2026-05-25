@@ -6,12 +6,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
 func MigrateUser(ctx context.Context, u *user.User, password string, database db.DB, v *viper.Viper) {
-	if v.GetBool("security.disable_migrate_on_login") {
+	if v.GetBool(config.ConfigKeyDisablePasswordMigrateOnLogin) {
 		return
 	}
 

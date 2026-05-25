@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"sync"
@@ -118,23 +119,23 @@ func RegisterForUpdates(listener UpdateListener) {
 func ValidateConfig() []string {
 	var errorsFound []string
 
-	if dbKind := viper.GetString("db.kind"); dbKind != "sqlite" {
-		log.Error().Str("db.kind", dbKind).Msg("invalid db kind; must be sqlite")
-		errorsFound = append(errorsFound, "invalid `db.kind`; must be `sqlite`")
+	if dbKind := viper.GetString(ConfigKeyDBKind); dbKind != "sqlite" {
+		log.Error().Str(ConfigKeyDBKind, dbKind).Msgf("invalid %s; must be sqlite", ConfigKeyDBKind)
+		errorsFound = append(errorsFound, fmt.Sprintf("invalid `%s`; must be `sqlite`", ConfigKeyDBKind))
 	}
 
-	authURL := viper.GetString("server.auth_url")
+	authURL := viper.GetString(ConfigKeyServerAuthURL)
 	if authURL == "" {
-		log.Error().Msg("server.auth_url is not set")
-		errorsFound = append(errorsFound, "`server.auth_url` is not set")
+		log.Error().Msgf("%s is not set", ConfigKeyServerAuthURL)
+		errorsFound = append(errorsFound, fmt.Sprintf("`%s` is not set", ConfigKeyServerAuthURL))
 	} else if _, err := url.Parse(authURL); err != nil {
-		log.Error().Str("auth_url", authURL).Err(err).Msg("server.auth_url is not a valid URL")
-		errorsFound = append(errorsFound, "`server.auth_url` is not a valid URL")
+		log.Error().Str("auth_url", authURL).Err(err).Msgf("%s is not a valid URL", ConfigKeyServerAuthURL)
+		errorsFound = append(errorsFound, fmt.Sprintf("`%s` is not a valid URL", ConfigKeyServerAuthURL))
 	}
 
-	if domain := viper.GetString("server.domain"); domain == "" {
-		log.Error().Msg("server.domain is not set. This should be set to the naked domain of your server")
-		errorsFound = append(errorsFound, "server.domain is not set")
+	if domain := viper.GetString(ConfigKeyServerDomain); domain == "" {
+		log.Error().Msgf("%s is not set. This should be set to the naked domain of your server", ConfigKeyServerDomain)
+		errorsFound = append(errorsFound, fmt.Sprintf("%s is not set", ConfigKeyServerDomain))
 	}
 
 	return errorsFound

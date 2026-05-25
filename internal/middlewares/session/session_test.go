@@ -15,8 +15,8 @@ import (
 
 func TestNewDefaultSession(t *testing.T) {
 	v := viper.New()
-	v.Set(config.DefaultSessionLifetime, DefaultSessionLifetime)
-	v.Set(config.DefaultCookieLifetime, DefaultCookieLifetime)
+	v.Set(config.ConfigKeyDefaultSessionLifetime, DefaultSessionLifetime)
+	v.Set(config.ConfigKeyDefaultCookieLifetime, DefaultCookieLifetime)
 
 	s, err := NewDefaultSession(v)
 	assert.NoError(t, err)
@@ -34,8 +34,8 @@ func TestNewDefaultSession(t *testing.T) {
 
 func TestSession_Expired(t *testing.T) {
 	v := viper.New()
-	v.Set(config.DefaultSessionLifetime, DefaultSessionLifetime)
-	v.Set(config.DefaultCookieLifetime, DefaultCookieLifetime)
+	v.Set(config.ConfigKeyDefaultSessionLifetime, DefaultSessionLifetime)
+	v.Set(config.ConfigKeyDefaultCookieLifetime, DefaultCookieLifetime)
 
 	s, err := NewDefaultSession(v)
 	require.NoError(t, err)
@@ -48,8 +48,8 @@ func TestSession_Expired(t *testing.T) {
 func TestSession_PlaceUserInSession(t *testing.T) {
 	t.Run("basic case", func(t *testing.T) {
 		v := viper.New()
-		v.Set(config.DefaultSessionLifetime, DefaultSessionLifetime)
-		v.Set(config.DefaultCookieLifetime, DefaultCookieLifetime)
+		v.Set(config.ConfigKeyDefaultSessionLifetime, DefaultSessionLifetime)
+		v.Set(config.ConfigKeyDefaultCookieLifetime, DefaultCookieLifetime)
 
 		s, err := NewDefaultSession(v)
 		require.NoError(t, err)
@@ -70,8 +70,8 @@ func TestSession_PlaceUserInSession(t *testing.T) {
 
 	t.Run("panic on disabled user", func(t *testing.T) {
 		v := viper.New()
-		v.Set(config.DefaultSessionLifetime, DefaultSessionLifetime)
-		v.Set(config.DefaultCookieLifetime, DefaultCookieLifetime)
+		v.Set(config.ConfigKeyDefaultSessionLifetime, DefaultSessionLifetime)
+		v.Set(config.ConfigKeyDefaultCookieLifetime, DefaultCookieLifetime)
 
 		s, err := NewDefaultSession(v)
 		require.NoError(t, err)

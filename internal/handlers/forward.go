@@ -70,10 +70,10 @@ func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Env) potentiallyAttachUser(w http.ResponseWriter, user *user.User) {
-	if headerName := e.Configuration.GetString(config.AttachUsernameAuthResponseHeader); headerName != "" {
+	if headerName := e.Configuration.GetString(config.ConfigKeyAttachUsernameAuthResponseHeader); headerName != "" {
 		w.Header().Set(headerName, user.Username)
 	}
-	if headerName := e.Configuration.GetString(config.AttachUserIDAuthResponseHeader); headerName != "" {
+	if headerName := e.Configuration.GetString(config.ConfigKeyAttachUserIDAuthResponseHeader); headerName != "" {
 		w.Header().Set(headerName, user.Id)
 	}
 }
@@ -129,7 +129,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, e.Configuration.GetBool("security.disable_basic_auth"))
+	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, e.Configuration.GetBool(config.ConfigKeyDisbaleBasicAuth))
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {
@@ -159,7 +159,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 
 	if user.Disabled {
 		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("account disabled, forwarding to message")
-		http.Redirect(w, r, fmt.Sprintf("%s/disabled", e.Configuration.GetString("server.auth_url")), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("%s/disabled", e.Configuration.GetString(config.ConfigKeyServerAuthURL)), http.StatusFound)
 		return
 	}
 
@@ -182,7 +182,7 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// if we're here, that means we are logged in and are denied access, return an error
-	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", e.Configuration.GetString("server.auth_url")), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", e.Configuration.GetString(config.ConfigKeyServerAuthURL)), http.StatusFound)
 }
 
 func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
@@ -193,5 +193,5 @@ func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.R
 	if messageKey != "" {
 		v.Set(loginMessageParam, messageKey)
 	}
-	http.Redirect(w, r, fmt.Sprintf("%s/login?%s", e.Configuration.GetString("server.auth_url"), v.Encode()), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/login?%s", e.Configuration.GetString(config.ConfigKeyServerAuthURL), v.Encode()), http.StatusFound)
 }

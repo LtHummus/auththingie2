@@ -311,8 +311,8 @@ func makeTestRequest(t *testing.T, method string, path string, body io.Reader, o
 	tcd.req = httptest.NewRequest(method, path, body)
 
 	v := viper.New()
-	v.Set(config.DefaultSessionLifetime, 5*time.Minute)
-	
+	v.Set(config.ConfigKeyDefaultSessionLifetime, 5*time.Minute)
+
 	sess, err := session2.NewDefaultSession(v)
 	require.NoError(t, err)
 	tcd.sess = &sess

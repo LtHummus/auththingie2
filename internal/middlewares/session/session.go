@@ -48,7 +48,7 @@ func NewDefaultSession(v *viper.Viper) (Session, error) {
 }
 
 func CookieLifetime(v *viper.Viper) time.Duration {
-	d := v.GetDuration(config.DefaultCookieLifetime)
+	d := v.GetDuration(config.ConfigKeyDefaultCookieLifetime)
 	if d != 0 {
 		return d
 	}
@@ -57,7 +57,7 @@ func CookieLifetime(v *viper.Viper) time.Duration {
 }
 
 func SessionLifetime(v *viper.Viper) time.Duration {
-	d := v.GetDuration(config.DefaultSessionLifetime)
+	d := v.GetDuration(config.ConfigKeyDefaultSessionLifetime)
 	if d != 0 {
 		return d
 	}

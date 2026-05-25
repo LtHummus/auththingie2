@@ -42,7 +42,7 @@ var _ db.DB = (*SQLite)(nil)
 func NewSQLiteFromConfig(v *viper.Viper) (*SQLite, error) {
 	config.Lock.RLock()
 	defer config.Lock.RUnlock()
-	file := v.GetString("db.file")
+	file := v.GetString(config.ConfigKeyDBFile)
 	if file == "" {
 		return nil, errors.New("db: NewSQLiteFromConfig: db file not set")
 	}

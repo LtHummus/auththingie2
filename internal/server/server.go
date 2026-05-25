@@ -70,7 +70,7 @@ func RunServer() {
 	}
 
 	config.Lock.RLock()
-	port := cfg.GetInt("server.port")
+	port := cfg.GetInt(config.ConfigKeyServerPort)
 	if port == 0 {
 		log.Warn().Msg("no port specified, using port 9000")
 		port = 9000
@@ -94,8 +94,8 @@ func RunServer() {
 
 	wan, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "AuthThingie 2",
-		RPID:          cfg.GetString("server.domain"),
-		RPOrigins:     []string{cfg.GetString("server.auth_url")},
+		RPID:          cfg.GetString(config.ConfigKeyServerDomain),
+		RPOrigins:     []string{cfg.GetString(config.ConfigKeyServerAuthURL)},
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not initialize webauthn")
@@ -141,9 +141,9 @@ func RunServer() {
 
 	log.Info().Int("port", port).Msg("starting server")
 	go func() {
-		if cfg.GetBool("server.tls.enabled") {
-			keyFile := cfg.GetString("server.tls.key_file")
-			certFile := cfg.GetString("server.tls.cert_file")
+		if cfg.GetBool(config.ConfigKeyServerTLSEnabled) {
+			keyFile := cfg.GetString(config.ConfigKeyServerTLSKeyFile)
+			certFile := cfg.GetString(config.ConfigKeyServerTLSCertFile)
 			log.Info().Int("port", port).Str("key_file", keyFile).Str("cert_file", certFile).Msg("starting with tls enabled")
 			if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Panic().Err(err).Msg("error starting server")

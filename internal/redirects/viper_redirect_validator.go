@@ -8,14 +8,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/net/idna"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 const (
-	AllowAllKey       = "security.redirects.allow_all"
-	FallbackURLKey    = "security.redirects.fallback_url"
-	AllowedDomainsKey = "security.redirects.allowed_domains"
-	ServerDomainKey   = "server.domain"
-
 	DefaultFallbackURL = "/"
 )
 
@@ -26,21 +23,21 @@ type ViperValidator struct {
 }
 
 func NewFromConfig(v *viper.Viper) (*ViperValidator, error) {
-	if v.GetBool(AllowAllKey) {
+	if v.GetBool(config.ConfigKeyRedirectsAllowAllKey) {
 		log.Warn().Msg("redirect checking is disabled. this can be insecure!")
 		return &ViperValidator{allowAll: true}, nil
 	}
 
 	fallback := DefaultFallbackURL
-	if customFallback := v.GetString(FallbackURLKey); customFallback != "" {
+	if customFallback := v.GetString(config.ConfigKeyRedirectsFallbackURLKey); customFallback != "" {
 		log.Info().Str("fallback_url", customFallback).Msg("using custom fallback url for redirect uri filtering")
 		fallback = customFallback
 	}
 
 	// by default, allow the server domain only as an allowed redirect domain. This should be safe and backwards
 	// compatible as this needs to be set in other places for AT2 to work in the first place
-	allowedDomains := []string{v.GetString(ServerDomainKey)}
-	if customDomains := v.GetStringSlice(AllowedDomainsKey); len(customDomains) > 0 {
+	allowedDomains := []string{v.GetString(config.ConfigKeyServerDomain)}
+	if customDomains := v.GetStringSlice(config.ConfigKeyRedirectsAllowedDomainsKey); len(customDomains) > 0 {
 		log.Info().Strs("custom_domains", customDomains).Msg("using domain allow-list for redirect uri filtering")
 		allowedDomains = customDomains
 	} else {

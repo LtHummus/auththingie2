@@ -27,7 +27,7 @@ func (e *Env) HandleSelfConfigGet(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, "self_config.gohtml", &selfEditPageParams{
 		User:           u,
-		EnablePasskeys: !e.Configuration.GetBool(config.KeyPasskeysDisabled),
+		EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 	})
 }
 

@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func TestCleanPassword(t *testing.T) {
@@ -77,7 +79,7 @@ func TestCleanPassword(t *testing.T) {
 
 	t.Run("disable cleaning if config is set that way", func(t *testing.T) {
 		v := viper.New()
-		v.Set("security.disable_precis", true)
+		v.Set(config.ConfigKeyDisbalePRECIS, true)
 
 		// this is a decomposed e with accent, which would normally be normalized and composed (NFC) as part
 		// of precis processing, but we've disabled it
