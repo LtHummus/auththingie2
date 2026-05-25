@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"sync"
@@ -14,6 +15,10 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/lthummus/auththingie2/internal/argon"
+)
+
+const (
+	MinimumSatisfactoryBitsPerRuneForSecretKey float64 = 3.8
 )
 
 type UpdateListener func(event fsnotify.Event)
@@ -116,12 +121,45 @@ func RegisterForUpdates(listener UpdateListener) {
 	updateListeners = append(updateListeners, listener)
 }
 
+func calcEntropy(x string) float64 {
+	if len(x) == 0 {
+		return 0
+	}
+
+	runeFrequencies := make(map[rune]int)
+	for _, c := range x {
+		runeFrequencies[c]++
+	}
+
+	length := float64(len([]rune(x)))
+	var entropy float64
+	for _, qty := range runeFrequencies {
+		p := float64(qty) / length
+		entropy -= p * math.Log2(p)
+	}
+
+	return entropy
+}
+
+func CheckSecretKeyEntropy() error {
+	bitsPerCharEntropy := calcEntropy(viper.GetString(ConfigKeyServerSecretKey))
+	if bitsPerCharEntropy < MinimumSatisfactoryBitsPerRuneForSecretKey {
+		return fmt.Errorf("config: CheckSecretKeyEntropy: secret key is not complex enough. please add more spice to your key")
+	}
+
+	return nil
+}
+
 func ValidateConfig() []string {
 	var errorsFound []string
 
 	if dbKind := viper.GetString(ConfigKeyDBKind); dbKind != "sqlite" {
 		log.Error().Str(ConfigKeyDBKind, dbKind).Msgf("invalid %s; must be sqlite", ConfigKeyDBKind)
 		errorsFound = append(errorsFound, fmt.Sprintf("invalid `%s`; must be `sqlite`", ConfigKeyDBKind))
+	}
+
+	if err := CheckSecretKeyEntropy(); err != nil {
+		log.Warn().Err(err).Msg("please use a more secure secret key. Add more letters, numbers, and symbols")
 	}
 
 	authURL := viper.GetString(ConfigKeyServerAuthURL)
