@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"sync"
@@ -13,6 +15,10 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/lthummus/auththingie2/internal/argon"
+)
+
+const (
+	MinimumSatisfactoryBitsPerRuneForSecretKey float64 = 3.8
 )
 
 type UpdateListener func(event fsnotify.Event)
@@ -115,26 +121,59 @@ func RegisterForUpdates(listener UpdateListener) {
 	updateListeners = append(updateListeners, listener)
 }
 
+func calcEntropy(x string) float64 {
+	if len(x) == 0 {
+		return 0
+	}
+
+	runeFrequencies := make(map[rune]int)
+	for _, c := range x {
+		runeFrequencies[c]++
+	}
+
+	length := float64(len([]rune(x)))
+	var entropy float64
+	for _, qty := range runeFrequencies {
+		p := float64(qty) / length
+		entropy -= p * math.Log2(p)
+	}
+
+	return entropy
+}
+
+func CheckSecretKeyEntropy() error {
+	bitsPerCharEntropy := calcEntropy(viper.GetString(ConfigKeyServerSecretKey))
+	if bitsPerCharEntropy < MinimumSatisfactoryBitsPerRuneForSecretKey {
+		return fmt.Errorf("config: CheckSecretKeyEntropy: secret key is not complex enough. please add more spice to your key")
+	}
+
+	return nil
+}
+
 func ValidateConfig() []string {
 	var errorsFound []string
 
-	if dbKind := viper.GetString("db.kind"); dbKind != "sqlite" {
-		log.Error().Str("db.kind", dbKind).Msg("invalid db kind; must be sqlite")
-		errorsFound = append(errorsFound, "invalid `db.kind`; must be `sqlite`")
+	if dbKind := viper.GetString(ConfigKeyDBKind); dbKind != "sqlite" {
+		log.Error().Str(ConfigKeyDBKind, dbKind).Msgf("invalid %s; must be sqlite", ConfigKeyDBKind)
+		errorsFound = append(errorsFound, fmt.Sprintf("invalid `%s`; must be `sqlite`", ConfigKeyDBKind))
 	}
 
-	authURL := viper.GetString("server.auth_url")
+	if err := CheckSecretKeyEntropy(); err != nil {
+		log.Warn().Err(err).Msg("please use a more secure secret key. Add more letters, numbers, and symbols")
+	}
+
+	authURL := viper.GetString(ConfigKeyServerAuthURL)
 	if authURL == "" {
-		log.Error().Msg("server.auth_url is not set")
-		errorsFound = append(errorsFound, "`server.auth_url` is not set")
+		log.Error().Msgf("%s is not set", ConfigKeyServerAuthURL)
+		errorsFound = append(errorsFound, fmt.Sprintf("`%s` is not set", ConfigKeyServerAuthURL))
 	} else if _, err := url.Parse(authURL); err != nil {
-		log.Error().Str("auth_url", authURL).Err(err).Msg("server.auth_url is not a valid URL")
-		errorsFound = append(errorsFound, "`server.auth_url` is not a valid URL")
+		log.Error().Str("auth_url", authURL).Err(err).Msgf("%s is not a valid URL", ConfigKeyServerAuthURL)
+		errorsFound = append(errorsFound, fmt.Sprintf("`%s` is not a valid URL", ConfigKeyServerAuthURL))
 	}
 
-	if domain := viper.GetString("server.domain"); domain == "" {
-		log.Error().Msg("server.domain is not set. This should be set to the naked domain of your server")
-		errorsFound = append(errorsFound, "server.domain is not set")
+	if domain := viper.GetString(ConfigKeyServerDomain); domain == "" {
+		log.Error().Msgf("%s is not set. This should be set to the naked domain of your server", ConfigKeyServerDomain)
+		errorsFound = append(errorsFound, fmt.Sprintf("%s is not set", ConfigKeyServerDomain))
 	}
 
 	return errorsFound

@@ -38,7 +38,7 @@ func (fe *ftueEnv) HandleFTUEScratchRenderPOST(w http.ResponseWriter, r *http.Re
 		Admin:    true,
 	}
 
-	err := u.SetPassword(password)
+	err := u.SetPassword(password, fe.config)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "ftuescratch.gohtml", &ftueParams{

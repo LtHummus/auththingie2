@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -35,7 +34,7 @@ func init() {
 }
 
 func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Request) {
-	if viper.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to begin passkey registration when passkeys disabled")
 		http.Error(w, "Passkeys are disabled", http.StatusUnauthorized)
 		return
@@ -51,7 +50,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	authId := generateAuthID()
 	s.CustomData[authenticationIDSessionKey] = authId
 
-	err := session.WriteSession(w, r, s)
+	err := session.WriteSession(w, r, s, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not update session")
 		render.RenderJSONError(w, "Could not update user session", "authn.enroll.could_not_update_session", http.StatusInternalServerError)
@@ -134,6 +133,8 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	sessionCache.Delete(authID)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(`{"failed":false}`))
@@ -143,7 +144,7 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 }
 
 func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
-	if viper.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to begin passkey signin when passkeys disabled")
 		http.Error(w, "Passkeys are disabled", http.StatusNotFound)
 		return
@@ -167,7 +168,7 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 
 	s := session.GetSessionFromRequest(r)
 	s.CustomData[authenticationIDSessionKey] = authID
-	err = session.WriteSession(w, r, s)
+	err = session.WriteSession(w, r, s, e.Configuration)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not write session data")
 		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_write_session", http.StatusInternalServerError)
@@ -226,22 +227,24 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	if err != nil {
 		// TODO: maybe refactor this error handling logic
 		if strings.Contains(err.Error(), "no rows in result set") {
-			log.Warn().Str("ip", trueip.Find(r)).Msg("bad passkey attempt")
+			log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Msg("bad passkey attempt")
 			render.RenderJSONError(w, "Key not registered to any user", "authn.login.unrecognized_key", http.StatusForbidden)
 			return
 		}
-		log.Warn().Err(err).Str("ip", trueip.Find(r)).Msg("could not validate credential")
+		log.Warn().Err(err).Str("ip", trueip.Find(r, e.Configuration)).Msg("could not validate credential")
 		render.RenderJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusInternalServerError)
 		return
 	}
 
 	if foundUser == nil {
-		log.Warn().Str("ip", trueip.Find(r)).Msg("could not find user with that key")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Msg("could not find user with that key")
 		http.Error(w, "could not find user with that key", http.StatusForbidden)
 		return
 	}
 
 	log.Info().Str("username", foundUser.Username).Msg("logged in via passkey")
+
+	sessionCache.Delete(authID)
 
 	err = e.Database.UpdateCredentialOnLogin(r.Context(), cred)
 	if err != nil {
@@ -249,17 +252,22 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 	}
 
 	if foundUser.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", foundUser.Username).Msg("user is disabled")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", foundUser.Username).Msg("user is disabled")
 		render.RenderJSONError(w, "Account is disabled", "authn.login.disabled", http.StatusForbidden)
 		return
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(foundUser)
+	err = sess.PlaceUserInSession(foundUser, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not log user in")
+		render.RenderJSONError(w, "Could not log user in", "authn.login.could_not_place_user", http.StatusInternalServerError)
+		return
+	}
 
-	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r)).Msg("successful passkey auth")
+	log.Info().Str("username", foundUser.Username).Str("ip", trueip.Find(r, e.Configuration)).Msg("successful passkey auth")
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		render.RenderJSONError(w, "Could not write session data", "authn.login.could_not_update_session", http.StatusInternalServerError)
@@ -312,7 +320,7 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 }
 
 func (e *Env) HandleRenderWebAuthnManage(w http.ResponseWriter, r *http.Request) {
-	if viper.GetBool(config.KeyPasskeysDisabled) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
 		log.Warn().Msg("attempted to get to passkey management with passkeys disabled")
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return

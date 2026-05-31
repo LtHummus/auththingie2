@@ -73,7 +73,7 @@ func TestFtueEnv_HandleRenderImportPage(t *testing.T) {
 	render.Init()
 
 	t.Run("just render", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/import", nil)
 		w := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	initCache()
 
 	t.Run("CSRF protection", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", nil)
 		r.Header.Set("Sec-Fetch-Site", "cross-origin")
@@ -106,7 +106,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	})
 
 	t.Run("empty config file test", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", nil)
 		w := httptest.NewRecorder()
@@ -118,7 +118,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	})
 
 	t.Run("very large file should error", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		elevenMegs := 11 * 1024 * 1024
 
@@ -143,7 +143,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	t.Run("error in config parse", func(t *testing.T) {
 		contents := `---AAA___A__)(!(*@#$)(A*S()*(`
 
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("config_file_text", contents)
@@ -159,7 +159,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 	})
 
 	t.Run("valid config file parse", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
@@ -192,7 +192,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	initCache()
 
 	t.Run("CSRF protection", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("import_key", "")
@@ -209,7 +209,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	})
 
 	t.Run("import key missing", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("import_key", "")
@@ -225,7 +225,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	})
 
 	t.Run("invalid import key", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("import_key", "thisimportkeydoesnotexist")
@@ -241,7 +241,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	})
 
 	t.Run("fail to create user", func(t *testing.T) {
-		db, _, e := makeTestEnv(t)
+		db, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
@@ -271,7 +271,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	})
 
 	t.Run("fail to write config file", func(t *testing.T) {
-		db, a, e := makeTestEnv(t)
+		db, a, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)
@@ -306,7 +306,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 	})
 
 	t.Run("happy case (full flow)", func(t *testing.T) {
-		db, a, e := makeTestEnv(t)
+		db, a, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("config_file_text", goodImportText)

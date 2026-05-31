@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
@@ -58,7 +59,7 @@ func TestFind(t *testing.T) {
 			RemoteAddr: "1.2.3.4:59884",
 		}
 
-		assert.Equal(t, "1.2.3.4", Find(r))
+		assert.Equal(t, "1.2.3.4", Find(r, viper.New()))
 	})
 
 	t.Run("trust XFF if proxy is trusted", func(t *testing.T) {
@@ -70,7 +71,7 @@ func TestFind(t *testing.T) {
 
 		r.Header.Set("X-Forwarded-For", "9.9.9.9")
 
-		assert.Equal(t, "9.9.9.9", Find(r))
+		assert.Equal(t, "9.9.9.9", Find(r, viper.New()))
 	})
 
 	t.Run("do not trust XFF is proxy is untrusted", func(t *testing.T) {
@@ -81,7 +82,7 @@ func TestFind(t *testing.T) {
 
 		r.Header.Set("X-Forwarded-For", "9.9.9.9")
 
-		assert.Equal(t, "1.2.3.4", Find(r))
+		assert.Equal(t, "1.2.3.4", Find(r, viper.New()))
 	})
 
 	t.Run("always take last XFF header", func(t *testing.T) {
@@ -96,7 +97,7 @@ func TestFind(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, "2.2.2.2", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r, viper.New()))
 	})
 
 	t.Run("take rightmost entry in XFF", func(t *testing.T) {
@@ -107,39 +108,35 @@ func TestFind(t *testing.T) {
 		}
 		r.Header.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
 
-		assert.Equal(t, "2.2.2.2", Find(r))
+		assert.Equal(t, "2.2.2.2", Find(r, viper.New()))
 	})
 
 	t.Run("use custom trust header if configured and present and proxy is trusted", func(t *testing.T) {
 		trustIPForProxy(t, "127.0.0.1")
-		t.Cleanup(func() {
-			viper.Reset()
-		})
 		r := &http.Request{
 			RemoteAddr: "127.0.0.1:5999",
 			Header:     map[string][]string{},
 		}
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v := viper.New()
+		v.Set(config.ConfigKeyTrustedProxyIPHeader, "x-real-ip")
 
-		assert.Equal(t, "1.1.1.1", Find(r))
+		assert.Equal(t, "1.1.1.1", Find(r, v))
 	})
 
 	t.Run("ignore set trust header if not coming from proxy", func(t *testing.T) {
 		trustIPForProxy(t, "127.0.0.1")
-		t.Cleanup(func() {
-			viper.Reset()
-		})
 		r := &http.Request{
 			RemoteAddr: "127.0.0.5:5999",
 			Header:     map[string][]string{},
 		}
 		r.Header.Set("X-Real-IP", "1.1.1.1")
 
-		viper.Set(trustedIpHeaderConfigKey, "x-real-ip")
+		v := viper.New()
+		v.Set(config.ConfigKeyTrustedProxyIPHeader, "x-real-ip")
 
-		assert.Equal(t, "127.0.0.5", Find(r))
+		assert.Equal(t, "127.0.0.5", Find(r, v))
 	})
 }
 
@@ -163,17 +160,15 @@ func Test_isTrustedProxy(t *testing.T) {
 
 func Test_Initialization(t *testing.T) {
 	t.Run("basic path including config file change", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
+		v := viper.New()
 
 		// we are doing things using viper this way and calling `initFromConfig` directly because attaching all of the
 		// listeners to the underlying systems (i.e. config.RegisterForUpdates) is not worth it. This does mean that we
 		// aren't testing to make sure that we register ourselves as a listener, but that's a small price to pay for
 		// easier-to-read test code. Perhaps the config system should be refactored to allow for tests?
-		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.1"})
+		v.Set(config.ConfigKeyTrustedProxyNetwork, []string{"127.0.0.1"})
 
-		err := initFromConfig(t.Context())
+		err := initFromConfig(t.Context(), v)
 		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
@@ -182,8 +177,8 @@ func Test_Initialization(t *testing.T) {
 		assert.True(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.1")))
 		assert.False(t, trustedProxyProviders[0].IsProxyTrusted(net.ParseIP("127.0.0.9")))
 
-		viper.Set(trustedProxyHeadersConfigKey, []string{"127.0.0.9"})
-		err = initFromConfig(t.Context())
+		v.Set(config.ConfigKeyTrustedProxyNetwork, []string{"127.0.0.9"})
+		err = initFromConfig(t.Context(), v)
 		require.NoError(t, err)
 
 		assert.Len(t, trustedProxyProviders, 1)
@@ -195,10 +190,9 @@ func Test_Initialization(t *testing.T) {
 
 	t.Run("return error if init with no configuration", func(t *testing.T) {
 		t.Cleanup(func() {
-			viper.Reset()
 			notices.Reset()
 		})
-		err := initFromConfig(t.Context())
+		err := initFromConfig(t.Context(), viper.New())
 		assert.Error(t, err)
 	})
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -70,11 +69,11 @@ func (e *Env) HandleAccountDisabled(w http.ResponseWriter, r *http.Request) {
 	render.RenderWithStatusCode(w, http.StatusForbidden, "disabled.gohtml", &params)
 }
 
-func potentiallyAttacheUser(w http.ResponseWriter, user *user.User) {
-	if headerName := viper.GetString(config.AttachUsernameAuthResponseHeader); headerName != "" {
+func (e *Env) potentiallyAttachUser(w http.ResponseWriter, user *user.User) {
+	if headerName := e.Configuration.GetString(config.ConfigKeyAttachUsernameAuthResponseHeader); headerName != "" {
 		w.Header().Set(headerName, user.Username)
 	}
-	if headerName := viper.GetString(config.AttachUserIDAuthResponseHeader); headerName != "" {
+	if headerName := e.Configuration.GetString(config.ConfigKeyAttachUserIDAuthResponseHeader); headerName != "" {
 		w.Header().Set(headerName, user.Id)
 	}
 }
@@ -124,17 +123,17 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// if we have a rule and the rule is public, just allow the user through...there is nothing else we need to do
 	if rule != nil && rule.Public {
 		log.Debug().Str("rule", rule.Name).Msg("rule is public; allowing access")
-		potentiallyAttacheUser(w, &user.User{Id: publicUserIDHeaderValue, Username: publicUsernameHeaderValue})
+		e.potentiallyAttachUser(w, &user.User{Id: publicUserIDHeaderValue, Username: publicUsernameHeaderValue})
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
 	// otherwise, see if we have a logged in user
-	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator)
+	user, source := session.GetUserFromRequestAllowFallback(r, ri.SourceIP.String(), e.PasswordValidator, e.Configuration.GetBool(config.ConfigKeyDisbaleBasicAuth))
 
 	// basic auth user, but invalid credentials
 	if user == nil && source == session.UserSourceBasicAuth {
-		log.Warn().Str("ip", trueip.Find(r)).Msg("invalid basic auth credentials or account locked")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Msg("invalid basic auth credentials or account locked")
 		http.Error(w, "invalid credentials or account locked", http.StatusForbidden)
 		return
 	}
@@ -147,20 +146,20 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if source == session.UserSourceBasicAuth && user.TOTPEnabled() {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and TOTP enabled")
 		http.Error(w, "Can not use basic auth with TOTP enabled", http.StatusForbidden)
 		return
 	}
 
 	if source == session.UserSourceBasicAuth && len(user.StoredCredentials) > 0 {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted forward auth w/ basic auth and passkeys")
 		http.Error(w, "Can not use basic auth with passkeys enabled", http.StatusForbidden)
 		return
 	}
 
 	if user.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("account disabled, forwarding to message")
-		http.Redirect(w, r, fmt.Sprintf("%s/disabled", viper.GetString("server.auth_url")), http.StatusFound)
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("account disabled, forwarding to message")
+		http.Redirect(w, r, fmt.Sprintf("%s/disabled", e.Configuration.GetString(config.ConfigKeyServerAuthURL)), http.StatusFound)
 		return
 	}
 
@@ -177,13 +176,13 @@ func (e *Env) HandleCheckRequest(w http.ResponseWriter, r *http.Request) {
 	// next, check to see if the user is admin (implicitly allowed everything) or is in the group that allows
 	// access to that url
 	if user.Admin || (rule != nil && user.GroupsOverlap(rule.PermittedRoles)) {
-		potentiallyAttacheUser(w, user)
+		e.potentiallyAttachUser(w, user)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
 	// if we're here, that means we are logged in and are denied access, return an error
-	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", viper.GetString("server.auth_url")), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/forbidden", e.Configuration.GetString(config.ConfigKeyServerAuthURL)), http.StatusFound)
 }
 
 func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.RequestInfo, messageKey string) {
@@ -194,5 +193,5 @@ func (e *Env) redirectToLogin(w http.ResponseWriter, r *http.Request, ri rules.R
 	if messageKey != "" {
 		v.Set(loginMessageParam, messageKey)
 	}
-	http.Redirect(w, r, fmt.Sprintf("%s/login?%s", viper.GetString("server.auth_url"), v.Encode()), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/login?%s", e.Configuration.GetString(config.ConfigKeyServerAuthURL), v.Encode()), http.StatusFound)
 }

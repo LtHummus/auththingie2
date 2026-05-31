@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/render"
 )
 
@@ -20,7 +21,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 	render.Init()
 
 	t.Run("basic case in docker", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		t.Setenv("AT2_MODE", "docker")
 
@@ -38,7 +39,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 	})
 
 	t.Run("basic case outside docker", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "https://auth.example.com/ftue/step0", nil)
 		w := httptest.NewRecorder()
@@ -55,7 +56,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 	})
 
 	t.Run("make sure we've attached security headers", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		t.Setenv("AT2_MODE", "docker")
 
@@ -75,7 +76,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 	render.Init()
 
 	t.Run("CSRF detection", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		tmpDir, err := os.MkdirTemp("", "testdatadb")
 		require.NoError(t, err)
@@ -108,14 +109,13 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 	})
 
 	t.Run("a case with everything", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, cfg, e := makeTestEnv(t)
 
 		tmpDir, err := os.MkdirTemp("", "testdatadb")
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
 			os.RemoveAll(tmpDir)
-			viper.Reset()
 		})
 
 		configFilePath := filepath.Join(tmpDir, "auththingie2.yaml")
@@ -144,11 +144,11 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		assert.FileExists(t, configFilePath)
 		assert.FileExists(t, dbPath)
 
-		assert.Equal(t, dbPath, viper.GetString("db.file"))
-		assert.Equal(t, "sqlite", viper.GetString("db.kind"))
-		assert.Equal(t, "example.com", viper.GetString("server.domain"))
-		assert.Equal(t, "auth.example.com", viper.GetString("server.auth_url"))
-		assert.Equal(t, uint64(9000), viper.GetUint64("server.port"))
+		assert.Equal(t, dbPath, cfg.GetString(config.ConfigKeyDBFile))
+		assert.Equal(t, "sqlite", cfg.GetString(config.ConfigKeyDBKind))
+		assert.Equal(t, "example.com", cfg.GetString(config.ConfigKeyServerDomain))
+		assert.Equal(t, "auth.example.com", cfg.GetString(config.ConfigKeyServerAuthURL))
+		assert.Equal(t, uint64(9000), cfg.GetUint64(config.ConfigKeyServerPort))
 
 		assert.NotNil(t, e.database)
 		assert.NotNil(t, e.analyzer)

@@ -15,13 +15,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
-	trustedProxyDockerEnabledConfigKey  = "security.trusted_proxies.docker.enabled"
-	trustedProxyDockerEndpointConfigKey = "security.trusted_proxies.docker.endpoint"
-
 	defaultDockerEndpoint = "unix:///var/run/docker.sock"
 )
 
@@ -50,6 +48,8 @@ type dockerAPI interface {
 type dockerProvider struct {
 	client dockerAPI
 
+	v *viper.Viper
+
 	eventStreamInitialized atomic.Bool
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
@@ -62,12 +62,12 @@ func (dp *dockerProvider) Active() bool {
 	return dp.eventStreamInitialized.Load()
 }
 
-func newDockerProvider(ctx context.Context) *dockerProvider {
-	if !viper.GetBool(trustedProxyDockerEnabledConfigKey) {
+func newDockerProvider(ctx context.Context, v *viper.Viper) *dockerProvider {
+	if !v.GetBool(config.ConfigKeyTrustedProxyDockerEnabled) {
 		return nil
 	}
 
-	dockerEndpoint := viper.GetString(trustedProxyDockerEndpointConfigKey)
+	dockerEndpoint := v.GetString(config.ConfigKeyTrustedProxyDockerEndpoint)
 	if dockerEndpoint == "" {
 		dockerEndpoint = defaultDockerEndpoint
 	}
@@ -89,6 +89,7 @@ func newDockerProvider(ctx context.Context) *dockerProvider {
 
 	dp := &dockerProvider{
 		client:    dockerClient,
+		v:         v,
 		activeIPs: map[string][]net.IP{},
 
 		cleanup: make(chan struct{}),

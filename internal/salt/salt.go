@@ -14,10 +14,18 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/pbkdf2"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
+
+// note to future self: i have taken efforts to change all global usages of `viper` in to local ones. I have _NOT_ changed
+// this package, because ideally i would like to get rid of the salt file entirely and change key derivation to use
+// HKDF instead of the current methods. This would fundamentally change how this package works, so I am leaving it alone
+// for now
 
 const (
 	saltLength = 32
+	keyLength  = 32
 	version    = 1
 
 	defaultIterations     = 600000
@@ -75,8 +83,17 @@ func CheckOrMakeSalt() {
 	iterationCount := getIterationCount()
 
 	start := time.Now()
-	signingKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Signing, iterationCount, 32, sha256.New)
-	encryptionKey = pbkdf2.Key([]byte(viper.GetString("server.secret_key")), salt.Encryption, iterationCount, 32, sha256.New)
+
+	// note to self for later: potentially we could convert these calls to HKDF instead of PBKDF2. It doesn't seem like it's
+	// a security miss to use PKBDF2 here, it saves us from a user having a weak `server.secret_key` value and we also generate
+	// our own salt ... different for signing and encryption ... to add more complexity to the derived key. As an alternate,
+	// we could do HKDF with `server.secret_key` as the key material, our generated salt, and INFO to be whether this is a
+	// signing key or an encryption key. The advantage is our salt generation is easier since we only need one salt instead of
+	// two. Something to think about for future iterations. We DO lose out of the slowness of PBKDF, which is actually probably
+	// fine since an attacker would be after the derived key since the secret key isn't enough on its own, you need the generated
+	// salt as well.
+	signingKey = pbkdf2.Key([]byte(viper.GetString(config.ConfigKeyServerSecretKey)), salt.Signing, iterationCount, keyLength, sha256.New)
+	encryptionKey = pbkdf2.Key([]byte(viper.GetString(config.ConfigKeyServerSecretKey)), salt.Encryption, iterationCount, keyLength, sha256.New)
 
 	log.Info().Int("iteration_count", iterationCount).Dur("key_generation_time", time.Since(start)).Msg("generated signing and encryption keys")
 }

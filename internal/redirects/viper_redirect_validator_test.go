@@ -7,37 +7,39 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func withAllowedDomains(domains []string) configFunc {
 	return func(v *viper.Viper) {
-		v.Set(AllowedDomainsKey, domains)
+		v.Set(config.ConfigKeyRedirectsAllowedDomainsKey, domains)
 	}
 }
 
 func withAllowedDomain(domain string) configFunc {
 	return func(v *viper.Viper) {
-		d := v.GetStringSlice(AllowedDomainsKey)
+		d := v.GetStringSlice(config.ConfigKeyRedirectsAllowedDomainsKey)
 		d = append(d, domain)
-		v.Set(AllowedDomainsKey, d)
+		v.Set(config.ConfigKeyRedirectsAllowedDomainsKey, d)
 	}
 }
 
 func withAllowAll() configFunc {
 	return func(v *viper.Viper) {
-		v.Set(AllowAllKey, true)
+		v.Set(config.ConfigKeyRedirectsAllowAllKey, true)
 	}
 }
 
 func withServerDomain(domain string) configFunc {
 	return func(v *viper.Viper) {
-		v.Set(ServerDomainKey, domain)
+		v.Set(config.ConfigKeyServerDomain, domain)
 	}
 }
 
 func withFallbackURL(fallbackURL string) configFunc {
 	return func(v *viper.Viper) {
-		v.Set(FallbackURLKey, fallbackURL)
+		v.Set(config.ConfigKeyRedirectsFallbackURLKey, fallbackURL)
 	}
 }
 

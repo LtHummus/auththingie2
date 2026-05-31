@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -39,6 +40,7 @@ type Middleware struct {
 	sc      *securecookie.SecureCookie
 	db      db.DB
 	handler http.Handler
+	cfg     *viper.Viper
 }
 
 type sessionData struct {
@@ -53,7 +55,7 @@ func init() {
 	gob.Register(Session{})
 }
 
-func NewMiddleware(next http.Handler, db db.DB) *Middleware {
+func NewMiddleware(next http.Handler, db db.DB, v *viper.Viper) *Middleware {
 	hk := salt.GenerateSigningKey()
 	ek := salt.GenerateEncryptionKey()
 	sc := securecookie.New(hk, ek)
@@ -61,6 +63,7 @@ func NewMiddleware(next http.Handler, db db.DB) *Middleware {
 		sc:      sc,
 		handler: next,
 		db:      db,
+		cfg:     v,
 	}
 }
 
@@ -91,10 +94,15 @@ func GetUserFromRequest(r *http.Request) *user.User {
 	return info.(*sessionData).user
 }
 
-func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator) (*user.User, UserSource) {
+func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator pwvalidate.PasswordValidator, disableBasicAuth bool) (*user.User, UserSource) {
 	u := GetUserFromRequest(r)
 	if u != nil {
 		return u, UserSourceSession
+	}
+
+	if disableBasicAuth {
+		// if basic auth is disabled, just pretend the basic auth credentials were never sent
+		return nil, UserSourceInvalidUser
 	}
 
 	username, pass, exists := r.BasicAuth()
@@ -116,20 +124,20 @@ func GetUserFromRequestAllowFallback(r *http.Request, sourceIP string, validator
 	return dbu, UserSourceBasicAuth
 }
 
-func generateCookie(value string) *http.Cookie {
+func generateCookie(value string, domain string, lifetime time.Duration) *http.Cookie {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    value,
 		Secure:   true,
 		HttpOnly: true,
-		Domain:   viper.GetString("server.domain"),
+		Domain:   domain,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(CookieLifetime().Seconds()),
+		MaxAge:   int(lifetime.Seconds()),
 	}
 }
 
-func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
+func WriteSession(w http.ResponseWriter, r *http.Request, s Session, v *viper.Viper) error {
 	// see if we have already set a cookie
 	//allCookies := w.Header().Values("Set-Cookie")
 
@@ -155,7 +163,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session) error {
 		return err
 	}
 
-	http.SetCookie(w, generateCookie(encoded))
+	http.SetCookie(w, generateCookie(encoded, v.GetString(config.ConfigKeyServerDomain), CookieLifetime(v)))
 
 	return nil
 }
@@ -211,7 +219,7 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if sess == nil {
 		// no session found
-		newSession, err := NewDefaultSession()
+		newSession, err := NewDefaultSession(m.cfg)
 		if err != nil {
 			log.Error().Err(err).Msg("could not create new session")
 			http.Error(w, "could not create new session", http.StatusInternalServerError)
@@ -223,8 +231,8 @@ func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Msg("could not encode session data")
 		}
 
-		newCookie := generateCookie(encoded)
-		log.Debug().Dur("session_lifetime", SessionLifetime()).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
+		newCookie := generateCookie(encoded, m.cfg.GetString(config.ConfigKeyServerDomain), CookieLifetime(m.cfg))
+		log.Debug().Dur("session_lifetime", SessionLifetime(m.cfg)).Time("cookie_expires", newCookie.Expires).Time("expires", sess.Expires).Time("creation", sess.CreationTime).Msg("new default session cookie set")
 
 		http.SetCookie(w, newCookie)
 	}

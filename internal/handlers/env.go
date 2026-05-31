@@ -28,6 +28,7 @@ type Env struct {
 	LoginLimiter         loginlimit.LoginLimiter
 	PasswordValidator    pwvalidate.PasswordValidator
 	RedirectURLValidator redirects.Validator
+	Configuration        *viper.Viper
 }
 
 const (
@@ -93,7 +94,7 @@ func (e *Env) BuildRouter() http.Handler {
 
 	mux.HandleFunc("/", e.HandleIndex)
 
-	sessionMiddleware := session.NewMiddleware(mux, e.Database)
+	sessionMiddleware := session.NewMiddleware(mux, e.Database, e.Configuration)
 
 	cop := http.NewCrossOriginProtection()
 	cop.AddInsecureBypassPattern("/forward")
@@ -103,7 +104,7 @@ func (e *Env) BuildRouter() http.Handler {
 
 	handler := cop.Handler(sessionMiddleware)
 
-	if !viper.GetBool(config.DisableSecurityHeaders) {
+	if !e.Configuration.GetBool(config.ConfigKeyDisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
 	} else {
 		log.Warn().Msg("not enabling security headers")

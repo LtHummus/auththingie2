@@ -35,6 +35,7 @@ var initCache = sync.OnceFunc(func() {
 type ftueEnv struct {
 	database db.DB
 	analyzer rules.Analyzer
+	config   *viper.Viper
 }
 
 type ftueParams struct {
@@ -96,7 +97,7 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 
 	handler := cop.Handler(mux)
 
-	if !viper.GetBool(config.DisableSecurityHeaders) {
+	if !fe.config.GetBool(config.ConfigKeyDisableSecurityHeaders) {
 		handler = securityheaders.NewSecurityHeadersMiddleware(handler)
 	} else {
 		log.Warn().Msg("not enabling security headers")

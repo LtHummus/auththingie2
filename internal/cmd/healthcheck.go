@@ -45,15 +45,15 @@ var healthCheckCmd = &cobra.Command{
 			}
 
 			scheme := "http"
-			if viper.GetBool("server.tls.enabled") {
+			if viper.GetBool(config.ConfigKeyServerTLSEnabled) {
 				scheme = "https"
 			}
 
-			if viper.GetBool("healthcheck.tls.ignore_bad_tls") {
+			if viper.GetBool(config.ConfigKeyHealthcheckIgnoreBadTLS) {
 				ignoreBadTLS = true
 			}
 
-			hostToCheck = fmt.Sprintf("%s://localhost:%d", scheme, viper.GetInt("server.port"))
+			hostToCheck = fmt.Sprintf("%s://localhost:%d", scheme, viper.GetInt(config.ConfigKeyServerPort))
 		} else {
 			hostToCheck = host
 		}

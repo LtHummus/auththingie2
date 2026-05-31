@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/mocks"
 )
 
@@ -363,17 +364,15 @@ func TestDockerProvider_ContainsProxies(t *testing.T) {
 
 func TestDockerProvider_newDockerProvider(t *testing.T) {
 	t.Run("disabled", func(t *testing.T) {
-		dp := newDockerProvider(t.Context())
+		dp := newDockerProvider(t.Context(), viper.New())
 		assert.Nil(t, dp)
 	})
 
 	t.Run("sample init", func(t *testing.T) {
-		t.Cleanup(func() {
-			viper.Reset()
-		})
 
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
+			v := viper.New()
 
 			// this is my little fake docker endpoint. Is this a good idea? Not sure!
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -398,10 +397,10 @@ func TestDockerProvider_newDockerProvider(t *testing.T) {
 				}
 			}))
 
-			viper.Set(trustedProxyDockerEnabledConfigKey, true)
-			viper.Set(trustedProxyDockerEndpointConfigKey, srv.URL)
+			v.Set(config.ConfigKeyTrustedProxyDockerEnabled, true)
+			v.Set(config.ConfigKeyTrustedProxyDockerEndpoint, srv.URL)
 
-			dp := newDockerProvider(ctx)
+			dp := newDockerProvider(ctx, v)
 			assert.NotNil(t, dp)
 
 			cancel()

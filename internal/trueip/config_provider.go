@@ -8,14 +8,17 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 const (
-	trustedProxyHeadersConfigKey = "security.trusted_proxies.network"
-	updateDebounceTime           = 100 * time.Millisecond
+	updateDebounceTime = 100 * time.Millisecond
 )
 
 type viperProvider struct {
+	v *viper.Viper
+
 	updateLock     sync.RWMutex
 	lastUpdateTime time.Time
 
@@ -34,7 +37,7 @@ func (vp *viperProvider) updateTrustedProxies() {
 	var newTrustedIPs []net.IP
 	var newTrustedCIDRs []*net.IPNet
 
-	for _, curr := range viper.GetStringSlice(trustedProxyHeadersConfigKey) {
+	for _, curr := range vp.v.GetStringSlice(config.ConfigKeyTrustedProxyNetwork) {
 		_, ipnet, err := net.ParseCIDR(curr)
 		// note opposite of normal error check!
 		if err == nil {
@@ -115,8 +118,10 @@ func (vp *viperProvider) Teardown(ctx context.Context) error {
 	return nil
 }
 
-func newViperProvider() *viperProvider {
-	vp := &viperProvider{}
+func newViperProvider(v *viper.Viper) *viperProvider {
+	vp := &viperProvider{
+		v: v,
+	}
 	vp.updateTrustedProxies()
 	return vp
 }

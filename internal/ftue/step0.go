@@ -12,7 +12,6 @@ import (
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
@@ -146,29 +145,29 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("config_file_path", configFilePath).Str("db_file_path", dbFilePath).Int64("port", port).Msg("got initial config")
 
-	viper.SetConfigFile(configFilePath)
-	viper.SetConfigType("yaml")
-	viper.Set("db.file", dbFilePath)
-	viper.Set("db.kind", "sqlite")
-	viper.Set("server.port", port)
-	viper.Set("server.secret_key", base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
-	viper.Set("server.auth_url", authURL)
-	viper.Set("server.domain", domain)
-	err = viper.WriteConfig()
+	fe.config.SetConfigFile(configFilePath)
+	fe.config.SetConfigType("yaml")
+	fe.config.Set(config.ConfigKeyDBFile, dbFilePath)
+	fe.config.Set(config.ConfigKeyDBKind, "sqlite")
+	fe.config.Set(config.ConfigKeyServerPort, port)
+	fe.config.Set(config.ConfigKeyServerSecretKey, base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
+	fe.config.Set(config.ConfigKeyServerAuthURL, authURL)
+	fe.config.Set(config.ConfigKeyServerDomain, domain)
+	err = fe.config.WriteConfig()
 	if err != nil {
 		log.Error().Err(err).Str("config_file_path", configFilePath).Msg("could not write config file")
 		http.Error(w, "could not write config file path -- see logs", http.StatusInternalServerError)
 		return
 	}
 
-	analyzer, err := rules.NewFromConfig()
+	analyzer, err := rules.NewFromConfig(fe.config)
 	if err != nil {
 		log.Error().Err(err).Msg("could not initialize rules engine")
 		http.Error(w, "could not initialize rules engine -- see logs", http.StatusInternalServerError)
 		return
 	}
 
-	newDatabase, err := sqlite.NewSQLiteFromConfig()
+	newDatabase, err := sqlite.NewSQLiteFromConfig(fe.config)
 	if err != nil {
 		log.Error().Err(err).Str("db_file", dbFilePath).Msg("could not initialize sqlite database")
 		http.Error(w, "could not initialize database -- see logs", http.StatusInternalServerError)

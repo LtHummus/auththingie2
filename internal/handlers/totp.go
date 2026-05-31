@@ -85,7 +85,7 @@ func (e *Env) handleTotpPrompt(w http.ResponseWriter, r *http.Request, loginTick
 }
 
 func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data totp2.LoginTicket) {
-	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r))
+	sourceIPKey := fmt.Sprintf("totp_ip|%s", trueip.Find(r, e.Configuration))
 	accountKey := fmt.Sprintf("totp_user_guid|%s", data.UserID)
 
 	totpCode := strings.TrimSpace(r.FormValue("totp-code"))
@@ -149,22 +149,27 @@ func (e *Env) handleTotpValidate(w http.ResponseWriter, r *http.Request, data to
 	e.LoginLimiter.MarkSuccessfulAttempt(accountKey)
 
 	if user.Disabled {
-		log.Warn().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("attempted login of disabled account")
+		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("attempted login of disabled account")
 		e.handleTotpPrompt(w, r, data, "Account is disabled")
 		return
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(user)
+	err = sess.PlaceUserInSession(user, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not place user in session")
+		http.Error(w, "could not place user in session", http.StatusInternalServerError)
+		return
+	}
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		http.Error(w, "could not write session data", http.StatusInternalServerError)
 		return
 	}
 
-	log.Info().Str("ip", trueip.Find(r)).Str("username", user.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r, e.Configuration)).Str("username", user.Username).Msg("successful login")
 	if redirectURI == "" {
 		redirectURI = "/"
 	}

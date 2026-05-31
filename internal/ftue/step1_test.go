@@ -14,7 +14,7 @@ func TestFtueEnv_HandleFTUEStep1(t *testing.T) {
 	render.Init()
 
 	t.Run("just render", func(t *testing.T) {
-		_, _, e := makeTestEnv(t)
+		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/step1", nil)
 		w := httptest.NewRecorder()

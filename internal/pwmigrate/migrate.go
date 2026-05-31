@@ -6,12 +6,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
 	"github.com/lthummus/auththingie2/internal/user"
 )
 
-func MigrateUser(ctx context.Context, u *user.User, password string, database db.DB) {
-	if viper.GetBool("security.disable_migrate_on_login") {
+func MigrateUser(ctx context.Context, u *user.User, password string, database db.DB, v *viper.Viper) {
+	if v.GetBool(config.ConfigKeyDisablePasswordMigrateOnLogin) {
 		return
 	}
 
@@ -23,7 +24,7 @@ func MigrateUser(ctx context.Context, u *user.User, password string, database db
 	}
 	defer unlockUser(u.Id)
 
-	err := u.SetPassword(password)
+	err := u.SetPassword(password, v)
 	if err != nil {
 		log.Error().Err(err).Str("username", u.Username).Msg("unable to migrate password on login")
 		return

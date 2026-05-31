@@ -244,7 +244,7 @@ func (e *Env) HandleEditUserSubmission(w http.ResponseWriter, r *http.Request) {
 
 	newPwd := r.FormValue("new-pwd")
 	if strings.TrimSpace(newPwd) != "" {
-		err := u.SetPassword(newPwd)
+		err := u.SetPassword(newPwd, e.Configuration)
 		if err != nil {
 			if errors.Is(err, user.ErrInvalidPasswordChars) {
 				http.Error(w, "Password contains invalid characters", http.StatusBadRequest)
@@ -365,7 +365,7 @@ func (e *Env) HandleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	nu := &user.User{
 		Username: username,
 	}
-	err = nu.SetPassword(pw1)
+	err = nu.SetPassword(pw1, e.Configuration)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "create_user_page.gohtml", &createUserPageParams{

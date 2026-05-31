@@ -7,6 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 type LoginLimiter interface {
@@ -20,10 +22,6 @@ var (
 )
 
 const (
-	ConfigKeyLoginFailureLimit = "security.account_lock.failure_limit"
-	ConfigKeyLookbackTime      = "security.account_lock.lookback_time"
-	ConfigKeyLockDuration      = "security.account_lock.lock_duration"
-
 	DefaultFailureLimit        = 5
 	DefaultLookbackTime        = 15 * time.Minute
 	DefaultAccountLockDuration = 15 * time.Minute
@@ -41,10 +39,10 @@ type InMemoryLoginLimiter struct {
 	accountLocks  map[string]time.Time
 }
 
-func NewInMemoryLimiter() *InMemoryLoginLimiter {
-	failureLimit := viper.GetInt(ConfigKeyLoginFailureLimit)
-	lookbackTime := viper.GetDuration(ConfigKeyLookbackTime)
-	lockDuration := viper.GetDuration(ConfigKeyLockDuration)
+func NewInMemoryLimiter(v *viper.Viper) *InMemoryLoginLimiter {
+	failureLimit := v.GetInt(config.ConfigKeyLoginFailureLimit)
+	lookbackTime := v.GetDuration(config.ConfigKeyLookbackTime)
+	lockDuration := v.GetDuration(config.ConfigKeyLockDuration)
 
 	// we do it this way so we don't mistakenly pollute the config file with our values
 	if failureLimit == 0 {

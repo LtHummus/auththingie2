@@ -15,7 +15,6 @@ import (
 	"github.com/lthummus/auththingie2/internal/trueip"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 )
 
 type loginPageParams struct {
@@ -64,7 +63,7 @@ func (e *Env) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 		render.Render(w, "login.gohtml", &loginPageParams{
 			RedirectURI:    e.getRedirectURIFromRequest(r),
 			Message:        getMessageFromRequest(r),
-			EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+			EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 		})
 	} else {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -76,14 +75,14 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	redirectURL := e.getRedirectURIFromRequest(r)
 
-	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r))
+	u, err := e.PasswordValidator.Validate(r.Context(), username, password, trueip.Find(r, e.Configuration))
 	if err != nil {
 		if _, ok := errors.AsType[pwvalidate.PasswordValidatorError](err); !ok {
 			// if there's not an auth error, just render something generic
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		}
@@ -93,21 +92,21 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Invalid username or password. This account has been locked due to multiple failures",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if _, ok := errors.AsType[*pwvalidate.IPBlockedError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "This IP has had too many login failures recently. Try again later",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if iupe, ok := errors.AsType[*pwvalidate.InvalidUsernamePasswordError](err); ok {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          fmt.Sprintf("Invalid username or password. You have %d more attempts before the account is temporarily locked", iupe.AccountRemainingBeforeLocked),
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		} else if _, ok := errors.AsType[*pwvalidate.AccountDisabledError](err); ok {
@@ -117,7 +116,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 				render.Render(w, "login.gohtml", &loginPageParams{
 					Error:          "Account is disabled",
 					RedirectURI:    redirectURL,
-					EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+					EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 				})
 				return
 			}
@@ -126,7 +125,7 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, "login.gohtml", &loginPageParams{
 				Error:          "Server side error happened. Try again?",
 				RedirectURI:    redirectURL,
-				EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+				EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 			})
 			return
 		}
@@ -139,16 +138,21 @@ func (e *Env) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sess := session.GetSessionFromRequest(r)
-	sess.PlaceUserInSession(u)
+	err = sess.PlaceUserInSession(u, e.Configuration)
+	if err != nil {
+		log.Error().Err(err).Msg("could not generate new session")
+		http.Error(w, "could not generate new session", http.StatusInternalServerError)
+		return
+	}
 
-	err = session.WriteSession(w, r, sess)
+	err = session.WriteSession(w, r, sess, e.Configuration)
 	if err != nil {
 		log.Error().Err(err).Msg("could not log user in")
 		http.Error(w, "could not write session data", http.StatusInternalServerError)
 		return
 	}
 
-	log.Info().Str("ip", trueip.Find(r)).Str("username", u.Username).Msg("successful login")
+	log.Info().Str("ip", trueip.Find(r, e.Configuration)).Str("username", u.Username).Msg("successful login")
 
 	if redirectURL == "" {
 		redirectURL = "/"

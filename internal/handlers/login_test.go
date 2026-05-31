@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/securecookie"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -31,7 +30,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	sc := securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())
 
 	t.Run("render login page on GET", func(t *testing.T) {
-		_, _, _, _, ruriv, e := makeTestEnv(t)
+		_, _, _, _, ruriv, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		ruriv.On("Sanitize", "").Return("/", true)
@@ -48,7 +47,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("render login page with message", func(t *testing.T) {
-		_, _, _, _, ruriv, e := makeTestEnv(t)
+		_, _, _, _, ruriv, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		ruriv.On("Sanitize", "").Return("/", true)
@@ -66,7 +65,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("do not render arbitrary messages in to the page", func(t *testing.T) {
-		_, _, _, _, ruriv, e := makeTestEnv(t)
+		_, _, _, _, ruriv, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		ruriv.On("Sanitize", "").Return("/", true)
@@ -84,15 +83,12 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login page should not have passkey option if passkeys are disabled", func(t *testing.T) {
-		_, _, _, _, ruriv, e := makeTestEnv(t)
+		_, _, _, _, ruriv, v, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 
 		ruriv.On("Sanitize", "").Return("/", true)
 
-		viper.Set(config.KeyPasskeysDisabled, true)
-		t.Cleanup(func() {
-			viper.Set(config.KeyPasskeysDisabled, false)
-		})
+		v.Set(config.ConfigKeyKeyPasskeysDisabled, true)
 
 		r := makeTestRequest(t, http.MethodGet, "/login", nil)
 		w := httptest.NewRecorder()
@@ -106,7 +102,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("puts redirect uri in form if needed", func(t *testing.T) {
-		_, _, _, _, ruriv, e := makeTestEnv(t)
+		_, _, _, _, ruriv, _, e := makeTestEnv(t)
 		e.LoginLimiter = nil
 		ruriv.On("Sanitize", "https://example.com").Return("https://example.com", true)
 
@@ -123,7 +119,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	// begin POST tests
 
 	t.Run("CSRF detection", func(t *testing.T) {
-		_, _, _, _, _, e := makeTestEnv(t)
+		_, _, _, _, _, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -141,7 +137,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("gracefully handle database error", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -160,7 +156,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("invalid credentials, not locked", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "test")
@@ -185,7 +181,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("incorrect password that results in a locked account (by username and IP)", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
@@ -207,7 +203,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("can't login with disabled account", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
@@ -229,7 +225,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("login passes with disable if TOTP is enabled", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
@@ -257,7 +253,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP and redirect uri", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
@@ -290,7 +286,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("valid username/password with no TOTP or explicit redirect", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		v := url.Values{}
 		v.Add("username", "regularuser")
@@ -318,7 +314,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -356,7 +352,7 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		t.Cleanup(func() {
 			notices.Reset()
 		})
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, _, e := makeTestEnv(t)
 
 		notices.AddMessage("test", "test message")
 
@@ -390,12 +386,9 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 	})
 
 	t.Run("correct username/password with TOTP", func(t *testing.T) {
-		_, _, _, pwv, ruriv, e := makeTestEnv(t)
+		_, _, _, pwv, ruriv, cfg, e := makeTestEnv(t)
 
-		viper.Set("auth_url", "https://example.com")
-		t.Cleanup(func() {
-			viper.Set("auth_url", "")
-		})
+		cfg.Set("auth_url", "https://example.com")
 
 		v := url.Values{}
 		v.Add("username", "sampletotp")

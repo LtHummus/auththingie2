@@ -13,10 +13,13 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/argon"
+	"github.com/lthummus/auththingie2/internal/config"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/salt"
@@ -265,7 +268,7 @@ func setupSalts(t *testing.T) {
 	salt.CheckOrMakeSalt()
 }
 
-func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *mocks.MockPasswordValidator, *mocks.MockRedirectURIValidator, *Env) {
+func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockLoginLimiter, *mocks.MockPasswordValidator, *mocks.MockRedirectURIValidator, *viper.Viper, *Env) {
 	a := mocks.NewMockAnalyzer(t)
 	db := mocks.NewMockDB(t)
 	ll := mocks.NewMockLoginLimiter(t)
@@ -277,13 +280,22 @@ func makeTestEnv(t *testing.T) (*mocks.MockAnalyzer, *mocks.MockDB, *mocks.MockL
 		RPOrigins:     []string{"https://example.com"},
 	})
 	assert.NoError(t, err)
-	return a, db, ll, pwv, mruriv, &Env{
+
+	v := viper.New()
+	v.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	v.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	v.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	v.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	v.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
+	return a, db, ll, pwv, mruriv, v, &Env{
 		Database:             db,
 		Analyzer:             a,
 		WebAuthn:             wa,
 		LoginLimiter:         ll,
 		PasswordValidator:    pwv,
 		RedirectURLValidator: mruriv,
+		Configuration:        v,
 	}
 }
 
@@ -298,7 +310,10 @@ func makeTestRequest(t *testing.T, method string, path string, body io.Reader, o
 	tcd := &testConnectionData{}
 	tcd.req = httptest.NewRequest(method, path, body)
 
-	sess, err := session2.NewDefaultSession()
+	v := viper.New()
+	v.Set(config.ConfigKeyDefaultSessionLifetime, 5*time.Minute)
+
+	sess, err := session2.NewDefaultSession(v)
 	require.NoError(t, err)
 	tcd.sess = &sess
 	tcd.sc = securecookie.New(salt.GenerateSigningKey(), salt.GenerateEncryptionKey())

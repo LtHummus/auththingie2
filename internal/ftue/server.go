@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
 	"github.com/lthummus/auththingie2/internal/rules"
@@ -24,15 +25,17 @@ const (
 
 func RunFTUEServer(step Step) {
 
-	fe := &ftueEnv{}
+	fe := &ftueEnv{
+		config: viper.GetViper(),
+	}
 
 	if step == StepConfigExists {
 		log.Info().Msg("noticed there's a config file; attempting to initialize systems")
-		analyzer, err := rules.NewFromConfig()
+		analyzer, err := rules.NewFromConfig(fe.config)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize rules engine")
 		}
-		database, err := sqlite.NewSQLiteFromConfig()
+		database, err := sqlite.NewSQLiteFromConfig(fe.config)
 		if err != nil {
 			log.Fatal().Err(err).Msg("could not initialize database")
 		}

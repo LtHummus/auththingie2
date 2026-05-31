@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
@@ -28,7 +27,7 @@ func (e *Env) HandleSelfConfigGet(w http.ResponseWriter, r *http.Request) {
 
 	render.Render(w, "self_config.gohtml", &selfEditPageParams{
 		User:           u,
-		EnablePasskeys: !viper.GetBool(config.KeyPasskeysDisabled),
+		EnablePasskeys: !e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled),
 	})
 }
 
@@ -49,7 +48,7 @@ func (e *Env) HandleSelfConfigPasswordPost(w http.ResponseWriter, r *http.Reques
 
 	oldPw := r.FormValue("old_pw")
 
-	err := u.CheckPassword(oldPw)
+	err := u.CheckPassword(oldPw, e.Configuration)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{
@@ -80,7 +79,7 @@ func (e *Env) HandleSelfConfigPasswordPost(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = u.SetPassword(newPw)
+	err = u.SetPassword(newPw, e.Configuration)
 	if err != nil {
 		if errors.Is(err, user.ErrInvalidPasswordChars) {
 			render.Render(w, "self_change_password.gohtml", &selfConfigPasswordParams{

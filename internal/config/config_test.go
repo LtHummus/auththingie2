@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -236,4 +237,47 @@ func TestCleanupDefaultArgon(t *testing.T) {
 
 		assert.Len(t, everything, 1)
 	})
+}
+
+func Test_calcEntropy(t *testing.T) {
+	tests := []struct {
+		Input          string
+		ExpectedOutput float64
+	}{
+		{
+			Input:          "aaaaaaa",
+			ExpectedOutput: 0,
+		},
+		{
+			Input:          "1223334444",
+			ExpectedOutput: 1.84644,
+		},
+		{
+			Input:          "aaaabbbb",
+			ExpectedOutput: 1.0,
+		},
+		{
+			Input:          "aaaabbbbcccc",
+			ExpectedOutput: 1.584963,
+		},
+		{
+			Input:          "rT651=eUEc#t4$W",
+			ExpectedOutput: 3.906891,
+		},
+		{
+			Input:          "707638077379781",
+			ExpectedOutput: 2.472906,
+		},
+		{
+			Input:          "56swe4jCV4tEf7I",
+			ExpectedOutput: 3.773557,
+		},
+	}
+
+	for _, curr := range tests {
+		t.Run(fmt.Sprintf("%s", curr.Input), func(t *testing.T) {
+			fmt.Printf("%f\n", calcEntropy(curr.Input))
+			assert.InDelta(t, curr.ExpectedOutput, calcEntropy(curr.Input), 0.0001)
+		})
+	}
 }

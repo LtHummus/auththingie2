@@ -13,8 +13,15 @@ import (
 var argonRegex = regexp.MustCompile(`^\$argon2id\$v=\d+\$m=\d+,t=\d+,p=\d+\$[-A-Za-z0-9+/]+\$[-A-Za-z0-9+/]+$`)
 
 func TestArgon2(t *testing.T) {
+	defaultParams := viper.New()
+	defaultParams.SetDefault(MemoryKey, DefaultMemory)
+	defaultParams.SetDefault(IterationKey, DefaultIterations)
+	defaultParams.SetDefault(ParallelismKey, DefaultParallelism)
+	defaultParams.SetDefault(SaltLengthKey, DefaultSaltLength)
+	defaultParams.SetDefault(KeyLengthKey, DefaultKeyLength)
+
 	t.Run("correct password", func(t *testing.T) {
-		hash, err := GenerateFromPassword("password")
+		hash, err := GenerateFromPassword("password", defaultParams)
 		require.NoError(t, err)
 
 		assert.Regexp(t, argonRegex, hash)
@@ -23,7 +30,7 @@ func TestArgon2(t *testing.T) {
 	})
 
 	t.Run("incorrect password", func(t *testing.T) {
-		hash, err := GenerateFromPassword("password")
+		hash, err := GenerateFromPassword("password", defaultParams)
 		require.NoError(t, err)
 
 		assert.Regexp(t, argonRegex, hash)
@@ -39,25 +46,35 @@ func TestArgon2(t *testing.T) {
 }
 
 func TestNeedsMigration(t *testing.T) {
+	defaultParams := viper.New()
+	defaultParams.SetDefault(MemoryKey, DefaultMemory)
+	defaultParams.SetDefault(IterationKey, DefaultIterations)
+	defaultParams.SetDefault(ParallelismKey, DefaultParallelism)
+	defaultParams.SetDefault(SaltLengthKey, DefaultSaltLength)
+	defaultParams.SetDefault(KeyLengthKey, DefaultKeyLength)
+
 	t.Run("bcrypt hash", func(t *testing.T) {
-		assert.True(t, NeedsMigration("$2y$10$UKHA7gPNKpu/Kc7tyo91eudJZdX9qDs0S2E1GWgZKPkP/o4s2SR.m"))
+		assert.True(t, NeedsMigration("$2y$10$UKHA7gPNKpu/Kc7tyo91eudJZdX9qDs0S2E1GWgZKPkP/o4s2SR.m", defaultParams))
 	})
 
 	t.Run("don't require migration if disabled", func(t *testing.T) {
-		viper.Set("security.disable_migrate_on_login", true)
-		t.Cleanup(func() {
-			viper.Set("security.disable_migrate_on_login", false)
-		})
+		cfg := viper.New()
+		cfg.Set(MemoryKey, DefaultMemory)
+		cfg.Set(IterationKey, DefaultIterations)
+		cfg.Set(ParallelismKey, DefaultParallelism)
+		cfg.Set(SaltLengthKey, DefaultSaltLength)
+		cfg.Set(KeyLengthKey, DefaultKeyLength)
+		cfg.Set("security.disable_migrate_on_login", true)
 
-		assert.False(t, NeedsMigration("$2y$10$UKHA7gPNKpu/Kc7tyo91eudJZdX9qDs0S2E1GWgZKPkP/o4s2SR.m"))
+		assert.False(t, NeedsMigration("$2y$10$UKHA7gPNKpu/Kc7tyo91eudJZdX9qDs0S2E1GWgZKPkP/o4s2SR.m", cfg))
 	})
 
 	t.Run("don't require migration if argon props are correct", func(t *testing.T) {
-		assert.False(t, NeedsMigration("$argon2id$v=19$m=65536,t=3,p=2$Sz1T6kOEN6fAa2/5NvHX5g$mDgZAJ7oLMYmW7yVAYnXBho7Ybg12woF66GQnP6XocA"))
+		assert.False(t, NeedsMigration("$argon2id$v=19$m=65536,t=3,p=2$Sz1T6kOEN6fAa2/5NvHX5g$mDgZAJ7oLMYmW7yVAYnXBho7Ybg12woF66GQnP6XocA", defaultParams))
 	})
 
 	t.Run("require migration if argon props are incorrect", func(t *testing.T) {
-		assert.True(t, NeedsMigration("$argon2id$v=19$m=32768,t=4,p=2$doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs$zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0"))
+		assert.True(t, NeedsMigration("$argon2id$v=19$m=32768,t=4,p=2$doqbcsy6S669OpGN5twLfWm8mJjy6QywOJsPLnabTgs$zoyPNcenQg0H83J4EcX2QVLGJFAMkTXyg5Q8Rvt3qv0", defaultParams))
 	})
 }
 
@@ -83,12 +100,13 @@ func TestDecodeHashParts(t *testing.T) {
 }
 
 func TestArgonConfigInvalid(t *testing.T) {
-	oldValue := viper.GetInt(ParallelismKey)
-	viper.Set(ParallelismKey, 999)
-	t.Cleanup(func() {
-		viper.Set(ParallelismKey, oldValue)
-	})
+	cfg := viper.New()
+	cfg.Set(MemoryKey, DefaultMemory)
+	cfg.Set(IterationKey, DefaultIterations)
+	cfg.Set(ParallelismKey, 99999)
+	cfg.Set(SaltLengthKey, DefaultSaltLength)
+	cfg.Set(KeyLengthKey, DefaultKeyLength)
 
-	_, err := GenerateFromPassword("abcdefg")
+	_, err := GenerateFromPassword("abcdefg", cfg)
 	assert.Error(t, err)
 }

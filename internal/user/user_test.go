@@ -8,6 +8,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -21,34 +22,48 @@ var (
 )
 
 func init() {
+	cfg := viper.New()
+	cfg.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	cfg.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	cfg.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	cfg.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	cfg.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
 	passwordBcrypt, _ = bcrypt.GenerateFromPassword([]byte("password"), 10)
-	passwordArgon, _ = argon.GenerateFromPassword("password")
+	passwordArgon, _ = argon.GenerateFromPassword("password", cfg)
 }
 
 func TestUser_CheckPassword(t *testing.T) {
+	cfg := viper.New()
+	cfg.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	cfg.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	cfg.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	cfg.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	cfg.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
 	t.Run("bcrypt", func(t *testing.T) {
 		u := User{}
 
-		assert.Equal(t, ErrNoPasswordSet, u.CheckPassword(string([]byte{0x01})))
+		assert.Equal(t, ErrNoPasswordSet, u.CheckPassword(string([]byte{0x01}), cfg))
 
 		u.PasswordHash = string(passwordBcrypt)
-		assert.Equal(t, ErrIncorrectPassword, u.CheckPassword("p@ssw0rd"))
-		assert.NoError(t, u.CheckPassword("password"))
+		assert.Equal(t, ErrIncorrectPassword, u.CheckPassword("p@ssw0rd", cfg))
+		assert.NoError(t, u.CheckPassword("password", cfg))
 
 		u.PasswordHash = string([]byte{0x01, 0x02})
-		assert.Equal(t, ErrInvalidHash, u.CheckPassword("password"))
+		assert.Equal(t, ErrInvalidHash, u.CheckPassword("password", cfg))
 	})
 
 	t.Run("argon", func(t *testing.T) {
 		u := User{}
-		assert.ErrorIs(t, ErrNoPasswordSet, u.CheckPassword("aaa"))
+		assert.ErrorIs(t, ErrNoPasswordSet, u.CheckPassword("aaa", cfg))
 
 		u.PasswordHash = passwordArgon
-		assert.ErrorIs(t, ErrIncorrectPassword, u.CheckPassword("wrongpw"))
-		assert.NoError(t, u.CheckPassword("password"))
+		assert.ErrorIs(t, ErrIncorrectPassword, u.CheckPassword("wrongpw", cfg))
+		assert.NoError(t, u.CheckPassword("password", cfg))
 
 		u.PasswordHash = "nope"
-		assert.ErrorIs(t, ErrInvalidHash, u.CheckPassword("password"))
+		assert.ErrorIs(t, ErrInvalidHash, u.CheckPassword("password", cfg))
 	})
 }
 
@@ -201,15 +216,22 @@ func BenchmarkUser_GroupsOverlap(b *testing.B) {
 }
 
 func FuzzUser_SetPassword(f *testing.F) {
+	cfg := viper.New()
+	cfg.SetDefault(argon.MemoryKey, argon.DefaultMemory)
+	cfg.SetDefault(argon.IterationKey, argon.DefaultIterations)
+	cfg.SetDefault(argon.ParallelismKey, argon.DefaultParallelism)
+	cfg.SetDefault(argon.SaltLengthKey, argon.DefaultSaltLength)
+	cfg.SetDefault(argon.KeyLengthKey, argon.DefaultKeyLength)
+
 	f.Add("hello")
 	f.Add("world")
 	f.Add("123456")
 	f.Add(" ")
 	f.Fuzz(func(t *testing.T, input string) {
 		u := User{}
-		err := u.SetPassword(input)
+		err := u.SetPassword(input, cfg)
 		assert.NoError(t, err)
 
-		assert.NoErrorf(t, u.CheckPassword(input), "failure setting password to %s", input)
+		assert.NoErrorf(t, u.CheckPassword(input, cfg), "failure setting password to %s", input)
 	})
 }

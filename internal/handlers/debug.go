@@ -62,11 +62,11 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	configTable := table.NewWriter()
 	configTable.AppendHeader(table.Row{"Key", "Value"})
 	configTable.AppendRows([]table.Row{
-		{"Config File", viper.ConfigFileUsed()},
-		{"TLS Enabled", viper.GetBool("server.tls.enabled")},
+		{"Config File", e.Configuration.ConfigFileUsed()},
+		{"TLS Enabled", e.Configuration.GetBool(config.ConfigKeyServerTLSEnabled)},
 		{"Salt File Path", salt.GetSaltPath()},
 	})
-	absDbFile, err := filepath.Abs(viper.GetString("db.file"))
+	absDbFile, err := filepath.Abs(e.Configuration.GetString(config.ConfigKeyDBFile))
 	if err != nil {
 		configTable.AppendRow(table.Row{"DB File Path", fmt.Sprintf("Unable to get: %s", err.Error())})
 	} else {
@@ -105,7 +105,7 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"X-Forwarded-Host", r.Header.Get("X-Forwarded-Host")},
 		{"X-Real-Ip", r.Header.Get("X-Real-Ip")},
 		{"X-Forwarded-Server", r.Header.Get("X-Forwarded-Server")},
-		{"trueip.Find", trueip.Find(r)},
+		{"trueip.Find", trueip.Find(r, viper.GetViper())},
 	})
 
 	userTable := table.NewWriter()

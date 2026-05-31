@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/pwvalidate"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -91,7 +92,7 @@ func TestGetUserFromRequest(t *testing.T) {
 }
 
 func TestGetUserFromRequestAllowFallback(t *testing.T) {
-	viper.Set("security.disable_migrate_on_login", true)
+	viper.Set(config.ConfigKeyDisablePasswordMigrateOnLogin, true)
 
 	t.Cleanup(func() {
 		viper.Reset()
@@ -101,7 +102,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 		u, _, r := generateMockUserSessionRequest(true, nil)
 		pwv := mocks.NewMockPasswordValidator(t)
 
-		u2, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u2, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		assert.Equal(t, u, u2)
 		assert.Equal(t, UserSourceSession, source)
 	})
@@ -116,12 +117,24 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			Username: "test",
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		require.NotNil(t, u)
 
 		assert.Equal(t, UserSourceBasicAuth, source)
 
 		assert.Equal(t, "test", u.Username)
+	})
+
+	t.Run("basic auth user, but basic auth is disabled", func(t *testing.T) {
+		_, _, r := generateMockUserSessionRequest(false, nil)
+		pwv := mocks.NewMockPasswordValidator(t)
+
+		r.SetBasicAuth("test", "test1")
+
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, true)
+		require.Nil(t, u)
+
+		assert.Equal(t, UserSourceInvalidUser, source)
 	})
 
 	t.Run("basic auth user does not exist", func(t *testing.T) {
@@ -135,7 +148,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			IPRemainingBeforeLocked:      4,
 		})
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		assert.Nil(t, u)
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
@@ -153,7 +166,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			StoredCredentials: nil,
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 
 		assert.True(t, u.TOTPEnabled())
 		assert.Equal(t, "test", u.Username)
@@ -179,7 +192,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			},
 		}, nil)
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 
 		assert.Equal(t, "test", u.Username)
 		assert.Len(t, u.StoredCredentials, 1)
@@ -197,7 +210,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 			Disabled: true,
 		}, &pwvalidate.AccountDisabledError{})
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		assert.Nil(t, u)
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
@@ -210,7 +223,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(nil, &pwvalidate.IPBlockedError{})
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		assert.Nil(t, u)
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
@@ -223,7 +236,7 @@ func TestGetUserFromRequestAllowFallback(t *testing.T) {
 
 		pwv.On("Validate", mock.Anything, "test", "test1", "10.0.0.1").Return(nil, &pwvalidate.AccountLockedError{})
 
-		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv)
+		u, source := GetUserFromRequestAllowFallback(r, "10.0.0.1", pwv, false)
 		assert.Nil(t, u)
 		assert.Equal(t, UserSourceBasicAuth, source)
 	})
@@ -240,7 +253,10 @@ func TestWriteSession(t *testing.T) {
 			"hello": "world",
 		}
 
-		err := WriteSession(w, r, *s)
+		v := viper.New()
+		v.Set("server.domain", "example.com")
+
+		err := WriteSession(w, r, *s, v)
 		assert.NoError(t, err)
 
 		resp := w.Result()
@@ -263,7 +279,7 @@ func TestWriteSession(t *testing.T) {
 		s := Session{}
 
 		assert.Panics(t, func() {
-			_ = WriteSession(w, r, s)
+			_ = WriteSession(w, r, s, viper.New())
 		})
 	})
 }
@@ -271,6 +287,7 @@ func TestWriteSession(t *testing.T) {
 func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.MockDB, *Middleware) {
 	db := mocks.NewMockDB(t)
 	sc := securecookie.New(securecookie.GenerateRandomKey(32), securecookie.GenerateRandomKey(32))
+	v := viper.New()
 
 	return sc, db, &Middleware{
 		sc: sc,
@@ -279,6 +296,7 @@ func generateTestMiddleware(t *testing.T) (*securecookie.SecureCookie, *mocks.Mo
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("hi!"))
 		}),
+		cfg: v,
 	}
 }
 

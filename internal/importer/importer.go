@@ -9,6 +9,7 @@ import (
 	"github.com/gurkankaymak/hocon"
 	"github.com/rs/zerolog/log"
 
+	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/rules"
 	"github.com/lthummus/auththingie2/internal/user"
 )
@@ -191,7 +192,7 @@ func Import(contents string) (*Results, error) {
 		Rules: make([]rules.Rule, 0),
 	}
 
-	ruleList := cfg.GetArray("auththingie.rules")
+	ruleList := cfg.GetArray(config.ConfigKeyRules)
 
 	for _, curr := range ruleList {
 		obj, ok := curr.(hocon.Object)
@@ -209,7 +210,7 @@ func Import(contents string) (*Results, error) {
 		c.Rules = append(c.Rules, *r)
 	}
 
-	userList := cfg.GetArray("auththingie.users")
+	userList := cfg.GetArray(config.ConfigKeyUsers)
 	for _, curr := range userList {
 		obj, ok := curr.(hocon.Object)
 		if !ok {
@@ -226,6 +227,8 @@ func Import(contents string) (*Results, error) {
 		c.Users = append(c.Users, *r)
 	}
 
+	// these are left as bare strings instead of using the ones in the `config` package because this is
+	// what they were in AuthThingie1
 	c.Domain = quoteTrim(cfg.GetString("auththingie.domain"))
 	c.AuthURL = quoteTrim(cfg.GetString("auththingie.authSiteUrl"))
 

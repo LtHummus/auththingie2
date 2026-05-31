@@ -17,7 +17,7 @@ import (
 
 func RunErrorServer(errorsFound []string) {
 
-	port := viper.GetInt("server.port")
+	port := viper.GetInt(ConfigKeyServerPort)
 	if port == 0 {
 		port = 9000
 	}
