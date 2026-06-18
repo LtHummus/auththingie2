@@ -14,7 +14,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.8.1
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/makiuchi-d/gozxing v0.1.1
-	github.com/mattn/go-sqlite3 v1.14.45
+	github.com/mattn/go-sqlite3 v1.14.46
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
 	github.com/pquerna/otp v1.5.0
 	github.com/rs/zerolog v1.35.1
