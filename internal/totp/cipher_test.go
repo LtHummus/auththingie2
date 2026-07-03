@@ -1,6 +1,7 @@
 package totp
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,5 +20,13 @@ func TestEncryptDecrypt(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, payload, dec)
+	})
+
+	t.Run("do not panic on too short ciphertexts", func(t *testing.T) {
+		shortCiphertext := base64.RawURLEncoding.EncodeToString([]byte{0x00, 0x01, 0x02})
+
+		dec, err := decrypt(shortCiphertext, []byte{'s', 'a', 'm', 'p', 'e', 'e'})
+		assert.Error(t, err)
+		assert.Nil(t, dec)
 	})
 }

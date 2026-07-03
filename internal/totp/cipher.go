@@ -49,6 +49,10 @@ func decrypt(encodedCiphertext string, kind []byte) ([]byte, error) {
 		return nil, fmt.Errorf("totp: decrypt: could not initialize AEAD: %w", err)
 	}
 
+	if len(bulkCiphertext) < gcm.NonceSize() {
+		return nil, fmt.Errorf("totp: decrypt: ciphertext too short")
+	}
+
 	nonce := bulkCiphertext[:gcm.NonceSize()]
 	ciphertext := bulkCiphertext[gcm.NonceSize():]
 

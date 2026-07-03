@@ -72,8 +72,8 @@ func (e *Env) HandleTestRule(w http.ResponseWriter, r *http.Request) {
 	ri := &rules.RequestInfo{
 		Method:     http.MethodGet,
 		Protocol:   parsedURL.Scheme,
-		Host:       parsedURL.Host,
-		RequestURI: parsedURL.Path,
+		Host:       rules.NormalizeHost(parsedURL.Host),
+		RequestURI: rules.NormalizeURI(parsedURL.EscapedPath()),
 		SourceIP:   source,
 	}
 

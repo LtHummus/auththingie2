@@ -115,35 +115,67 @@ function hideWebAuthnError() {
     elem.style.display = 'none';
 }
 
-async function handleDiscoverLogin() {
-    hideWebAuthnError();
-    setLoginButtonLoading();
-    const response = await fetch("/webauthn/discover", {
-        method: "POST"
-    })
-    const params = await response.json();
+let conditionalLoginAbortController = null;
 
-    if (params.failed) {
-        showWebAuthnLoginError(params.message);
-        resetLoginButton();
+async function startConditionalLogin() {
+    if (!window.PublicKeyCredential?.isConditionalMediationAvailable) {
         return;
     }
 
+    if (!(await PublicKeyCredential.isConditionalMediationAvailable())) {
+        return;
+    }
+
+    conditionalLoginAbortController = new AbortController();
+    const signal = conditionalLoginAbortController.signal;
+    const error = await doDiscoverLogin({mediation: 'conditional', signal: signal});
+    if (error && !signal.aborted) {
+        showWebAuthnLoginError(error);
+    }
+}
+
+function abortConditionalLogin() {
+    conditionalLoginAbortController?.abort();
+    conditionalLoginAbortController = null;
+}
+
+async function handleDiscoverLoginButton() {
+    hideWebAuthnError();
+    setLoginButtonLoading();
+    const error = await doDiscoverLogin({});
+    if (error) {
+        showWebAuthnLoginError(error);
+        resetLoginButton();
+    }
+}
+
+async function doDiscoverLogin(credentialOptions) {
+    let params;
+    try {
+        const response = await fetch("/webauthn/discover", {
+            method: "POST"
+        })
+        params = await response.json();
+    } catch (e) {
+        console.log(e);
+        return 'Could not get WebAuthn challenge';
+    }
+
+    if (params.failed) {
+        return params.message;
+    }
+
     params.publicKey.challenge = base64ToArrayBuffer(params.publicKey.challenge);
+    Object.assign(params, credentialOptions);
 
     let credFinished;
     try {
         credFinished = await navigator.credentials.get(params);
-        if (!credFinished) {
-            showWebAuthnLoginError('User cancelled login or Passkeys not available');
-            resetLoginButton();
-            return;
-        }
     } catch (e) {
         console.log(e);
-        showWebAuthnLoginError('User cancelled login or Passkeys not available')
-        resetLoginButton();
-        return;
+    }
+    if (!credFinished) {
+        return 'User cancelled login or Passkeys not available';
     }
 
 
@@ -160,22 +192,24 @@ async function handleDiscoverLogin() {
         type: credFinished.type
     }
 
-    const loginResponse = await fetch("/webauthn/finishdiscover", {
-        method:"POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-    });
+    let respJSON;
+    try {
+        const loginResponse = await fetch("/webauthn/finishdiscover", {
+            method:"POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-    const respJSON = await loginResponse.json();
-    if (respJSON.failed) {
-        showWebAuthnLoginError(respJSON.message);
-        resetLoginButton();
-        return;
+        respJSON = await loginResponse.json();
+        if (respJSON.failed) {
+            return respJSON.message;
+        }
+    } catch (e) {
+        console.log(e);
+        return 'Could not handle login finish';
     }
-
-    console.log(respJSON);
 
     let nextPage = document.getElementById('passkey-login-button').dataset.redirectUri || location.origin;
     if (respJSON.admin_messages) {
@@ -183,6 +217,7 @@ async function handleDiscoverLogin() {
     }
 
     window.location.href = nextPage;
+    return null;
 }
 
 function patchBase64(input) {
