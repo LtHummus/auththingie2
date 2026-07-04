@@ -153,12 +153,17 @@ async function doDiscoverLogin(credentialOptions) {
     let params;
     try {
         const response = await fetch("/webauthn/discover", {
-            method: "POST"
+            method: "POST",
+            signal: credentialOptions.signal
         })
         params = await response.json();
     } catch (e) {
         console.log(e);
         return 'Could not get WebAuthn challenge';
+    }
+
+    if (credentialOptions.signal?.aborted) {
+        return null;
     }
 
     if (params.failed) {
