@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -36,11 +37,11 @@ func (rr *rawRule) ToRule() (*Rule, error) {
 	}
 
 	if rr.ProtocolPattern != nil {
-		ret.ProtocolPattern = rr.ProtocolPattern
+		ret.ProtocolPattern = new(strings.ToLower(*rr.ProtocolPattern))
 	}
 
 	if rr.HostPattern != nil {
-		ret.HostPattern = rr.HostPattern
+		ret.HostPattern = new(strings.ToLower(*rr.HostPattern))
 	}
 
 	if rr.PathPattern != nil {

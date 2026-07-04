@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -18,15 +19,11 @@ import (
 // fakeArgonHash is a hash of an arbitrary string that we can check against later when logging in with a user that does
 // not exist. We want a valid argon hash to check against so we don't leak user existence via timing. We generate one
 // here to use because we want to generate one that uses the configured argon parameters
-var fakeArgonHash string
+var (
+	fakeArgonHash string
 
-func init() {
-	var err error
-	fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password", viper.GetViper())
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not generate fake hash -- is your argon configuration ok?")
-	}
-}
+	argonGenerate sync.Once
+)
 
 type ValidatorImpl struct {
 	db  db.DB
@@ -35,6 +32,15 @@ type ValidatorImpl struct {
 }
 
 func NewValidator(db db.DB, ll loginlimit.LoginLimiter, cfg *viper.Viper) *ValidatorImpl {
+	// we have to generate the fake argon hash here because we have to wait until after viper has been initialized
+	argonGenerate.Do(func() {
+		var err error
+		fakeArgonHash, err = argon.GenerateFromPassword("hello world this is my fake password", cfg)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not generate fake hash -- is your argon configuration ok?")
+		}
+	})
+
 	return &ValidatorImpl{
 		db:  db,
 		ll:  ll,

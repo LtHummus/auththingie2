@@ -41,8 +41,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
-		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />`)
 		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
 
@@ -58,8 +58,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
-		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />`)
 		assert.Contains(t, w.Body.String(), `You are not logged in. Please log in`)
 		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
@@ -76,8 +76,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
-		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />`)
 		assert.NotContains(t, w.Body.String(), `111111`)
 		assert.Contains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
@@ -96,8 +96,8 @@ func TestEnv_HandleLoginPage(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" />`)
-		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password"/>`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />`)
+		assert.Contains(t, w.Body.String(), `<input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />`)
 		assert.NotContains(t, w.Body.String(), `id="passkey-login-button"`)
 	})
 

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -32,11 +33,14 @@ const (
 )
 
 func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
+	// one little note -- we get the source IP from the X-Forwarded-For header naively here. This is ok because the
+	// forward auth request is a separate, constructed one from Traefik that we can trust and it is not a proxied request
+	// we have to view with suspicion
 	return rules.RequestInfo{
 		Method:     r.Header.Get(httpMethodHeader),
-		Protocol:   r.Header.Get(protocolHeader),
-		Host:       r.Header.Get(hostHeader),
-		RequestURI: r.Header.Get(requestURIHeader),
+		Protocol:   strings.ToLower(r.Header.Get(protocolHeader)),
+		Host:       rules.NormalizeHost(r.Header.Get(hostHeader)),
+		RequestURI: rules.NormalizeURI(r.Header.Get(requestURIHeader)),
 		SourceIP:   net.ParseIP(r.Header.Get(sourceIPAddressHeader)),
 	}
 }
