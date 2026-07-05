@@ -36,12 +36,16 @@ func pullInfoFromRequest(r *http.Request) rules.RequestInfo {
 	// one little note -- we get the source IP from the X-Forwarded-For header naively here. This is ok because the
 	// forward auth request is a separate, constructed one from Traefik that we can trust and it is not a proxied request
 	// we have to view with suspicion
+
+	path, query := rules.NormalizeURI(r.Header.Get(requestURIHeader))
+
 	return rules.RequestInfo{
-		Method:     r.Header.Get(httpMethodHeader),
-		Protocol:   strings.ToLower(r.Header.Get(protocolHeader)),
-		Host:       rules.NormalizeHost(r.Header.Get(hostHeader)),
-		RequestURI: rules.NormalizeURI(r.Header.Get(requestURIHeader)),
-		SourceIP:   net.ParseIP(r.Header.Get(sourceIPAddressHeader)),
+		Method:      r.Header.Get(httpMethodHeader),
+		Protocol:    strings.ToLower(r.Header.Get(protocolHeader)),
+		Host:        rules.NormalizeHost(r.Header.Get(hostHeader)),
+		RequestURI:  path,
+		QueryString: query,
+		SourceIP:    net.ParseIP(r.Header.Get(sourceIPAddressHeader)),
 	}
 }
 

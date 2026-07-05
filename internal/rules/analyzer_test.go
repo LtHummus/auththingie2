@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const sampleRules = `
@@ -40,23 +41,29 @@ rules:
       host_pattern: test.example.com
       path_pattern: /
       public: true
+    - name: any JS
+      host_pattern: js.example.com
+      path_pattern: '*.js'
+      public: true
+
 `
 
 func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
 		v := viper.New()
 		v.SetConfigType("yaml")
-		_ = v.ReadConfig(strings.NewReader(sampleRules))
+		err := v.ReadConfig(strings.NewReader(sampleRules))
+		require.NoError(t, err)
 
 		a := ViperConfigAnalyzer{
 			cfg: v,
 		}
 		assert.Empty(t, a.rules)
 
-		err := a.UpdateFromConfigFile()
-		assert.NoError(t, err)
+		err = a.UpdateFromConfigFile()
+		require.NoError(t, err)
 
-		assert.Len(t, a.rules, 6)
+		assert.Len(t, a.rules, 7)
 
 		assert.Equal(t, "foo role", a.rules[0].Name)
 
@@ -92,15 +99,16 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		v := viper.New()
 
 		v.SetConfigType("yaml")
-		_ = v.ReadConfig(strings.NewReader(sampleRules))
+		err := v.ReadConfig(strings.NewReader(sampleRules))
+		require.NoError(t, err)
 
 		a := ViperConfigAnalyzer{
 			cfg: v,
 		}
 		assert.Empty(t, a.rules)
 
-		err := a.UpdateFromConfigFile()
-		assert.NoError(t, err)
+		err = a.UpdateFromConfigFile()
+		require.NoError(t, err)
 
 		r := a.MatchesRule(&RequestInfo{
 			Method:     "GET",
@@ -131,6 +139,40 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 			Host:       "aaaaa.example.com",
 			RequestURI: "/css/test.css",
 			SourceIP:   net.ParseIP("10.0.0.1"),
+		})
+		assert.Nil(t, r)
+	})
+
+	t.Run("do not match on query strings", func(t *testing.T) {
+		v := viper.New()
+
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(sampleRules))
+
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
+		assert.Empty(t, a.rules)
+
+		err := a.UpdateFromConfigFile()
+		require.NoError(t, err)
+
+		r := a.MatchesRule(&RequestInfo{
+			Method:     "GET",
+			Protocol:   "http",
+			Host:       "js.example.com",
+			RequestURI: "/js/test.js",
+			SourceIP:   net.ParseIP("10.0.0.1"),
+		})
+		assert.NotNil(t, r)
+
+		r = a.MatchesRule(&RequestInfo{
+			Method:      "GET",
+			Protocol:    "http",
+			Host:        "js.example.com",
+			RequestURI:  "/admin/admin.html",
+			QueryString: "foo=something.js",
+			SourceIP:    net.ParseIP("10.0.0.1"),
 		})
 		assert.Nil(t, r)
 	})

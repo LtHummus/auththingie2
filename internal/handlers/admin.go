@@ -69,12 +69,15 @@ func (e *Env) HandleTestRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	path, query := rules.NormalizeURI(parsedURL.EscapedPath())
+
 	ri := &rules.RequestInfo{
-		Method:     http.MethodGet,
-		Protocol:   parsedURL.Scheme,
-		Host:       rules.NormalizeHost(parsedURL.Host),
-		RequestURI: rules.NormalizeURI(parsedURL.EscapedPath()),
-		SourceIP:   source,
+		Method:      http.MethodGet,
+		Protocol:    parsedURL.Scheme,
+		Host:        rules.NormalizeHost(parsedURL.Host),
+		RequestURI:  path,
+		QueryString: query,
+		SourceIP:    source,
 	}
 
 	rule := e.Analyzer.MatchesRule(ri)
