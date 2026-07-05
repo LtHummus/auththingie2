@@ -30,13 +30,28 @@ func TestRequestInfo_Valid(t *testing.T) {
 }
 
 func TestRequestInfo_GetURL(t *testing.T) {
-	ri := &RequestInfo{
-		Method:     http.MethodGet,
-		Protocol:   "https",
-		Host:       "example.com",
-		RequestURI: "/foo",
-		SourceIP:   net.ParseIP("127.0.0.1"),
-	}
+	t.Run("no query string", func(t *testing.T) {
+		ri := &RequestInfo{
+			Method:     http.MethodGet,
+			Protocol:   "https",
+			Host:       "example.com",
+			RequestURI: "/foo",
+			SourceIP:   net.ParseIP("127.0.0.1"),
+		}
 
-	assert.Equal(t, "https://example.com/foo", ri.GetURL())
+		assert.Equal(t, "https://example.com/foo", ri.GetURL())
+	})
+
+	t.Run("with query string", func(t *testing.T) {
+		ri := &RequestInfo{
+			Method:      http.MethodGet,
+			Protocol:    "https",
+			Host:        "example.com",
+			RequestURI:  "/foo",
+			QueryString: "baz=a&quix=b",
+			SourceIP:    net.ParseIP("127.0.0.1"),
+		}
+
+		assert.Equal(t, "https://example.com/foo?baz=a&quix=b", ri.GetURL())
+	})
 }

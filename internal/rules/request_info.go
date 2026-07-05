@@ -6,11 +6,12 @@ import (
 )
 
 type RequestInfo struct {
-	Method     string
-	Protocol   string
-	Host       string
-	RequestURI string
-	SourceIP   net.IP
+	Method      string
+	Protocol    string
+	Host        string
+	RequestURI  string
+	QueryString string
+	SourceIP    net.IP
 }
 
 func (ri *RequestInfo) Valid() bool {
@@ -19,9 +20,11 @@ func (ri *RequestInfo) Valid() bool {
 
 func (ri *RequestInfo) GetURL() string {
 	dest := url.URL{
-		Scheme: ri.Protocol,
-		Host:   ri.Host,
-		Path:   ri.RequestURI,
+		Scheme:   ri.Protocol,
+		Host:     ri.Host,
+		Path:     ri.RequestURI,
+		RawQuery: ri.QueryString,
 	}
+
 	return dest.String()
 }

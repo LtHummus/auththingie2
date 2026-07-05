@@ -38,6 +38,7 @@ func TestNormalizeURI(t *testing.T) {
 		Name           string
 		Input          string
 		ExpectedOutput string
+		ExpectedQuery  string
 	}{
 		{
 			Name:           "basic test case (no query string)",
@@ -52,7 +53,8 @@ func TestNormalizeURI(t *testing.T) {
 		{
 			Name:           "basic test (with query string)",
 			Input:          "/admin/foo/bar?hello=world&something=another_thing",
-			ExpectedOutput: "/admin/foo/bar?hello=world&something=another_thing",
+			ExpectedOutput: "/admin/foo/bar",
+			ExpectedQuery:  "hello=world&something=another_thing",
 		},
 		{
 			Name:           "percent escape sequences",
@@ -72,7 +74,8 @@ func TestNormalizeURI(t *testing.T) {
 		{
 			Name:           "percent escape sequence with query (should not be escaped)",
 			Input:          "/%61dmin/foo?bar=ba%39",
-			ExpectedOutput: "/admin/foo?bar=ba%39",
+			ExpectedOutput: "/admin/foo",
+			ExpectedQuery:  "bar=ba%39",
 		},
 		{
 			Name:           "path collapse",
@@ -88,7 +91,9 @@ func TestNormalizeURI(t *testing.T) {
 
 	for _, curr := range tests {
 		t.Run(curr.Name, func(t *testing.T) {
-			assert.Equal(t, curr.ExpectedOutput, NormalizeURI(curr.Input))
+			path, query := NormalizeURI(curr.Input)
+			assert.Equal(t, curr.ExpectedOutput, path)
+			assert.Equal(t, curr.ExpectedQuery, query)
 		})
 	}
 }

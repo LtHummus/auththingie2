@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -104,6 +105,26 @@ func TestEnv_HandleAccountDisabled(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 		assert.Contains(t, w.Body.String(), "Your account has been disabled. You are currently logged in as <strong>sample-user</strong>")
 	})
+}
+
+func TestPullInfoFromRequest(t *testing.T) {
+	h := http.Header{}
+	h.Add(httpMethodHeader, "GET")
+	h.Add(protocolHeader, "https")
+	h.Add(hostHeader, "download.example.com")
+	h.Add(requestURIHeader, "/somepage.html?foo=bar")
+	h.Add(sourceIPHeader, "10.0.0.1")
+	r, _ := http.NewRequest(http.MethodGet, "/check", nil)
+	r.Header = h
+
+	ri := pullInfoFromRequest(r)
+
+	assert.Equal(t, "GET", ri.Method)
+	assert.Equal(t, "https", ri.Protocol)
+	assert.Equal(t, "download.example.com", ri.Host)
+	assert.Equal(t, "/somepage.html", ri.RequestURI)
+	assert.Equal(t, "foo=bar", ri.QueryString)
+	assert.Equal(t, net.ParseIP("10.0.0.1"), ri.SourceIP)
 }
 
 func TestEnv_HandleNotAllowed(t *testing.T) {

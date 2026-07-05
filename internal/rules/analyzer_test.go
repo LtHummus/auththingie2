@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"bytes"
 	"net"
 	"strings"
 	"testing"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 const sampleRules = `
@@ -40,23 +43,32 @@ rules:
       host_pattern: test.example.com
       path_pattern: /
       public: true
+    - name: any JS
+      host_pattern: js.example.com
+      path_pattern: '*.js'
+      public: true
+    - name: Pihole internal
+      source_address: '192.168.0.0/16'
+      host_pattern: pihole.example.com
+      public: true
 `
 
 func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 	t.Run("happy case", func(t *testing.T) {
 		v := viper.New()
 		v.SetConfigType("yaml")
-		_ = v.ReadConfig(strings.NewReader(sampleRules))
+		err := v.ReadConfig(strings.NewReader(sampleRules))
+		require.NoError(t, err)
 
 		a := ViperConfigAnalyzer{
 			cfg: v,
 		}
 		assert.Empty(t, a.rules)
 
-		err := a.UpdateFromConfigFile()
-		assert.NoError(t, err)
+		err = a.UpdateFromConfigFile()
+		require.NoError(t, err)
 
-		assert.Len(t, a.rules, 6)
+		assert.Len(t, a.rules, 8)
 
 		assert.Equal(t, "foo role", a.rules[0].Name)
 
@@ -92,15 +104,16 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		v := viper.New()
 
 		v.SetConfigType("yaml")
-		_ = v.ReadConfig(strings.NewReader(sampleRules))
+		err := v.ReadConfig(strings.NewReader(sampleRules))
+		require.NoError(t, err)
 
 		a := ViperConfigAnalyzer{
 			cfg: v,
 		}
 		assert.Empty(t, a.rules)
 
-		err := a.UpdateFromConfigFile()
-		assert.NoError(t, err)
+		err = a.UpdateFromConfigFile()
+		require.NoError(t, err)
 
 		r := a.MatchesRule(&RequestInfo{
 			Method:     "GET",
@@ -134,4 +147,79 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		})
 		assert.Nil(t, r)
 	})
+
+	t.Run("do not match on query strings", func(t *testing.T) {
+		v := viper.New()
+
+		v.SetConfigType("yaml")
+		_ = v.ReadConfig(strings.NewReader(sampleRules))
+
+		a := ViperConfigAnalyzer{
+			cfg: v,
+		}
+		assert.Empty(t, a.rules)
+
+		err := a.UpdateFromConfigFile()
+		require.NoError(t, err)
+
+		r := a.MatchesRule(&RequestInfo{
+			Method:     "GET",
+			Protocol:   "http",
+			Host:       "js.example.com",
+			RequestURI: "/js/test.js",
+			SourceIP:   net.ParseIP("10.0.0.1"),
+		})
+		assert.NotNil(t, r)
+
+		r = a.MatchesRule(&RequestInfo{
+			Method:      "GET",
+			Protocol:    "http",
+			Host:        "js.example.com",
+			RequestURI:  "/admin/admin.html",
+			QueryString: "foo=something.js",
+			SourceIP:    net.ParseIP("10.0.0.1"),
+		})
+		assert.Nil(t, r)
+	})
+}
+
+func TestRuleRoundTrip(t *testing.T) {
+	_, sourceCIDR, err := net.ParseCIDR("10.0.0.0/8")
+	require.NoError(t, err)
+	r := &Rule{
+		Name:            "Some Test Rule",
+		SourceAddress:   sourceCIDR,
+		ProtocolPattern: new("https"),
+		HostPattern:     new("test.example.com"),
+		PathPattern:     new("/public/*"),
+		Timeout:         new(10 * time.Minute),
+		Public:          false,
+		PermittedRoles:  []string{"a", "b"},
+	}
+
+	parts := ruleConverter(r.toSerializableMap())
+
+	marshalledRule, err := yaml.Marshal(parts)
+	require.NoError(t, err)
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+	err = v.ReadConfig(bytes.NewReader(marshalledRule))
+	require.NoError(t, err)
+
+	var rr rawRule
+	err = v.Unmarshal(&rr)
+	require.NoError(t, err)
+
+	roundTrippedRule, err := rr.ToRule()
+	require.NoError(t, err)
+
+	assert.Equal(t, r.Name, roundTrippedRule.Name)
+	assert.Equal(t, r.SourceAddress, roundTrippedRule.SourceAddress)
+	assert.Equal(t, r.ProtocolPattern, roundTrippedRule.ProtocolPattern)
+	assert.Equal(t, r.HostPattern, roundTrippedRule.HostPattern)
+	assert.Equal(t, r.PathPattern, roundTrippedRule.PathPattern)
+	assert.Equal(t, r.Timeout, roundTrippedRule.Timeout)
+	assert.Equal(t, r.Public, roundTrippedRule.Public)
+	assert.Equal(t, r.PermittedRoles, roundTrippedRule.PermittedRoles)
 }
