@@ -3,8 +3,6 @@ package rules
 import (
 	"net"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type Rule struct {
@@ -16,49 +14,6 @@ type Rule struct {
 	Timeout         *time.Duration
 	Public          bool
 	PermittedRoles  []string
-}
-
-func nonDefaultString(x string) *string {
-	if x != "" {
-		return &x
-	}
-	return nil
-}
-
-func New(v *viper.Viper) (*Rule, error) {
-	name := v.GetString("name")
-	source := v.GetString("source_address")
-	protocol := v.GetString("protocol_pattern")
-	host := v.GetString("host_pattern")
-	path := v.GetString("path_pattern")
-	timeout := v.GetDuration("timeout")
-	public := v.GetBool("public")
-	permittedRoles := v.GetStringSlice("permitted_roles")
-
-	var addr *net.IPNet
-	if source != "" {
-		_, n, err := net.ParseCIDR(source)
-		if err != nil {
-			return nil, err
-		}
-		addr = n
-	}
-
-	trueTimeout := &timeout
-	if timeout == 0 {
-		trueTimeout = nil
-	}
-
-	return &Rule{
-		Name:            name,
-		SourceAddress:   addr,
-		ProtocolPattern: nonDefaultString(protocol),
-		HostPattern:     nonDefaultString(host),
-		PathPattern:     nonDefaultString(path),
-		Timeout:         trueTimeout,
-		Public:          public,
-		PermittedRoles:  permittedRoles,
-	}, nil
 }
 
 // internalMatch matches input against patterns such as `/api/*`
@@ -107,24 +62,6 @@ func (r *Rule) Matches(ri *RequestInfo) bool {
 	pathMatch := r.PathPattern == nil || internalMatch(*r.PathPattern, ri.RequestURI)
 
 	return sourceMatch && protocolMatch && hostMatch && pathMatch
-}
-
-//nolint:unused // maybe we'll use this someday :)
-func (r *Rule) toRawRule() rawRule {
-	rr := rawRule{}
-	rr.Name = r.Name
-	if r.SourceAddress != nil {
-		rr.SourceAddress = new(r.SourceAddress.String())
-	}
-
-	rr.ProtocolPattern = r.ProtocolPattern
-	rr.HostPattern = r.HostPattern
-	rr.PathPattern = r.PathPattern
-
-	rr.Public = r.Public
-	rr.PermittedRoles = r.PermittedRoles
-
-	return rr
 }
 
 func (r *Rule) toSerializableMap() map[string]interface{} {

@@ -47,7 +47,10 @@ rules:
       host_pattern: js.example.com
       path_pattern: '*.js'
       public: true
-
+    - name: Pihole internal
+      source_address: '192.168.0.0/16'
+      host_pattern: pihole.example.com
+      public: true
 `
 
 func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
@@ -65,7 +68,7 @@ func TestViperConfigAnalyzer_UpdateFromConfigFile(t *testing.T) {
 		err = a.UpdateFromConfigFile()
 		require.NoError(t, err)
 
-		assert.Len(t, a.rules, 7)
+		assert.Len(t, a.rules, 8)
 
 		assert.Equal(t, "foo role", a.rules[0].Name)
 
@@ -204,7 +207,11 @@ func TestRuleRoundTrip(t *testing.T) {
 	err = v.ReadConfig(bytes.NewReader(marshalledRule))
 	require.NoError(t, err)
 
-	roundTrippedRule, err := New(v)
+	var rr rawRule
+	err = v.Unmarshal(&rr)
+	require.NoError(t, err)
+
+	roundTrippedRule, err := rr.ToRule()
 	require.NoError(t, err)
 
 	assert.Equal(t, r.Name, roundTrippedRule.Name)
