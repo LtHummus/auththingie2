@@ -27,13 +27,13 @@ func nonDefaultString(x string) *string {
 
 func New(v *viper.Viper) (*Rule, error) {
 	name := v.GetString("name")
-	source := v.GetString("source")
+	source := v.GetString("source_address")
 	protocol := v.GetString("protocol_pattern")
 	host := v.GetString("host_pattern")
 	path := v.GetString("path_pattern")
 	timeout := v.GetDuration("timeout")
 	public := v.GetBool("public")
-	permittedRoles := v.GetStringSlice("roles")
+	permittedRoles := v.GetStringSlice("permitted_roles")
 
 	var addr *net.IPNet
 	if source != "" {

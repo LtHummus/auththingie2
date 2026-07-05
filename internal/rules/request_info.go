@@ -20,12 +20,11 @@ func (ri *RequestInfo) Valid() bool {
 
 func (ri *RequestInfo) GetURL() string {
 	dest := url.URL{
-		Scheme: ri.Protocol,
-		Host:   ri.Host,
-		Path:   ri.RequestURI,
+		Scheme:   ri.Protocol,
+		Host:     ri.Host,
+		Path:     ri.RequestURI,
+		RawQuery: ri.QueryString,
 	}
-	if ri.QueryString != "" {
-		dest.RawQuery = ri.QueryString
-	}
+
 	return dest.String()
 }

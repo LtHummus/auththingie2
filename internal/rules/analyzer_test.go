@@ -204,11 +204,7 @@ func TestRuleRoundTrip(t *testing.T) {
 	err = v.ReadConfig(bytes.NewReader(marshalledRule))
 	require.NoError(t, err)
 
-	var raw rawRule
-	err = v.Unmarshal(&raw)
-	require.NoError(t, err)
-
-	roundTrippedRule, err := raw.ToRule()
+	roundTrippedRule, err := New(v)
 	require.NoError(t, err)
 
 	assert.Equal(t, r.Name, roundTrippedRule.Name)

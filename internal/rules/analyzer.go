@@ -109,7 +109,6 @@ func (a *ViperConfigAnalyzer) UpdateFromConfigFile() error {
 	knownRoleSet := map[string]bool{}
 	var ruleNames []string
 
-	a.rules = nil
 	parsedRules := make([]Rule, 0, len(rules))
 	for _, curr := range rules {
 		r, err := curr.ToRule()
@@ -134,13 +133,9 @@ func (a *ViperConfigAnalyzer) UpdateFromConfigFile() error {
 		a.knownRoles = append(a.knownRoles, curr)
 	}
 
-	log.Info().Strs("loaded_rules", ruleNames).Strs("known_roles", a.knownRoles).Strs("errors", a.errors).Msg("loaded rules from files")
+	log.Info().Strs("loaded_rules", ruleNames).Strs("known_roles", a.knownRoles).Msg("loaded rules from files")
 
 	a.rules = parsedRules
-
-	if a.errors != nil {
-		return errors.New("there was an error parsing the rules")
-	}
 
 	a.lastUpdate = time.Now()
 	return nil

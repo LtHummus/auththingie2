@@ -50,13 +50,13 @@ func TestRule_New(t *testing.T) {
 	t.Run("fully defined rule", func(t *testing.T) {
 		v := viper.New()
 		v.Set("name", "test rule")
-		v.Set("source", "192.168.0.0/16")
+		v.Set("source_address", "192.168.0.0/16")
 		v.Set("protocol_pattern", "https")
 		v.Set("host_pattern", "example.com")
 		v.Set("path_pattern", "/foo")
 		v.Set("timeout", "5m")
 		v.Set("public", false)
-		v.Set("roles", []string{"a", "b"})
+		v.Set("permitted_roles", []string{"a", "b"})
 
 		r, err := New(v)
 		require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestRule_New(t *testing.T) {
 	t.Run("error on invalid CIDR", func(t *testing.T) {
 		v := viper.New()
 		v.Set("name", "test rule")
-		v.Set("source", "aaaaaaaaa")
+		v.Set("source_address", "aaaaaaaaa")
 		v.Set("host_pattern", "example.com")
 		v.Set("path_pattern", "/foo")
 
@@ -267,7 +267,7 @@ func TestSerializationFieldsAccountedFor(t *testing.T) {
 		}
 
 		key, _, _ := strings.Cut(tag, ",") // omit ... uh ... ,omitempty
-		if !assert.NotEmptyf(t, tag, "field %s has empty mapstructure key", field.Name) {
+		if !assert.NotEmptyf(t, key, "field %s has empty mapstructure key", field.Name) {
 			continue
 		}
 
