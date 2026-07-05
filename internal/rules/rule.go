@@ -67,26 +67,35 @@ func New(v *viper.Viper) (*Rule, error) {
 // using the library `doublestar` could work here, but would break configs since `*` won't match across separators, but
 // ** will
 func internalMatch(pattern string, candidate string) bool {
-	for len(pattern) > 0 {
-		switch pattern[0] {
-		case '?':
-			// make sure we have at least one character we can consume
-			if len(candidate) == 0 {
-				return false
-			}
-		case '*':
-			return internalMatch(pattern[1:], candidate) || (len(candidate) > 0 && internalMatch(pattern, candidate[1:]))
-		default:
-			if len(candidate) == 0 || candidate[0] != pattern[0] {
-				return false
-			}
-		}
+	p := 0
+	c := 0
 
-		candidate = candidate[1:]
-		pattern = pattern[1:]
+	lastStar := -1
+	starMatches := 0
+
+	for c < len(candidate) {
+		if p < len(pattern) && pattern[p] == '*' {
+			lastStar = p
+			starMatches = c
+			p++
+		} else if p < len(pattern) && (pattern[p] == '?' || pattern[p] == candidate[c]) {
+			// match single character (either literal or ?)
+			p++
+			c++
+		} else if lastStar != -1 {
+			starMatches++
+			p = lastStar + 1
+			c = starMatches
+		} else {
+			return false
+		}
 	}
 
-	return len(candidate) == 0 && len(pattern) == 0
+	for p < len(pattern) && pattern[p] == '*' {
+		p++
+	}
+
+	return p == len(pattern)
 }
 
 func (r *Rule) Matches(ri *RequestInfo) bool {

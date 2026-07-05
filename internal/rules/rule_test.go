@@ -3,6 +3,7 @@ package rules
 import (
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,25 @@ func TestInternalMatch(t *testing.T) {
 	assert.True(t, internalMatch("a??", "abc"))
 
 	assert.False(t, internalMatch("a??", "ab"))
+
+	assert.True(t, internalMatch("/api/*/users", "/api/v2/users"))
+	assert.True(t, internalMatch("/api/*", "/api/v2/users"))
+	assert.True(t, internalMatch("/static/*/*.js", "/static/vendor/js/script.js"))
+
+	assert.False(t, internalMatch("/admin/*", "/public/index.html"))
+	assert.False(t, internalMatch("/api/v1/*", "/api/v2/ping"))
+
+	assert.True(t, internalMatch("", ""))
+	assert.True(t, internalMatch("*", ""))
+	assert.True(t, internalMatch("*", strings.Repeat("a", 50)))
+	assert.True(t, internalMatch(strings.Repeat("?", 50), strings.Repeat("a", 50)))
+	assert.True(t, internalMatch(strings.Repeat("*", 50), strings.Repeat("a", 50)))
+	assert.True(t, internalMatch(strings.Repeat("*", 49), strings.Repeat("a", 50)))
+
+	assert.True(t, internalMatch("*a*a*a*a*a*a*a*a*a*", strings.Repeat("a", 50)))
+	assert.False(t, internalMatch("*a*a*a*a*a*a*a*a*a*b", strings.Repeat("a", 50)))
+	assert.True(t, internalMatch(strings.Repeat("*a", 30), strings.Repeat("a", 50)))
+
 }
 
 func TestRule_New(t *testing.T) {
