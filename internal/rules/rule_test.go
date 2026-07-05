@@ -3,6 +3,7 @@ package rules
 import (
 	"net"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -222,7 +223,7 @@ func TestRule_toSerializableMap(t *testing.T) {
 		assert.Equal(t, "https", rr["protocol_pattern"])
 		assert.Equal(t, "example.com", rr["host_pattern"])
 		assert.Equal(t, "/foo", rr["path_pattern"])
-		assert.Equal(t, 5*time.Second, rr["timeout"])
+		assert.Equal(t, "5s", rr["timeout"])
 	})
 
 	t.Run("some things left undefined", func(t *testing.T) {
@@ -242,4 +243,35 @@ func TestRule_toSerializableMap(t *testing.T) {
 		assert.Nil(t, rr["path_pattern"])
 		assert.Nil(t, rr["timeout"])
 	})
+}
+
+func fieldOrderSet() map[string]struct{} {
+	m := make(map[string]struct{})
+	for _, curr := range ruleFieldOrder {
+		m[curr] = struct{}{}
+	}
+
+	return m
+}
+
+func TestSerializationFieldsAccountedFor(t *testing.T) {
+	fields := fieldOrderSet()
+
+	rt := reflect.TypeFor[rawRule]()
+	for i := range rt.NumField() {
+		field := rt.Field(i)
+
+		tag := field.Tag.Get("mapstructure")
+		if !assert.NotEmptyf(t, tag, "field %s has no mapstructure tag", field.Name) {
+			continue
+		}
+
+		key, _, _ := strings.Cut(tag, ",") // omit ... uh ... ,omitempty
+		if !assert.NotEmptyf(t, tag, "field %s has empty mapstructure key", field.Name) {
+			continue
+		}
+
+		_, fieldExists := fields[key]
+		assert.Truef(t, fieldExists, "rawRule field %s (key %q) is missing from ruleFieldOrder", field.Name, key)
+	}
 }

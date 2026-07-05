@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"bytes"
 	"net"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 const sampleRules = `
@@ -176,4 +178,45 @@ func TestViperConfigAnalyzer_MatchesRule(t *testing.T) {
 		})
 		assert.Nil(t, r)
 	})
+}
+
+func TestRuleRoundTrip(t *testing.T) {
+	_, sourceCIDR, err := net.ParseCIDR("10.0.0.0/8")
+	require.NoError(t, err)
+	r := &Rule{
+		Name:            "Some Test Rule",
+		SourceAddress:   sourceCIDR,
+		ProtocolPattern: new("https"),
+		HostPattern:     new("test.example.com"),
+		PathPattern:     new("/public/*"),
+		Timeout:         new(10 * time.Minute),
+		Public:          false,
+		PermittedRoles:  []string{"a", "b"},
+	}
+
+	parts := ruleConverter(r.toSerializableMap())
+
+	marshalledRule, err := yaml.Marshal(parts)
+	require.NoError(t, err)
+
+	v := viper.New()
+	v.SetConfigType("yaml")
+	err = v.ReadConfig(bytes.NewReader(marshalledRule))
+	require.NoError(t, err)
+
+	var raw rawRule
+	err = v.Unmarshal(&raw)
+	require.NoError(t, err)
+
+	roundTrippedRule, err := raw.ToRule()
+	require.NoError(t, err)
+
+	assert.Equal(t, r.Name, roundTrippedRule.Name)
+	assert.Equal(t, r.SourceAddress, roundTrippedRule.SourceAddress)
+	assert.Equal(t, r.ProtocolPattern, roundTrippedRule.ProtocolPattern)
+	assert.Equal(t, r.HostPattern, roundTrippedRule.HostPattern)
+	assert.Equal(t, r.PathPattern, roundTrippedRule.PathPattern)
+	assert.Equal(t, r.Timeout, roundTrippedRule.Timeout)
+	assert.Equal(t, r.Public, roundTrippedRule.Public)
+	assert.Equal(t, r.PermittedRoles, roundTrippedRule.PermittedRoles)
 }

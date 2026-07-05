@@ -151,7 +151,7 @@ func (r *Rule) toSerializableMap() map[string]interface{} {
 	}
 
 	if r.Timeout != nil {
-		m["timeout"] = *r.Timeout
+		m["timeout"] = (*r.Timeout).String()
 	}
 
 	return m

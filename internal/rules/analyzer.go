@@ -29,7 +29,7 @@ type Analyzer interface {
 
 var (
 	ruleFieldOrder = []string{"name",
-		"source",
+		"source_address",
 		"protocol_pattern",
 		"host_pattern",
 		"path_pattern",
@@ -110,18 +110,23 @@ func (a *ViperConfigAnalyzer) UpdateFromConfigFile() error {
 	var ruleNames []string
 
 	a.rules = nil
-	parsedRules := make([]Rule, len(rules))
-	for i, curr := range rules {
+	parsedRules := make([]Rule, 0, len(rules))
+	for _, curr := range rules {
 		r, err := curr.ToRule()
 		if err != nil {
 			a.errors = append(a.errors, fmt.Sprintf("could not parse rule: %s", err.Error()))
 		} else {
-			parsedRules[i] = *r
+			parsedRules = append(parsedRules, *r)
 			ruleNames = append(ruleNames, r.Name)
-			for _, curr := range r.PermittedRoles {
-				knownRoleSet[curr] = true
+			for _, role := range r.PermittedRoles {
+				knownRoleSet[role] = true
 			}
 		}
+	}
+
+	if len(a.errors) > 0 {
+		log.Error().Strs("parse_errors", a.errors).Msg("rule parse errors; not updating rules")
+		return errors.New("could not parse rules")
 	}
 
 	a.knownRoles = make([]string, 0)
