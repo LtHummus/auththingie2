@@ -16,43 +16,6 @@ type Rule struct {
 	PermittedRoles  []string
 }
 
-// internalMatch matches input against patterns such as `/api/*`
-// a * in a pattern matches many characters. A ? matches a single character. We can not use path.Match here because
-// we want * to match across separators (e.g. `/api/*` would match `/api/foo` but not `/api/v1/foo). Note for future self
-// using the library `doublestar` could work here, but would break configs since `*` won't match across separators, but
-// ** will
-func internalMatch(pattern string, candidate string) bool {
-	p := 0
-	c := 0
-
-	lastStar := -1
-	starMatches := 0
-
-	for c < len(candidate) {
-		if p < len(pattern) && pattern[p] == '*' {
-			lastStar = p
-			starMatches = c
-			p++
-		} else if p < len(pattern) && (pattern[p] == '?' || pattern[p] == candidate[c]) {
-			// match single character (either literal or ?)
-			p++
-			c++
-		} else if lastStar != -1 {
-			starMatches++
-			p = lastStar + 1
-			c = starMatches
-		} else {
-			return false
-		}
-	}
-
-	for p < len(pattern) && pattern[p] == '*' {
-		p++
-	}
-
-	return p == len(pattern)
-}
-
 func (r *Rule) Matches(ri *RequestInfo) bool {
 	// OPTIMIZE: we can return early if a match does not happen for a given rule
 
