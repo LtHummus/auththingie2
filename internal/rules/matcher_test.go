@@ -2,8 +2,10 @@ package rules
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -118,4 +120,53 @@ func BenchmarkInternalMatch(b *testing.B) {
 			}
 		})
 	}
+}
+
+func FuzzInternalMatch(f *testing.F) {
+	f.Add("", "")
+	f.Add("", "x")
+	f.Add("?", "ü")
+	f.Add("/api/*", "/api/v2/users")
+	f.Add("a*b*c", "abc")
+	f.Add("caf?", "café")
+	f.Add("Here is some food: *", "Here is some food: 🍔🌮🥓")
+	f.Add("?*", "")
+	f.Add("*.example.com", "test.example.com")
+	f.Add("/api/*", "/api/add_something_new")
+	f.Add(strings.Repeat("*a", 30), strings.Repeat("a", 50)+"b")
+	f.Fuzz(func(t *testing.T, pattern string, candidate string) {
+		matched := internalMatch(pattern, candidate)
+
+		if isASCII(pattern) && isASCII(candidate) {
+			if u := internalMatchUnicode(pattern, candidate); u != matched {
+				t.Errorf("unicode vs ascii implementations differ (%q vs %q): ascii=%v, unicode=%v", pattern, candidate, matched, u)
+			}
+		}
+
+		if utf8.ValidString(pattern) && utf8.ValidString(candidate) {
+			if oracle := buildRegexOracle(pattern).MatchString(candidate); oracle != matched {
+				t.Errorf("implementations disagree with regex oracle on %q vs %q: got %v, wanted %v", pattern, candidate, matched, oracle)
+			}
+		}
+
+		if !internalMatch(candidate, candidate) {
+			t.Errorf("%q does not match itself as a pattern", candidate)
+		}
+	})
+}
+
+func buildRegexOracle(pattern string) *regexp.Regexp {
+	var sb strings.Builder
+	sb.WriteString(`(?s)\A`)
+	for _, r := range pattern {
+		if r == '*' {
+			sb.WriteString(`.*`)
+		} else if r == '?' {
+			sb.WriteString(`.`)
+		} else {
+			sb.WriteString(regexp.QuoteMeta(string(r)))
+		}
+	}
+	sb.WriteString(`\z`)
+	return regexp.MustCompile(sb.String())
 }

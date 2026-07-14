@@ -1,5 +1,9 @@
 .PHONY: docker
 
+fuzz:
+	go test -fuzz FuzzInternalMatch -fuzzminimizetime 1x -fuzztime 15s ./internal/rules
+	go test -fuzz FuzzUser_SetPassword -fuzzminimizetime 1x -fuzztime 15s ./internal/user
+
 docker:
 	docker build -t lthummus/auththingie2 .
 
