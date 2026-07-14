@@ -52,27 +52,25 @@ func NewSQLiteFromConfig(v *viper.Viper) (*SQLite, error) {
 		log.Warn().Str("raw_db_file", file).Err(err).Msg("could not get db file absolute path")
 	}
 
+	dsn := fmt.Sprintf("%s?_foreign_keys=on", file)
+
 	log.Info().Str("raw_db_file", file).Str("abs_db_file", absDBFile).Msg("starting database initialization")
 
-	database, err := sql.Open("sqlite3", file)
+	database, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not open db: %w", err)
 	}
 
 	err = migrateDatabase(database)
 	if err != nil {
+		database.Close()
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not check configuration state: %w", err)
 	}
 
-	// reopen database now that migration is complete
-	database, err = sql.Open("sqlite3", file)
+	// reopen database now that migration is complete (`migrateDatabase` will close)
+	database, err = sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not open db: %w", err)
-	}
-
-	_, err = database.Exec("PRAGMA foreign_keys = ON")
-	if err != nil {
-		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not enable foreign keys: %w", err)
 	}
 
 	log.Info().Str("raw_db_file", file).Str("abs_db_file", absDBFile).Msg("finished database initialization")
