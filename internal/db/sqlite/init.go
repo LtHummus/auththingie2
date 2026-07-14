@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -41,7 +42,7 @@ func migrateDatabase(db *sql.DB) error {
 	m.Log = &migrationLogger{}
 
 	if err = m.Migrate(latestVersion); err != nil {
-		if err == migrate.ErrNoChange {
+		if errors.Is(err, migrate.ErrNoChange) {
 			log.Info().Int("latest_version", latestVersion).Msg("database is at latest version")
 			return nil
 		}
