@@ -63,7 +63,10 @@ func NewSQLiteFromConfig(v *viper.Viper) (*SQLite, error) {
 
 	err = migrateDatabase(database)
 	if err != nil {
-		database.Close()
+		err2 := database.Close()
+		if err2 != nil {
+			log.Warn().Err(err).Msg("error closing database")
+		}
 		return nil, fmt.Errorf("db: NewSQLiteFromConfig: could not check configuration state: %w", err)
 	}
 
