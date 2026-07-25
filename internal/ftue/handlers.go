@@ -1,7 +1,9 @@
 package ftue
 
 import (
+	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
+	"github.com/lthummus/auththingie2/internal/ftue/session"
 	"github.com/lthummus/auththingie2/internal/importer"
 	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
@@ -23,6 +26,8 @@ import (
 
 const (
 	MaxBodySize = 10 * 1024 * 1024 // 10 MB
+
+	SetupCookieName = "auththingie2-setup-code"
 )
 
 var importCache *ttlcache.Cache[string, *importer.Results]
@@ -33,6 +38,10 @@ var initCache = sync.OnceFunc(func() {
 })
 
 type ftueEnv struct {
+	setupCode    string
+	startingStep Step
+	protector    *session.Middleware
+
 	database db.DB
 	analyzer rules.Analyzer
 	config   *viper.Viper
@@ -48,18 +57,23 @@ type ftueImportConfirmParams struct {
 	ImportKey string
 }
 
+func (fe *ftueEnv) validateSetupCodeCookie(r *http.Request) error {
+	setupCodeCookies := r.CookiesNamed(SetupCookieName)
+	if len(setupCodeCookies) != 1 {
+		return fmt.Errorf("no valid setup cookie found")
+	}
+
+	if subtle.ConstantTimeCompare([]byte(setupCodeCookies[0].Value), []byte(fe.setupCode)) != 1 {
+		return fmt.Errorf("invalid setup code found")
+	}
+
+	return nil
+}
+
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if step == StepConfigExists {
-			http.Redirect(w, r, "/ftue/step1", http.StatusFound)
-			return
-		}
-		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
-	})
-
-	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /auth", func(w http.ResponseWriter, r *http.Request) {
 		requestHost := r.Header.Get("X-Forwarded-Host")
 		allowHost := os.Getenv("FTUE_ALLOW_HOST")
 
@@ -72,25 +86,37 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 		}
 	})
 
-	// TODO: remove CSRF exemption here
-	mux.HandleFunc("/ftue/path", HandlePathComplete)
-
-	mux.HandleFunc("GET /ftue/step0", fe.HandleFTUEStep0GET)
-	mux.HandleFunc("POST /ftue/step0", fe.HandleFTUEStep0POST)
-
-	mux.HandleFunc("GET /ftue/step1", fe.HandleFTUEStep1)
-
-	mux.HandleFunc("GET /ftue/scratch", fe.HandleFTUEScratchRenderPage)
-	mux.HandleFunc("POST /ftue/scratch", fe.HandleFTUEScratchRenderPOST)
-
-	mux.HandleFunc("GET /ftue/import", fe.HandleRenderImportPage)
-	mux.HandleFunc("POST /ftue/import", fe.HandlerImportPageUpload)
-	mux.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)
-
-	mux.HandleFunc("GET /ftue/restart", HandleRestartPage)
-	mux.HandleFunc("POST /ftue/restart", HandleRestartPost)
-
 	mux.Handle("/static/", render.StaticFSHandler())
+
+	mux.HandleFunc("GET /{$}", fe.HandleSetupCodeGET)
+	mux.HandleFunc("POST /{$}", fe.HandleSetupCodePOST)
+
+	mux.Handle("GET /begin", fe.protector.ProtectFunc(func(w http.ResponseWriter, r *http.Request) {
+		if step == StepConfigExists {
+			http.Redirect(w, r, "/ftue/step1", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
+	}))
+
+	// TODO: actually finish this experiment or ditch it
+	//// TODO: remove CSRF exemption here
+	//mux.HandleFunc("/ftue/path", HandlePathComplete)
+
+	mux.Handle("GET /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0GET))
+	mux.Handle("POST /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0POST))
+
+	mux.Handle("GET /ftue/step1", fe.protector.ProtectFunc(fe.HandleFTUEStep1))
+
+	mux.Handle("GET /ftue/scratch", fe.protector.ProtectFunc(fe.HandleFTUEScratchRenderPage))
+	mux.Handle("POST /ftue/scratch", fe.protector.ProtectFunc(fe.HandleFTUEScratchRenderPOST))
+
+	mux.Handle("GET /ftue/import", fe.protector.ProtectFunc(fe.HandleRenderImportPage))
+	mux.Handle("POST /ftue/import", fe.protector.ProtectFunc(fe.HandlerImportPageUpload))
+	mux.Handle("POST /ftue/import/confirm", fe.protector.ProtectFunc(fe.HandleImportConfirm))
+
+	mux.Handle("GET /ftue/restart", fe.protector.ProtectFunc(HandleRestartPage))
+	mux.Handle("POST /ftue/restart", fe.protector.ProtectFunc(HandleRestartPost))
 
 	cop := http.NewCrossOriginProtection()
 	cop.AddInsecureBypassPattern("/ftue/path")

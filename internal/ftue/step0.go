@@ -152,6 +152,7 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	fe.config.Set(config.ConfigKeyServerPort, port)
 	fe.config.Set(config.ConfigKeyServerSecretKey, base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
 	fe.config.Set(config.ConfigKeyServerAuthURL, authURL)
+	fe.config.Set(config.ConfigKeyRedirectsAllowedDomainsKey, []string{domain})
 	fe.config.Set(config.ConfigKeyServerDomain, domain)
 	err = fe.config.WriteConfig()
 	if err != nil {

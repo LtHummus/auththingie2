@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
+	"github.com/lthummus/auththingie2/internal/ftue/session"
 	"github.com/lthummus/auththingie2/internal/rules"
 )
 
@@ -24,9 +25,16 @@ const (
 )
 
 func RunFTUEServer(step Step) {
+	setupCode, err := session.GenerateSetupCode()
+	if err != nil {
+		log.Fatal().Err(err).Msg("could not generate setup code")
+	}
 
 	fe := &ftueEnv{
-		config: viper.GetViper(),
+		setupCode:    setupCode,
+		startingStep: step,
+		config:       viper.GetViper(),
+		protector:    session.NewMiddleware(setupCode),
 	}
 
 	if step == StepConfigExists {
@@ -65,6 +73,8 @@ func RunFTUEServer(step Step) {
 		}
 	}()
 
+	fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!! AUTHTHINGIE2 SETUP !!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!\nGo to the AuthThingie page (whereever it's hosted) and use the code %s for setup\n", setupCode)
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -76,7 +86,7 @@ func RunFTUEServer(step Step) {
 	defer cancel()
 
 	log.Info().Msg("shutting own server")
-	err := srv.Shutdown(ctx)
+	err = srv.Shutdown(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("error shutting down server")
 	}

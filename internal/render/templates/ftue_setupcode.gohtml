@@ -1,0 +1,42 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+
+{{define "content"}}
+    <div id="ftue-setup-container">
+        {{ if .Errors }}
+            <article>
+                <h3>Errors</h3>
+                <ul>
+                    {{ range .Errors }}
+                        <li>{{ . }}</li>
+                    {{ end }}
+                </ul>
+            </article>
+        {{ end }}
+        <article>
+            <h1>Welcome to AuthThingie 2 Setup</h1>
+            <p>
+                This workflow will help you configure your server. To get up and running, we need to set up some basic configuration options. I will try to import as much as I could from any config that existed, but in the case I didn't find anything, you'll need to put some values in.
+            </p>
+            <p>
+                And enjoy the process! You'll be up and running soon!
+            </p>
+            <p>
+                In order to protect your setup, you will need to enter the setup code to continue. You can find the setup code in the logs for the running application. It should be all numbers and capital letters. Enter it below to get started.
+            </p>
+            <div>
+                <form action="/" method="post">
+                    <div>
+                        <label for="ftue-setup-code">Setup Code</label>
+                        <input type="text" name="setup_code" id="ftue-setup-code" />
+                    </div>
+                    <div>
+                        <input type="submit" value="Start Setup" />
+                    </div>
+                </form>
+            </div>
+        </article>
+    </div>
+{{end}}
