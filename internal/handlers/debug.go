@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/lthummus/auththingie2/internal/config"
+	"github.com/lthummus/auththingie2/internal/ftue/iprange"
 	"github.com/lthummus/auththingie2/internal/middlewares/session"
 	"github.com/lthummus/auththingie2/internal/notices"
 	"github.com/lthummus/auththingie2/internal/render"
@@ -33,6 +35,7 @@ type debugPageInfo struct {
 	UserTemplate       template.HTML
 	SessionTemplate    template.HTML
 	TrustedProxies     template.HTML
+	DetectedInterfaces template.HTML
 }
 
 func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
@@ -140,17 +143,29 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		proxyTable.AppendRow(table.Row{curr.Source, curr.Description})
 	}
 
+	detectedInterfaces := table.NewWriter()
+	detectedInterfaces.AppendHeader(table.Row{"Name", "Network", "Local IP"})
+	ips, err := iprange.DetectInternalIPRange()
+	if err != nil {
+		log.Error().Err(err).Msg("could not detect interfaces")
+	} else {
+		for _, curr := range ips {
+			detectedInterfaces.AppendRow(table.Row{curr.InterfaceName, curr.Network.String(), curr.LocalIP.String()})
+		}
+	}
+
 	render.Render(w, "debug.gohtml", &debugPageInfo{
 		AdminNotices:       notices.GetMessages(),
-		DependencyTemplate: template.HTML(depTable.RenderHTML()),     // #nosec G203 -- table library handles escaping for us
-		VarsTemplate:       template.HTML(data.RenderHTML()),         // #nosec G203
-		BuildTemplate:      template.HTML(buildTable.RenderHTML()),   // #nosec G203
-		ConfigTemplate:     template.HTML(configTable.RenderHTML()),  // #nosec G203
-		EnvVarTemplate:     template.HTML(envTable.RenderHTML()),     // #nosec G203
-		RequestTemplate:    template.HTML(requestTable.RenderHTML()), // #nosec G203
-		UserTemplate:       template.HTML(userTable.RenderHTML()),    // #nosec G203
-		SessionTemplate:    template.HTML(sessionTable.RenderHTML()), // #nosec G203
-		TrustedProxies:     template.HTML(proxyTable.RenderHTML()),   // #nosec G203
+		DependencyTemplate: template.HTML(depTable.RenderHTML()),           // #nosec G203 -- table library handles escaping for us
+		VarsTemplate:       template.HTML(data.RenderHTML()),               // #nosec G203
+		BuildTemplate:      template.HTML(buildTable.RenderHTML()),         // #nosec G203
+		ConfigTemplate:     template.HTML(configTable.RenderHTML()),        // #nosec G203
+		EnvVarTemplate:     template.HTML(envTable.RenderHTML()),           // #nosec G203
+		RequestTemplate:    template.HTML(requestTable.RenderHTML()),       // #nosec G203
+		UserTemplate:       template.HTML(userTable.RenderHTML()),          // #nosec G203
+		SessionTemplate:    template.HTML(sessionTable.RenderHTML()),       // #nosec G203
+		TrustedProxies:     template.HTML(proxyTable.RenderHTML()),         // #nosec G203
+		DetectedInterfaces: template.HTML(detectedInterfaces.RenderHTML()), // #nosec G203
 	})
 
 }

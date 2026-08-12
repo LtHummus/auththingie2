@@ -19,13 +19,13 @@
                 </article>
             {{ end }}
             <form action="/ftue/step0" method="post">
-                <h4>General Configuration</h4>
+                <h3>General Configuration</h3>
                 <div>
                     <label for="port-field">Port to listen on:</label>
                     <input type="text" name="port" id="port-field" required aria-label="Server Port" value="{{ .Port }}" />
                 </div>
                 <div>
-                    <h5>Configuration Path</h5>
+                    <h4>Configuration Path</h4>
                     <p>
                         Here, we need to set the configuration file path. This will be the location that we store the config file and the database file. If you are running
                         in a docker container, I recommend picking <code>/config</code>. Whatever you pick, it is HIGHLY RECOMMENDED that it is a mounted volume so it will
@@ -75,6 +75,78 @@
                     <label for="auth-url-field">Auth Domain</label>
                     <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="off" />
                 </div>
+                <div>
+                    <h4>Trusted Proxy Configuration</h4>
+                    <p>
+                        For this part, we need to know where your reverse proxy lives so we know what systems to trust. This can be configured in one of two ways: Docker Tagging (recommended) or via IP address range. I've
+                        tried to do some detection in your environment.
+                    </p>
+                    <h5>Docker Container Trust</h5>
+                    <p>
+                        First up, I checked to see if there were any docker containers with the tag <code>auththingie2.trusted_proxy=true</code>. I did this by connecting to a Docker API at <code>{{ .DockerEndpoint }}</code>. If this
+                        is incorrect, you can customize it for set up by setting the environment variable <code>SETUP_DOCKER_ENDPOINT</code> to where I should look instead.
+                    </p>
+                    <div>
+                        {{ if .DockerDetectionError }}
+                            <p>
+                            Unfortunately, I was not able to connect to the Docker Daemon because of <code>{{ .DockerDetectionError }}</code>. You might see some interesting logs to help you diagnose. You can't use Docker container trust right now :(
+                            </p>
+                            <input type="hidden" name="docker_detected" value="false" />
+                        {{ else }}
+                            <input type="hidden" name="docker_endpoint" value="{{ .DockerEndpoint }}" />
+                            <input type="hidden" name="docker_detected" value="true" />
+                            <p>
+                            I was able to connect to the Docker Daemon! I looked for containers with the right tag and this is what I found:
+                            </p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Image</th>
+                                <th scope="col">Names</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ range .DetectedContainers }}
+                                <tr>
+                                    <td>{{ .ShortID }}</td>
+                                    <td>{{ .Image }}</td>
+                                    <td>{{ .AllNames }}</td>
+                                </tr>
+                            {{ end }}
+                        </tbody>
+                    </table>
+                <p>If this looks good to you, then you're golden! You don't have to worry about any of the IP-based trusting since we've got it from here.</p>
+                        {{ end }}
+                <h5>Network Based Trust</h5>
+                <p>If the Docker detection is not working for you, or you know what you're doing, you can trust an entire IP range. Be <strong>damn</strong> sure that you
+                are only trusting IPs in a private range that you control. Preferably as narrow as possible. I looked at the running network interfaces and I found the following. Please
+                check the ranges you wish to trust. If none of these work for you, you can add a custom one below as well. If you are using Docker Container labels, you likely will not
+                need to worry about this.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col"></th>
+                            <th scope="col">Interface Name</th>
+                            <th scope="col">Assigned IP</th>
+                            <th scope="col">IP Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .CandidateIPRanges}}
+                            <tr>
+                                <td><input type="checkbox" name="trusted_networks" value="{{ .Network }}" /> </td>
+                                <td>{{ .InterfaceName }}</td>
+                                <td>{{ .LocalIP }}</td>
+                                <td>{{ .Network }}</td>
+                            </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+                        <p>If none of these detected ranges work, you can put a custom one here (a single IP will work as well): <input type="text" name="custom_trusted_network" /> </p>
+
+                    </div>
+
                 <div>
                     <!-- TODO -->
                     <input type="submit" value="Continue..." />

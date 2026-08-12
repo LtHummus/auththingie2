@@ -9,12 +9,15 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
+	"github.com/lthummus/auththingie2/internal/ftue/docker"
+	"github.com/lthummus/auththingie2/internal/ftue/iprange"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 )
@@ -26,16 +29,20 @@ const (
 )
 
 type step0Params struct {
-	Port               int
-	ServerDomain       string
-	AuthURL            string
-	DefaultSlashConfig bool
-	DefaultPWD         bool
-	DefaultCustom      bool
-	PWD                string // #nosec G117, this is working directory, not password :)
-	CustomConfigPath   string
-	CustomDBPath       string
-	Errors             []string
+	Port                 int
+	ServerDomain         string
+	AuthURL              string
+	DefaultSlashConfig   bool
+	DefaultPWD           bool
+	DefaultCustom        bool
+	PWD                  string // #nosec G117, this is working directory, not password :)
+	CustomConfigPath     string
+	CustomDBPath         string
+	Errors               []string
+	DockerEndpoint       string
+	DetectedContainers   []docker.FoundContainer
+	DockerDetectionError error
+	CandidateIPRanges    []iprange.CandidateRange
 }
 
 func getCwd() string {
@@ -48,14 +55,31 @@ func getCwd() string {
 }
 
 func (fe *ftueEnv) HandleFTUEStep0GET(w http.ResponseWriter, r *http.Request) {
+	dockerEndpoint := docker.DefaultDockerEndpoint
+	if customEndpoint := os.Getenv("SETUP_DOCKER_ENDPOINT"); customEndpoint != "" {
+		dockerEndpoint = customEndpoint
+	}
+	detectedContainers, dockerErr := docker.DetectDocker(r.Context(), dockerEndpoint)
+	if dockerErr != nil {
+		log.Warn().Err(dockerErr).Msg("error attempting to detect docker containers")
+	}
+
+	ipNetworks, err := iprange.DetectInternalIPRange()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not detect a reasonable private IP range")
+	}
 
 	render.Render(w, "ftue_step0.gohtml", &step0Params{
-		ServerDomain:       GetRootDomain(r.URL),
-		AuthURL:            r.Host,
-		DefaultSlashConfig: config.IsDocker(),
-		DefaultPWD:         !config.IsDocker(),
-		PWD:                getCwd(),
-		Port:               DefaultPort,
+		ServerDomain:         GetRootDomain(r.URL),
+		AuthURL:              r.Host,
+		DefaultSlashConfig:   config.IsDocker(),
+		DefaultPWD:           !config.IsDocker(),
+		PWD:                  getCwd(),
+		Port:                 DefaultPort,
+		DockerEndpoint:       dockerEndpoint,
+		DetectedContainers:   detectedContainers,
+		DockerDetectionError: dockerErr,
+		CandidateIPRanges:    ipNetworks,
 	})
 }
 
@@ -71,6 +95,10 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	domain := r.FormValue("domain")
 	authURL := r.FormValue("auth_url")
 	pathPreset := r.FormValue("config_file_preset")
+	dockerDetected := r.FormValue("docker_detected") == "true"
+	dockerEndpoint := r.FormValue("docker_endpoint")
+	checkedNetworks := r.Form["trusted_networks"]
+	customTrustedNetwork := strings.TrimSpace(r.FormValue("custom_trusted_network"))
 
 	var errors []string
 
@@ -154,6 +182,26 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	fe.config.Set(config.ConfigKeyServerAuthURL, authURL)
 	fe.config.Set(config.ConfigKeyRedirectsAllowedDomainsKey, []string{domain})
 	fe.config.Set(config.ConfigKeyServerDomain, domain)
+
+	if dockerDetected {
+		fe.config.Set(config.ConfigKeyTrustedProxyDockerEnabled, true)
+		if dockerEndpoint != docker.DefaultDockerEndpoint {
+			fe.config.Set(config.ConfigKeyTrustedProxyDockerEndpoint, dockerEndpoint)
+		}
+	}
+
+	var allTrustedNetworks []string
+	if customTrustedNetwork != "" {
+		allTrustedNetworks = append(allTrustedNetworks, customTrustedNetwork)
+	}
+	if len(checkedNetworks) > 0 {
+		allTrustedNetworks = append(allTrustedNetworks, checkedNetworks...)
+	}
+
+	if len(allTrustedNetworks) > 0 {
+		fe.config.Set(config.ConfigKeyTrustedProxyNetwork, checkedNetworks)
+	}
+
 	err = fe.config.WriteConfig()
 	if err != nil {
 		log.Error().Err(err).Str("config_file_path", configFilePath).Msg("could not write config file")
