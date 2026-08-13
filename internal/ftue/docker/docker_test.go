@@ -40,11 +40,12 @@ func TestInternalDetectDocker(t *testing.T) {
 	t.Run("some error when listing", func(t *testing.T) {
 		mockDocker := mocks.NewMockFTUEDockerAPI(t)
 
-		mockDocker.On("ContainerList", mock.Anything, mock.Anything).Return(nil, errors.New("oh no"))
+		mockDocker.On("ContainerList", mock.Anything, mock.Anything).Return(nil, &ErrCouldNotList{Cause: errors.New("oh no")})
 
 		containers, err := internalDetectDocker(t.Context(), mockDocker)
 		assert.Nil(t, containers)
-		assert.ErrorIs(t, err, &ErrCouldNotList{})
+		assert.ErrorContains(t, err, "oh no")
+
 	})
 
 	t.Run("no containers found", func(t *testing.T) {

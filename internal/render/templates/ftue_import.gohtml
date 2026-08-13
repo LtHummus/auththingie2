@@ -3,37 +3,47 @@
 {{define "title"}}AuthThingie 2 Setup{{end}}
 
 {{define "content"}}
-    <div id="ftue-scratch">
+    <div id="ftue-import-container" class="ftue-page">
+        <hgroup>
+            <h1>Import from AuthThingie 1</h1>
+            <h2>Let's bring your old users and rules along for the ride</h2>
+        </hgroup>
+
+        <p>
+            This will import as much as we can from the AuthThingie 1 config file. You can either upload the config file yourself or you can
+            paste the context in the text area below.
+        </p>
+
         <article>
-            <h1>Welcome to AuthThingie 2 Setup</h1>
-            <p>
-                This will import as much as we can from the AuthThingie 1 config file. You can either upload the config file yourself or you can
-                paste the context in the text area below.
-            </p>
-            <div>
-                <form action="/ftue/import" method="post">
+            <header>
+                <strong>AuthThingie 1 Config File</strong>
+            </header>
 
-                    <div>
-                        <!-- TODO: reenable when you fix uploads
-                        <div>
-                            <input type="file" name="config_file" id="config-file-field" aria-label="Config File" placeholder="Config File" />
-                        </div>
-                        <div id="ftue-or">
-                            - or -
-                        </div>
-                        -->
-                        <div>
-                            <label>
-                                Config file contents:
-                                <textarea name="config_file_text"></textarea>
-                            </label>
-                        </div>
-                    </div>
+            <details>
+                <summary>Where do I find that file?</summary>
+                <p>
+                    Where's that config file you were using? The file is probably named something like
+                    <code>auththingie.conf</code> living next to your reverse proxy configuration. Paste the whole thing; I'll pick out
+                    the users and the rules and quietly ignore everything else.
+                </p>
+            </details>
 
-                    <button type="submit" class="contrast">Import</button>
-                </form>
-            </div>
+            <form action="/ftue/import" method="post">
 
+                <!-- TODO: reenable when you fix uploads
+                <div>
+                    <input type="file" name="config_file" id="config-file-field" aria-label="Config File" placeholder="Config File" />
+                </div>
+                <div id="ftue-or">
+                    - or -
+                </div>
+                -->
+                <label for="config-file-text">Config file contents</label>
+                <textarea name="config_file_text" id="config-file-text" rows="16" aria-label="Config File Contents" spellcheck="false"></textarea>
+                <small>You will get a chance to confirm everything before the config is written.</small>
+
+                <button type="submit" class="contrast">Import</button>
+            </form>
         </article>
     </div>
 {{end}}

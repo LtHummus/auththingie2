@@ -76,6 +76,7 @@ func TestFtueEnv_HandleRenderImportPage(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/import", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -109,6 +110,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -132,6 +134,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		v.Add("config_file_text", sb.String())
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -149,6 +152,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		v.Add("config_file_text", contents)
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -165,6 +169,7 @@ func TestFtueEnv_HandlerImportPageUpload(t *testing.T) {
 		v.Add("config_file_text", goodImportText)
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -215,6 +220,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v.Add("import_key", "")
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode()))
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -231,6 +237,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 		v.Add("import_key", "thisimportkeydoesnotexist")
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v.Encode()))
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -248,6 +255,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -259,6 +267,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r2, e)
 		w2 := httptest.NewRecorder()
 
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(errors.New("oh no"))
@@ -278,6 +287,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -289,6 +299,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r2, e)
 		w2 := httptest.NewRecorder()
 
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
@@ -313,6 +324,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/import", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -324,6 +336,7 @@ func TestFtueEnv_HandleImportConfirm(t *testing.T) {
 
 		r2 := httptest.NewRequest(http.MethodPost, "/ftue/import/confirm", strings.NewReader(v2.Encode()))
 		r2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r2, e)
 		w2 := httptest.NewRecorder()
 
 		db.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)

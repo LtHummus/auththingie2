@@ -124,14 +124,152 @@ th {
     display: none;
 }
 
+.ftue-page hgroup {
+    margin-bottom: 2rem;
+}
+
+.ftue-page article > header {
+    font-size: 1.1rem;
+}
+
+.ftue-page h4 {
+    margin-top: 2rem;
+}
+
+.ftue-page label > small,
+.ftue-page input + small,
+.ftue-page textarea + small,
+.ftue-page figure + small,
+.ftue-page .grid + small {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--muted-color);
+}
+
+.ftue-page input[type="checkbox"] + small,
+.ftue-page input[type="radio"] + small {
+    margin-bottom: 0;
+}
+
+.ftue-page fieldset > label {
+    margin-bottom: 1rem;
+}
+
+.ftue-page fieldset > label > small {
+    margin-left: 2.125rem;
+}
+
+.ftue-page #custom-path-fields {
+    margin-left: 2.125rem;
+}
+
+.ftue-page details {
+    margin-bottom: 1.5rem;
+}
+
+.ftue-page figure {
+    margin-bottom: 1.5rem;
+}
+
+.ftue-page table td,
+.ftue-page table th {
+    white-space: nowrap;
+}
+
+.ftue-page table input[type="checkbox"] {
+    margin-bottom: 0;
+}
+
+.ftue-page article > footer form,
+.ftue-page article > footer .grid {
+    margin-bottom: 0;
+}
+
+.ftue-page article > footer input[type="submit"] {
+    margin-bottom: 0;
+}
+
+.ftue-footnote {
+    margin-top: 2rem;
+    color: var(--muted-color);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.ftue-detection-status::before {
+    padding-right: 0.5rem;
+    font-weight: bold;
+}
+
+.ftue-detection-ok::before {
+    content: "✓";
+    color: #448428;
+}
+
+.ftue-detection-failed::before {
+    content: "✕";
+    color: #c62828;
+}
+
+.ftue-empty {
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--muted-border-color);
+    color: var(--muted-color);
+}
+
+#ftue-error-box {
+    text-align: left;
+}
+
+#ftue-error-box ul {
+    margin-bottom: 0;
+}
+
 #ftue-or {
     text-align: center;
     padding-bottom: 10px;
 }
 
 #ftue-choose-destiny {
+    margin-bottom: 1.5rem;
+    font-weight: bold;
 }
 
-#ftue-destiny-buttons-container {
-    align-items: center;
+#ftue-destiny-buttons-container > article {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#ftue-destiny-buttons-container > article > p {
+    flex-grow: 1;
+}
+
+#ftue-destiny-buttons-container > article > footer {
+    margin-bottom: 0;
+}
+
+#ftue-destiny-buttons-container > article > footer > a {
+    display: block;
+    padding: var(--form-element-spacing-vertical) var(--form-element-spacing-horizontal);
+    border: var(--border-width) solid var(--primary);
+    border-radius: var(--border-radius);
+    background-color: var(--primary);
+    color: var(--primary-inverse);
+    font-weight: var(--font-weight);
+    line-height: var(--line-height);
+    text-align: center;
+    text-decoration: none;
+}
+
+#ftue-destiny-buttons-container > article > footer > a:hover,
+#ftue-destiny-buttons-container > article > footer > a:focus {
+    border-color: var(--primary-hover);
+    background-color: var(--primary-hover);
+}
+
+#ftue-import-confirm-container .badge {
+    display: inline-block;
+    margin-bottom: 2px;
 }

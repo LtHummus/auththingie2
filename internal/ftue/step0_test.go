@@ -26,6 +26,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		t.Setenv("AT2_MODE", "docker")
 
 		r := httptest.NewRequest(http.MethodGet, "https://auth.example.com/ftue/step0", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -42,6 +43,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "https://auth.example.com/ftue/step0", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -61,6 +63,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		t.Setenv("AT2_MODE", "docker")
 
 		r := httptest.NewRequest(http.MethodGet, "https://auth.example.com/ftue/step0", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -99,6 +102,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 
 		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
 		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		r.Header.Set("Sec-Fetch-Site", "cross-origin")
 		w := httptest.NewRecorder()
@@ -131,6 +135,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 
 		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
 		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 
@@ -139,6 +144,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		assert.Equal(t, http.StatusFound, w.Result().StatusCode)
 		redirectURL, err := w.Result().Location()
 		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
 		assert.Equal(t, "/ftue/step1", redirectURL.Path)
 
 		assert.FileExists(t, configFilePath)

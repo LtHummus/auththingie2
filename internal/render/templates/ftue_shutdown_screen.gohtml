@@ -1,9 +1,18 @@
 {{ template "base.gohtml" }}
 
-{{ define "title" }}Restarting...{{ end }}
+{{ define "title" }}Shut Down{{ end }}
 
 {{ define "content" }}
-    <div>
-        We've shutdown. Once you restart AuthThingie, please <a href="/">click here</a> to mosey on.
+    <div id="ftue-restart-container" class="ftue-page">
+        <hgroup>
+            <h1>All Shut Down</h1>
+            <h2>Till next time, my friend</h2>
+        </hgroup>
+
+        <article>
+            <p>
+                We've shutdown. Once you restart AuthThingie, please <a href="/">click here</a> to mosey on.
+            </p>
+        </article>
     </div>
 {{ end }}

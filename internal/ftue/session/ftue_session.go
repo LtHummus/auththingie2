@@ -22,7 +22,7 @@ const (
 	hkdfInfoEncryptionKey = "AUTHTHINGIE2-FTUE-KEY"
 	hkdfInfoSigningKey    = "AUTHTHINGIE2-FTUE-SIGNING"
 
-	ftueSessionCookieName = "auththingie2-setup"
+	FTUESessionCookieName = "auththingie2-setup"
 )
 
 type FTUESession struct {
@@ -61,8 +61,17 @@ func NewMiddleware(setupCode string) *Middleware {
 	}
 }
 
+func (m *Middleware) EncodeValidCookie(setupCode string) (string, error) {
+	encoded, err := m.sc.Encode(FTUESessionCookieName, &FTUESession{SetupCode: setupCode})
+	if err != nil {
+		return "", err
+	}
+
+	return encoded, nil
+}
+
 func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) {
-	encoded, err := m.sc.Encode(ftueSessionCookieName, &FTUESession{SetupCode: setupCode})
+	encoded, err := m.EncodeValidCookie(setupCode)
 	if err != nil {
 		log.Error().Err(err).Msg("could not encode setup cookie")
 		http.Error(w, "could not encode setup cookie", http.StatusInternalServerError)
@@ -70,7 +79,7 @@ func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     ftueSessionCookieName,
+		Name:     FTUESessionCookieName,
 		Value:    encoded,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -94,9 +103,9 @@ func (m *Middleware) ProtectFunc(handler http.HandlerFunc) *MiddlewareHandler {
 }
 
 func (mh *MiddlewareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(ftueSessionCookieName); err == nil {
+	if c, err := r.Cookie(FTUESessionCookieName); err == nil {
 		s := &FTUESession{}
-		if err = mh.sc.Decode(ftueSessionCookieName, c.Value, &s); err != nil {
+		if err = mh.sc.Decode(FTUESessionCookieName, c.Value, &s); err != nil {
 			http.Error(w, "invalid setup cookie. start over. i am sorry", http.StatusForbidden)
 			return
 		}
