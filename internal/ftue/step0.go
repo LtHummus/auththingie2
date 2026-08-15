@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/idna"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
@@ -89,35 +89,6 @@ func detectContainers(ctx context.Context) (string, []docker.FoundContainer, err
 	return dockerEndpoint, detectedContainers, err
 }
 
-func validateURL(x string) error {
-	parsed, err := url.Parse(x)
-	if err != nil {
-		return err
-	}
-
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("invalid scheme: must be http or https")
-	}
-
-	if parsed.Host == "" {
-		return fmt.Errorf("invalid host: can not be empty")
-	}
-
-	if parsed.User != nil {
-		return fmt.Errorf("invalid url: can not have credentials (username:password) in URL")
-	}
-
-	if parsed.RawQuery != "" {
-		return fmt.Errorf("invalid url: can not have query string")
-	}
-
-	if parsed.Fragment != "" {
-		return fmt.Errorf("invalid url: can not have a URL fragment in it")
-	}
-
-	return nil
-}
-
 func (fe *ftueEnv) HandleFTUEStep0GET(w http.ResponseWriter, r *http.Request) {
 	dockerEndpoint, detectedContainers, dockerErr := detectContainers(r.Context())
 
@@ -158,6 +129,7 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	checkedNetworks := r.Form["trusted_networks"]
 	customTrustedNetwork := strings.TrimSpace(r.FormValue("custom_trusted_network"))
 
+	// TODO: all this error checking can probably be refactored in to something easier to read or test
 	var errors []string
 
 	var configFilePath string
@@ -198,13 +170,15 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 		errors = append(errors, "Invalid domain")
 	} else if isIPAddress(domain) {
 		errors = append(errors, "Invalid domain: an IP address can not be used as the server domain. Use a real domain name, otherwise passkeys and session cookies will not work")
+	} else if _, err := idna.Lookup.ToASCII(strings.ToLower(strings.TrimSuffix(domain, "."))); err != nil {
+		errors = append(errors, "Invalid domain: this must be a bare domain. No scheme, no path, no port, no nothing")
 	}
 
 	if authURL == "" {
 		errors = append(errors, "Auth URL can not be blank")
 	} else {
-		authURL = strings.TrimSuffix(authURL, "/")
-		err = validateURL(authURL)
+		authURL = strings.TrimRight(authURL, "/")
+		err = config.ValidateAuthURL(authURL)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Invalid auth URL: %s", err.Error()))
 		}

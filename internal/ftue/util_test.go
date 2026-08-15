@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/lthummus/auththingie2/internal/config"
 )
 
 func TestGetRootDomain(t *testing.T) {
@@ -93,7 +95,6 @@ func TestRequestHost(t *testing.T) {
 
 func TestRequestOrigin(t *testing.T) {
 	t.Run("defaults to https on a plain origin form request", func(t *testing.T) {
-		// this is the case a real server always hits, and the one that regressed
 		origin := RequestOrigin(buildOriginFormRequest("auth.example.com"))
 
 		assert.Equal(t, "https://auth.example.com", origin)
@@ -138,14 +139,14 @@ func TestRequestOrigin(t *testing.T) {
 		}
 	})
 
-	t.Run("output always survives validateURL", func(t *testing.T) {
+	t.Run("output always survives config.ValidateAuthURL", func(t *testing.T) {
 		for _, proto := range []string{"", "http", "https", "javascript", "HTTPS , http"} {
 			r := buildOriginFormRequest("auth.example.com")
 			if proto != "" {
 				r.Header.Set(forwardedProtoHeader, proto)
 			}
 
-			assert.NoError(t, validateURL(RequestOrigin(r)), "prefill for proto %q must pass its own validator", proto)
+			assert.NoError(t, config.ValidateAuthURL(RequestOrigin(r)), "prefill for proto %q must pass its own validator", proto)
 		}
 	})
 }

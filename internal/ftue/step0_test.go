@@ -258,7 +258,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		assert.NotContains(t, body, "You must configure some sort of trusted proxy setup")
 	})
 
-	t.Run("rejects an IP address as the server domain", func(t *testing.T) {
+	t.Run("rejects an IP address or full URL as the server domain", func(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		tmpDir, err := os.MkdirTemp("", "testdatadb")
@@ -268,26 +268,38 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 			os.RemoveAll(tmpDir)
 		})
 
-		for _, curr := range []string{"192.168.1.10", "127.0.0.1", "fd00::1"} {
-			v := url.Values{}
-			v.Add("port", "9000")
-			v.Add("domain", curr)
-			v.Add("auth_url", "https://auth.example.com")
-			v.Add("config_file_preset", "custom")
-			v.Add("config_path", filepath.Join(tmpDir, "auththingie2.yaml"))
-			v.Add("db_path", filepath.Join(tmpDir, "at2.db"))
-			v.Add("custom_trusted_network", "10.0.0.0/16")
+		tests := []struct {
+			Domain        string
+			ExpectedError string
+		}{
+			{Domain: "192.168.1.10", ExpectedError: "an IP address can not be used as the server domain"},
+			{Domain: "127.0.0.1", ExpectedError: "an IP address can not be used as the server domain"},
+			{Domain: "fd00::1", ExpectedError: "an IP address can not be used as the server domain"},
+			{Domain: "https://exampe.com", ExpectedError: "Invalid domain: this must be a bare domain. No scheme, no path, no port, no nothing"},
+			{Domain: "localhost:9000", ExpectedError: "Invalid domain: this must be a bare domain. No scheme, no path, no port, no nothing"},
+		}
 
-			r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
-			require.NoError(t, err)
-			attachSetupAuthCookie(r, e)
-			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			w := httptest.NewRecorder()
+		for _, curr := range tests {
+			t.Run(curr.Domain, func(t *testing.T) {
+				v := url.Values{}
+				v.Add("port", "9000")
+				v.Add("domain", curr.Domain)
+				v.Add("auth_url", "https://auth.example.com")
+				v.Add("config_file_preset", "custom")
+				v.Add("config_path", filepath.Join(tmpDir, "auththingie2.yaml"))
+				v.Add("db_path", filepath.Join(tmpDir, "at2.db"))
+				v.Add("custom_trusted_network", "10.0.0.0/16")
 
-			e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+				r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+				require.NoError(t, err)
+				attachSetupAuthCookie(r, e)
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				w := httptest.NewRecorder()
 
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode, "domain %q should not have been accepted", curr)
-			assert.Contains(t, w.Body.String(), "an IP address can not be used as the server domain", "domain %q should have been rejected", curr)
+				e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+				assert.Contains(t, w.Body.String(), curr.ExpectedError)
+			})
 		}
 	})
 
