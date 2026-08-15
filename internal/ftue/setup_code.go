@@ -22,9 +22,9 @@ func (fe *ftueEnv) HandleSetupCodePOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	givenSetupCode := strings.TrimSpace(r.FormValue("setup_code"))
+	givenSetupCode := strings.ToUpper(strings.TrimSpace(r.FormValue("setup_code")))
 	if subtle.ConstantTimeCompare([]byte(givenSetupCode), []byte(fe.setupCode)) != 1 {
-		log.Error().Err(err).Msg("invalid setup code")
+		log.Error().Msg("invalid setup code")
 		render.Render(w, "ftue_setupcode.gohtml", map[string]any{
 			"Errors": []string{
 				"Invalid setup code. Check the AuthThingie2 logs to find it",
@@ -33,7 +33,10 @@ func (fe *ftueEnv) HandleSetupCodePOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fe.protector.WriteSession(w, givenSetupCode)
+	if err := fe.protector.WriteSession(w, givenSetupCode); err != nil {
+		http.Error(w, "could not write setup cookie, check logs", http.StatusInternalServerError)
+		return
+	}
 
 	http.Redirect(w, r, "/begin", http.StatusFound)
 }

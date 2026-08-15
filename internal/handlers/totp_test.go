@@ -539,7 +539,7 @@ func TestEnv_HandleTOTPDisable(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "You do not currently have TOTP enabled")
+		assert.Contains(t, w.Body.String(), "You currently have TOTP <strong>disabled</strong>.")
 
 		updatedUser := db.Mock.Calls[1].Arguments[1].(*user.User)
 		assert.Nil(t, updatedUser.TOTPSeed)

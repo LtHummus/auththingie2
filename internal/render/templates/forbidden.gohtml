@@ -3,10 +3,17 @@
 {{define "title"}}Access Denied{{end}}
 
 {{define "content"}}
-    <div id="forbidden-container">
-        <article class="grid">
+    <div id="forbidden-container" class="at-page at-narrow">
+        <hgroup>
             <h1>Access Denied</h1>
+            <h2>You don't have to go home but you can't stay here</h2>
+        </hgroup>
+
+        <article>
             <p>You are not allowed access to that page. You are currently logged in as <strong>{{ .Username }}</strong></p>
+            <p>
+                If you think that's wrong, an admin can hand you the role this page needs.
+            </p>
         </article>
     </div>
 {{end}}

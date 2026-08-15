@@ -1,9 +1,6 @@
 package ftue
 
 import (
-	"crypto/subtle"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -26,8 +23,6 @@ import (
 
 const (
 	MaxBodySize = 10 * 1024 * 1024 // 10 MB
-
-	SetupCookieName = "auththingie2-setup-code"
 )
 
 var importCache *ttlcache.Cache[string, *importer.Results]
@@ -57,25 +52,17 @@ type ftueImportConfirmParams struct {
 	ImportKey string
 }
 
-func (fe *ftueEnv) validateSetupCodeCookie(r *http.Request) error {
-	setupCodeCookies := r.CookiesNamed(SetupCookieName)
-	if len(setupCodeCookies) != 1 {
-		return fmt.Errorf("no valid setup cookie found")
-	}
-
-	if subtle.ConstantTimeCompare([]byte(setupCodeCookies[0].Value), []byte(fe.setupCode)) != 1 {
-		return fmt.Errorf("invalid setup code found")
-	}
-
-	return nil
-}
-
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /auth", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		requestHost := r.Header.Get("X-Forwarded-Host")
 		allowHost := os.Getenv("FTUE_ALLOW_HOST")
+
+		if allowHost == "" {
+			http.Error(w, "environment varibale FTUE_ALLOW_HOST must be set to your host to set things up behind the proxy", http.StatusForbidden)
+			return
+		}
 
 		if allowHost == requestHost {
 			log.Debug().Str("ftue_allow_host", allowHost).Str("xfh", requestHost).Msg("allowing during FTUE")
@@ -99,10 +86,6 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
 	}))
 
-	// TODO: actually finish this experiment or ditch it
-	//// TODO: remove CSRF exemption here
-	//mux.HandleFunc("/ftue/path", HandlePathComplete)
-
 	mux.Handle("GET /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0GET))
 	mux.Handle("POST /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0POST))
 
@@ -119,7 +102,7 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	mux.Handle("POST /ftue/restart", fe.protector.ProtectFunc(HandleRestartPost))
 
 	cop := http.NewCrossOriginProtection()
-	cop.AddInsecureBypassPattern("/ftue/path")
+	cop.AddInsecureBypassPattern("/auth")
 
 	handler := cop.Handler(mux)
 
@@ -132,33 +115,4 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
-}
-
-func HandlePathComplete(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Path string `json:"path"`
-	}
-	defer r.Body.Close()
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		log.Error().Err(err).Msg("could not decode path input")
-		http.Error(w, "could not decode path input", http.StatusBadRequest)
-		return
-	}
-
-	paths := make([]string, 0)
-	if input.Path != "" {
-		paths = PathAutoComplete(input.Path)
-	}
-	respBytes, err := json.Marshal(paths)
-	if err != nil {
-		log.Error().Err(err).Msg("could not serialize paths back")
-		http.Error(w, "could not serialize response", http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(respBytes)
-	if err != nil {
-		log.Error().Caller(0).Err(err).Msg("could not write path completion data to response")
-	}
 }

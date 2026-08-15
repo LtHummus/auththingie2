@@ -107,6 +107,20 @@ th {
     background-color: #2e7d32;
 }
 
+@media(prefers-color-scheme: dark) {
+    .danger-button {
+        background-color: #841b1b !important;
+    }
+
+    .delete-badge-button {
+        background-color: #8e3c3c;
+    }
+
+    .delete-badge-button:hover {
+        background-color: #b03030;
+    }
+}
+
 
 
 .add-button {
@@ -124,104 +138,277 @@ th {
     display: none;
 }
 
-.ftue-page hgroup {
+.at-page hgroup {
     margin-bottom: 2rem;
 }
 
-.ftue-page article > header {
+.at-page nav[aria-label="breadcrumb"] {
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+}
+
+.at-page article > header {
     font-size: 1.1rem;
 }
 
-.ftue-page h4 {
+.at-page h4 {
     margin-top: 2rem;
 }
 
-.ftue-page label > small,
-.ftue-page input + small,
-.ftue-page textarea + small,
-.ftue-page figure + small,
-.ftue-page .grid + small {
+.at-page label > small,
+.at-page input + small,
+.at-page textarea + small,
+.at-page select + small,
+.at-page figure + small,
+.at-page .grid + small {
     display: block;
     margin-bottom: 1rem;
     color: var(--muted-color);
 }
 
-.ftue-page input[type="checkbox"] + small,
-.ftue-page input[type="radio"] + small {
+.at-page input[type="checkbox"] + small,
+.at-page input[type="radio"] + small {
     margin-bottom: 0;
 }
 
-.ftue-page fieldset > label {
+.at-page fieldset > label {
     margin-bottom: 1rem;
 }
 
-.ftue-page fieldset > label > small {
+.at-page fieldset > label > small {
     margin-left: 2.125rem;
 }
 
-.ftue-page #custom-path-fields {
+.at-page #custom-path-fields {
     margin-left: 2.125rem;
 }
 
-.ftue-page details {
+.at-page details {
     margin-bottom: 1.5rem;
 }
 
-.ftue-page figure {
+.at-page figure {
     margin-bottom: 1.5rem;
 }
 
-.ftue-page table td,
-.ftue-page table th {
+.at-page figure table td,
+.at-page figure table th {
     white-space: nowrap;
 }
 
-.ftue-page table input[type="checkbox"] {
+.at-page table input[type="checkbox"] {
     margin-bottom: 0;
 }
 
-.ftue-page article > footer form,
-.ftue-page article > footer .grid {
+.at-page article > footer form,
+.at-page article > footer .grid {
     margin-bottom: 0;
 }
 
-.ftue-page article > footer input[type="submit"] {
+.at-page article > footer input[type="submit"],
+.at-page article > footer button {
     margin-bottom: 0;
 }
 
-.ftue-footnote {
+.at-page form > button:last-child,
+.at-page form > input[type="submit"]:last-child {
+    margin-bottom: 0;
+}
+
+.at-narrow {
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+.at-footnote {
     margin-top: 2rem;
     color: var(--muted-color);
     font-size: 0.875rem;
     text-align: center;
 }
 
-.ftue-detection-status::before {
+.at-hint {
+    display: block;
+    color: var(--muted-color);
+}
+
+.at-card-grid > article {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.at-card-grid > article > p,
+.at-card-grid > article > div {
+    flex-grow: 1;
+}
+
+.at-card-grid > article > footer {
+    margin-bottom: 0;
+}
+
+.at-card-grid > article > footer > a,
+.at-button-link > a {
+    display: block;
+    padding: var(--form-element-spacing-vertical) var(--form-element-spacing-horizontal);
+    border: var(--border-width) solid var(--primary);
+    border-radius: var(--border-radius);
+    background-color: var(--primary);
+    color: var(--primary-inverse);
+    font-weight: var(--font-weight);
+    line-height: var(--line-height);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.link-like {
+    cursor: pointer;
+}
+
+.at-card-grid > article > footer > a:hover,
+.at-card-grid > article > footer > a:focus,
+.at-button-link > a:hover,
+.at-button-link > a:focus {
+    border-color: var(--primary-hover);
+    background-color: var(--primary-hover);
+}
+
+.at-qr-code {
+    display: block;
+    width: 100%;
+    max-width: 15rem;
+    margin: 0 auto;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    background-color: white;
+}
+
+#totp-enrollment-form .grid > :first-child {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+#totp-enrollment-form #totp-code-field,
+#totp-prompt-container #totp-code-field {
+    max-width: 10rem;
+    letter-spacing: 0.25em;
+}
+
+#enrollment-steps {
+    margin-bottom: 1rem;
+}
+
+#manual-enrollment {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.at-secret {
+    display: inline-block;
+    word-break: break-all;
+    user-select: all;
+}
+
+.at-danger-zone {
+    border: var(--border-width) solid #c62828;
+}
+
+.at-danger-zone > header {
+    color: #c62828;
+}
+
+.at-danger-zone form {
+    display: inline-block;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+}
+
+.at-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.at-badge-row .badge {
+    display: inline-block;
+}
+
+.at-badge-pair {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.at-badge-pair .modify-badge-button {
+    cursor: pointer;
+    user-select: none;
+}
+
+#debug-container figure table td,
+#debug-container figure table th {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.notice {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #c62828;
+    background-color: var(--card-background-color);
+}
+
+.at-detection-status::before {
     padding-right: 0.5rem;
     font-weight: bold;
 }
 
-.ftue-detection-ok::before {
+.at-detection-ok::before {
     content: "✓";
     color: #448428;
 }
 
-.ftue-detection-failed::before {
+.at-detection-failed::before {
     content: "✕";
     color: #c62828;
 }
 
-.ftue-empty {
+@media(prefers-color-scheme: dark) {
+    .at-danger-zone {
+        border-color: #ef5350;
+    }
+
+    .at-danger-zone > header {
+        color: #ef5350;
+    }
+
+    .notice {
+        border-left-color: #ef5350;
+    }
+
+    .at-detection-ok::before {
+        color: #66bb6a;
+    }
+
+    .at-detection-failed::before {
+        color: #ef5350;
+    }
+}
+
+.at-empty {
     padding: 0.75rem 1rem;
     border-left: 4px solid var(--muted-border-color);
     color: var(--muted-color);
 }
 
-#ftue-error-box {
+.at-error-list {
     text-align: left;
 }
 
-#ftue-error-box ul {
+.at-error-list ul {
     margin-bottom: 0;
 }
 
@@ -235,41 +422,47 @@ th {
     font-weight: bold;
 }
 
-#ftue-destiny-buttons-container > article {
-    display: flex;
-    flex-direction: column;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-#ftue-destiny-buttons-container > article > p {
-    flex-grow: 1;
-}
-
-#ftue-destiny-buttons-container > article > footer {
-    margin-bottom: 0;
-}
-
-#ftue-destiny-buttons-container > article > footer > a {
-    display: block;
-    padding: var(--form-element-spacing-vertical) var(--form-element-spacing-horizontal);
-    border: var(--border-width) solid var(--primary);
-    border-radius: var(--border-radius);
-    background-color: var(--primary);
-    color: var(--primary-inverse);
-    font-weight: var(--font-weight);
-    line-height: var(--line-height);
-    text-align: center;
-    text-decoration: none;
-}
-
-#ftue-destiny-buttons-container > article > footer > a:hover,
-#ftue-destiny-buttons-container > article > footer > a:focus {
-    border-color: var(--primary-hover);
-    background-color: var(--primary-hover);
-}
-
 #ftue-import-confirm-container .badge {
     display: inline-block;
     margin-bottom: 2px;
+}
+
+#login-container article,
+#totp-prompt-container article,
+#forbidden-container article {
+    margin-top: 0;
+}
+
+#login-container form,
+#totp-prompt-container form {
+    margin-bottom: 0;
+}
+
+#passkey-login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+#test-result:not(:empty) {
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    border-left: 4px solid var(--muted-border-color);
+}
+
+.at-page #tag-edit-table h4 {
+    margin-top: 0;
+}nt: center;
+    margin-bottom: 0;
+}
+
+#test-result:not(:empty) {
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    border-left: 4px solid var(--muted-border-color);
+}
+
+.at-page #tag-edit-table h4 {
+    margin-top: 0;
 }

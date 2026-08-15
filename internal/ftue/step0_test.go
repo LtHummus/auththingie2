@@ -36,7 +36,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  checked  />`)
 		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="https://auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 	})
 
 	t.Run("basic case outside docker", func(t *testing.T) {
@@ -53,7 +53,7 @@ func TestFtueEnv_HandleFTUEStep0GET(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `<input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig"  />`)
 		assert.Contains(t, w.Body.String(), `<input type="radio" id="cwd-radio" name="config_file_preset" value="pwd"  checked  />`)
 		assert.Contains(t, w.Body.String(), `<input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
-		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
+		assert.Contains(t, w.Body.String(), `<input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="https://auth.example.com" autocomplete="off" autocorrect="off" spellcheck="off" />`)
 
 	})
 
@@ -95,7 +95,7 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		v := url.Values{}
 		v.Add("port", "9000")
 		v.Add("domain", "example.com")
-		v.Add("auth_url", "auth.example.com")
+		v.Add("auth_url", "https://auth.example.com")
 		v.Add("config_file_preset", "custom")
 		v.Add("config_path", configFilePath)
 		v.Add("db_path", dbPath)
@@ -110,6 +110,73 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+	})
+
+	t.Run("0.0.0.0/0 is not allowed as a trusted network", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+		})
+
+		configFilePath := filepath.Join(tmpDir, "auththingie2.yaml")
+		dbPath := filepath.Join(tmpDir, "at2.db")
+
+		v := url.Values{}
+		v.Add("port", "9000")
+		v.Add("domain", "example.com")
+		v.Add("auth_url", "https://auth.example.com")
+		v.Add("config_file_preset", "custom")
+		v.Add("config_path", configFilePath)
+		v.Add("db_path", dbPath)
+		v.Add("custom_trusted_network", "0.0.0.0/0")
+
+		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "global-trust is not allowed (e.g. 0.0.0.0/0 or ::/0)")
+	})
+
+	t.Run("no trusted configuration", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+		})
+
+		configFilePath := filepath.Join(tmpDir, "auththingie2.yaml")
+		dbPath := filepath.Join(tmpDir, "at2.db")
+
+		v := url.Values{}
+		v.Add("port", "9000")
+		v.Add("domain", "example.com")
+		v.Add("auth_url", "https://auth.example.com")
+		v.Add("config_file_preset", "custom")
+		v.Add("config_path", configFilePath)
+		v.Add("db_path", dbPath)
+
+		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "You must configure some sort of trusted proxy setup -- either docker or trusted networks")
 	})
 
 	t.Run("a case with everything", func(t *testing.T) {
@@ -128,10 +195,11 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		v := url.Values{}
 		v.Add("port", "9000")
 		v.Add("domain", "example.com")
-		v.Add("auth_url", "auth.example.com")
+		v.Add("auth_url", "https://auth.example.com")
 		v.Add("config_file_preset", "custom")
 		v.Add("config_path", configFilePath)
 		v.Add("db_path", dbPath)
+		v.Add("custom_trusted_network", "10.0.0.0/16")
 
 		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
 		require.NoError(t, err)
@@ -153,8 +221,9 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 		assert.Equal(t, dbPath, cfg.GetString(config.ConfigKeyDBFile))
 		assert.Equal(t, "sqlite", cfg.GetString(config.ConfigKeyDBKind))
 		assert.Equal(t, "example.com", cfg.GetString(config.ConfigKeyServerDomain))
-		assert.Equal(t, "auth.example.com", cfg.GetString(config.ConfigKeyServerAuthURL))
+		assert.Equal(t, "https://auth.example.com", cfg.GetString(config.ConfigKeyServerAuthURL))
 		assert.Equal(t, uint64(9000), cfg.GetUint64(config.ConfigKeyServerPort))
+		assert.Equal(t, []string{"10.0.0.0/16"}, cfg.GetStringSlice(config.ConfigKeyTrustedProxyNetwork))
 
 		assert.NotNil(t, e.database)
 		assert.NotNil(t, e.analyzer)

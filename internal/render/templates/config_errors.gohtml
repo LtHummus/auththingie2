@@ -3,17 +3,25 @@
 {{define "title"}}Config Errors!{{end}}
 
 {{define "content"}}
-        <div>
+    <div id="config-errors-container" class="at-page at-narrow">
+        <hgroup>
             <h1>Config Errors Found</h1>
+            <h2>AuthThingie can't do its job until these are fixed</h2>
+        </hgroup>
+
+        <div class="error-box at-error-list">
+            <strong>Here's what's wrong with your config file:</strong>
             <ul>
                 {{ range .ErrorsFound }}
                     <li>{{ . }}</li>
                 {{ end }}
             </ul>
         </div>
-    <div>
-        There may be more information in the logs!
+
+        <article>
+            <p>
+                Fix the entries above in your config file and restart AuthThingie. There may be more information in the logs!
+            </p>
+        </article>
     </div>
-
-
 {{end}}

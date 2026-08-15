@@ -73,6 +73,8 @@ func RunFTUEServer(step Step) {
 		}
 	}()
 
+	log.Info().Str("setup_code", setupCode).Msg("here is the setup code!")
+
 	fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!! AUTHTHINGIE2 SETUP !!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!\nGo to the AuthThingie page (whereever it's hosted) and use the code %s for setup\n", setupCode)
 
 	c := make(chan os.Signal, 1)

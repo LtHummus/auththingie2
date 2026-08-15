@@ -3,30 +3,50 @@
 {{define "title"}}AuthThingie2 Admin Page{{end}}
 
 {{define "content"}}
-    <h1>Create A New User</h1>
+    <div id="create-user-container" class="at-page">
+        <hgroup>
+            <h1>Create A New User</h1>
+            <h2>Pick some credentials for now. Roles can be dealt with later...</h2>
+        </hgroup>
 
-    <nav aria-label="breadcrumb">
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/admin">Admin Control Panel</a></li>
-            <li>Create A User</li>
-        </ul>
-    </nav>
-    <div>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/admin">Admin Control Panel</a></li>
+                <li>Create A User</li>
+            </ul>
+        </nav>
+
         {{ if .Error }}
             <div class="error-box">
                 {{ .Error }}
             </div>
         {{ end }}
-        <form action="/admin/users/create" method="post">
-            <label for="username">Username</label> <input type="text" id="username" name="username" required/>
-            <div class="grid">
-                <label for="pw1">Password <input type="password" name="pw1" id="pw1" required/></label>
-                <label for="pw2">Password (confirm) <input type="password" name="pw2" id="pw2" required/></label>
-            </div>
 
-            <input type="submit" value="Create User" />
-        </form>
+        <article>
+            <header>
+                <strong>New User</strong>
+            </header>
+
+            <form action="/admin/users/create" method="post">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required value="{{ .Username }}" autocomplete="off" autocorrect="off" spellcheck="false" />
+                <small>This is what they'll type in on the login page.</small>
+
+                <div class="grid">
+                    <div>
+                        <label for="pw1">Password</label>
+                        <input type="password" name="pw1" id="pw1" required autocomplete="new-password" />
+                    </div>
+                    <div>
+                        <label for="pw2">Password (confirm)</label>
+                        <input type="password" name="pw2" id="pw2" required autocomplete="new-password" />
+                    </div>
+                </div>
+                <small>The new user starts with no roles at all. You can hand those out once they exist.</small>
+
+                <input type="submit" value="Create User" />
+            </form>
+        </article>
     </div>
-
 {{end}}

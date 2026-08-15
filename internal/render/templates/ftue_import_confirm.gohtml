@@ -3,7 +3,7 @@
 {{define "title"}}Confirm Import{{end}}
 
 {{define "content"}}
-    <div id="ftue-import-confirm-container" class="ftue-page">
+    <div id="ftue-import-confirm-container" class="at-page">
         <hgroup>
             <h1>AuthThingie Import</h1>
             <h2>Confirm Users and Rules</h2>
@@ -51,7 +51,7 @@
                 </figure>
                 <small>Passwords come across as they were so everyone can keep logging in with the password they already know.</small>
             {{ else }}
-                <p class="ftue-empty">I didn't find any users in that config file. You'll be able to create some once setup is done.</p>
+                <p class="at-empty">I didn't find any users in that config file. You'll be able to create some once setup is done.</p>
             {{ end }}
         </article>
 
@@ -100,7 +100,7 @@
                 </figure>
                 <small>Rules are checked in this order, so the first one that matches a request wins.</small>
             {{ else }}
-                <p class="ftue-empty">I didn't find any rules in that config file. Everything will be admin only until you add some.</p>
+                <p class="at-empty">I didn't find any rules in that config file. Everything will be admin only until you add some.</p>
             {{ end }}
         </article>
 

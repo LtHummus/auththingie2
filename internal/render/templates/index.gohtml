@@ -3,29 +3,59 @@
 {{define "title"}}AuthThingie 2{{end}}
 
 {{define "content"}}
-        <h1>Welcome to AuthThingie!</h1>
-        <div id="main">
-            {{if .User }}
-                <div id="logged-in">
-                    <div id="intro">
-                        You are logged in as <strong>{{.User.Username}}</strong>. You can <a href="/logout">log out if you wish</a>.
-                    </div>
-                    <div>
-                        You logged in at {{ .LoginTime }} (<i>{{ .DurationTime }}</i>)
-                    </div>
-                        <nav>
-                            <ul>
-                                <li>
-                                    <a href="/edit_self">Edit Profile</a>
-                                </li>
-                                {{ if .User.Admin }}
-                                    <li><a href="/admin">Admin Control Panel</a></li>
-                                {{ end }}
-                            </ul>
-                        </nav>
-                </div>
-            {{else}}
-                You are currently logged out. You can <a href="/login">log in here</a>.
-            {{end}}
-        </div>
+    <div id="main" class="at-page">
+        <hgroup>
+            <h1>Welcome to AuthThingie!</h1>
+            <h2>{{ if .User }}You're signed in and ready to go.{{ else }}Nobody is signed in right now.{{ end }}</h2>
+        </hgroup>
+
+        {{ if .User }}
+            <article id="logged-in">
+                <header>
+                    <strong>Your Session</strong>
+                </header>
+
+                <p id="intro">
+                    You are logged in as <strong>{{.User.Username}}</strong>. You can <a href="/logout">log out if you wish</a>.
+                </p>
+                <p>
+                    You logged in at {{ .LoginTime }} (<i>{{ .DurationTime }}</i>)
+                </p>
+            </article>
+
+            <div class="grid at-card-grid">
+                <article>
+                    <header>
+                        <strong>Your Profile</strong>
+                    </header>
+                    <p>
+                        Change your password, turn on two factor authentication, and manage the passkeys you use to sign in.
+                    </p>
+                    <footer>
+                        <a href="/edit_self">Edit Profile</a>
+                    </footer>
+                </article>
+
+                {{ if .User.Admin }}
+                    <article>
+                        <header>
+                            <strong>Administration</strong>
+                        </header>
+                        <p>
+                            Add and remove users, hand out roles, and check which rule applies to any URL you throw at it.
+                        </p>
+                        <footer>
+                            <a href="/admin">Admin Control Panel</a>
+                        </footer>
+                    </article>
+                {{ end }}
+            </div>
+        {{else}}
+            <article>
+                <p>
+                    You are currently logged out. You can <a href="/login">log in here</a>.
+                </p>
+            </article>
+        {{end}}
+    </div>
 {{end}}

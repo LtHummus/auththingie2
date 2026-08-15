@@ -1,19 +1,22 @@
-<h3>Keys</h3>
-<figure>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Key ID</th>
-            <th>Last Used</th>
-            <th>Key Name</th>
-            <th></th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody hx-target="closest tr" hx-swap="outerHTML">
-        {{ range .Keys }}
-            {{ template "authn_key_row.gohtml" . }}
-        {{ end }}
-    </tbody>
-</table>
-</figure>
+{{ if .Keys }}
+    <figure>
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th scope="col">Key ID</th>
+                    <th scope="col">Last Used</th>
+                    <th scope="col">Key Name</th>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody hx-target="closest tr" hx-swap="outerHTML">
+                {{ range .Keys }}
+                    {{ template "authn_key_row.gohtml" . }}
+                {{ end }}
+            </tbody>
+        </table>
+    </figure>
+{{ else }}
+    <p class="at-empty">You don't have any passkeys yet. Enroll one below and you can stop typing your password</p>
+{{ end }}

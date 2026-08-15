@@ -52,7 +52,7 @@ func TestRender(t *testing.T) {
 
 		RenderFullPageError(w, "title", "error header", "oh no!")
 
-		assert.Contains(t, w.Body.String(), `<article class="grid">`)
+		assert.Contains(t, w.Body.String(), `<div id="full-page-error-container" class="at-page at-narrow">`)
 		assert.Contains(t, w.Body.String(), `<h1>error header</h1>`)
 		assert.Contains(t, w.Body.String(), "oh no!")
 	})

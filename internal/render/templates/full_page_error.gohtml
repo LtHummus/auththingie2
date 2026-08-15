@@ -2,12 +2,16 @@
 
 {{define "title"}}{{ .ErrorTitle }}{{end}}
 {{define "content"}}
-    <article class="grid">
-        <h1>{{ .ErrorHeader }}</h1>
-        <p>
-            {{ .Error }}
-        </p>
-    </article>
+    <div id="full-page-error-container" class="at-page at-narrow">
+        <hgroup>
+            <h1>{{ .ErrorHeader }}</h1>
+            <h2>Well, that didn't work</h2>
+        </hgroup>
 
-
+        <article>
+            <p>
+                {{ .Error }}
+            </p>
+        </article>
+    </div>
 {{end}}

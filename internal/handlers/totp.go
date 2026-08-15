@@ -32,6 +32,7 @@ type totpEnrollmentPageParams struct {
 	QRCodeDataURL    template.URL
 	Error            string
 	EnrollmentTicket string
+	Secret           string
 }
 
 type totpPromptParams struct {
@@ -340,6 +341,7 @@ func (e *Env) renderSetupPage(w http.ResponseWriter, r *http.Request, errorMessa
 		//#nosec G203 -- contents are entirely generated server side
 		QRCodeDataURL:    template.URL(qrDataURL),
 		EnrollmentTicket: encoded,
+		Secret:           seed.Secret(),
 	})
 
 }

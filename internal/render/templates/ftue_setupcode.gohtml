@@ -4,7 +4,7 @@
 
 
 {{define "content"}}
-    <div id="ftue-setup-container" class="ftue-page">
+    <div id="ftue-setup-container" class="at-page">
         <hgroup>
             <h1>Welcome to AuthThingie 2</h1>
             <h2>Let's get you all sorted</h2>
@@ -12,7 +12,7 @@
 
         {{ if . }}
             {{ if .Errors }}
-                <div class="error-box" id="ftue-error-box">
+                <div class="error-box at-error-list" id="ftue-error-box">
                     <strong>We couldn't start setup:</strong>
                     <ul>
                         {{ range .Errors }}

@@ -3,14 +3,14 @@
 {{define "title"}}AuthThingie 2 Setup{{end}}
 
 {{define "content"}}
-    <div id="ftue-0-container" class="ftue-page">
+    <div id="ftue-0-container" class="at-page">
         <hgroup>
             <h1>Welcome to AuthThingie 2</h1>
             <h2>Step 1 of 2 - Your Environment and Network</h2>
         </hgroup>
 
         {{ if .Errors }}
-            <div class="error-box" id="ftue-error-box">
+            <div class="error-box at-error-list" id="ftue-error-box">
                 <strong>We couldn't continue with these settings:</strong>
                 <ul>
                     {{ range .Errors }}
@@ -93,8 +93,8 @@
                         <code>bar.example.com</code>, then use <strong>example.com</strong>.
                     </p>
                     <p>
-                        For <strong>Auth Domain</strong>, use the domain AuthThingie itself lives on. If AuthThingie is reachable at
-                        <code>auth.example.com</code>, then use <strong>auth.example.com</strong>. I've tried to fill this in for you.
+                        For <strong>Auth URL</strong>, use the full URL AuthThingie itself lives on. If AuthThingie is reachable at
+                        <code>https://auth.example.com</code>, then use <strong>https://auth.example.com</strong>. I've tried to fill this in for you.
                     </p>
                 </details>
 
@@ -105,9 +105,9 @@
                         <small>e.g. <code>example.com</code></small>
                     </div>
                     <div>
-                        <label for="auth-url-field">Auth Domain</label>
+                        <label for="auth-url-field">Auth URL</label>
                         <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="off" />
-                        <small>e.g. <code>auth.example.com</code></small>
+                        <small>e.g. <code>https://auth.example.com</code></small>
                     </div>
                 </div>
             </article>
@@ -125,7 +125,7 @@
                 <h4>Docker Container Trust</h4>
 
                 {{ if .DockerDetectionError }}
-                    <p class="ftue-detection-status ftue-detection-failed">
+                    <p class="at-detection-status at-detection-failed">
                         I couldn't connect to the Docker daemon at <code>{{ .DockerEndpoint }}</code>: <code>{{ .DockerDetectionError }}</code>.
                        You can either fix that, or use network trust down below.
                     </p>
@@ -133,11 +133,12 @@
                 {{ else }}
                     <input type="hidden" name="docker_endpoint" value="{{ .DockerEndpoint }}" />
                     <input type="hidden" name="docker_detected" value="true" />
-                    <p class="ftue-detection-status ftue-detection-ok">
+                    <p class="at-detection-status at-detection-ok">
                         Connected to the Docker daemon at <code>{{ .DockerEndpoint }}</code> and looked for containers labelled
                         <code>auththingie2.trusted_proxy=true</code>.
                     </p>
                     {{ if .DetectedContainers }}
+                        <input type="hidden" name="containers_found" value="true" />
                         <figure>
                             <table role="grid">
                                 <thead>
@@ -160,7 +161,8 @@
                         </figure>
                         <p>If that looks right, you're golden! You can skip the IP based trust below entirely.</p>
                     {{ else }}
-                        <p class="ftue-empty">
+                        <input type="hidden" name="containers_found" value="false" />
+                        <p class="at-empty">
                             No labelled containers found. Add the label <code>auththingie2.trusted_proxy=true</code> to your reverse proxy and reload this
                             page, or use network based trust below.
                         </p>
@@ -206,7 +208,7 @@
                         </table>
                     </figure>
                 {{ else }}
-                    <p class="ftue-empty">I couldn't find any private network ranges worth suggesting. You can still add one by hand below.</p>
+                    <p class="at-empty">I couldn't find any private network ranges worth suggesting. You can still add one by hand below.</p>
                 {{ end }}
 
                 <label for="custom-trusted-network">Custom trusted network</label>

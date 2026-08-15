@@ -70,12 +70,11 @@ func (m *Middleware) EncodeValidCookie(setupCode string) (string, error) {
 	return encoded, nil
 }
 
-func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) {
+func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) error {
 	encoded, err := m.EncodeValidCookie(setupCode)
 	if err != nil {
 		log.Error().Err(err).Msg("could not encode setup cookie")
-		http.Error(w, "could not encode setup cookie", http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -84,6 +83,8 @@ func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+
+	return nil
 }
 
 func (m *Middleware) Protect(handler http.Handler) *MiddlewareHandler {

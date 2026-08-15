@@ -43,7 +43,7 @@ func (fc *FoundContainer) AllNames() string {
 func (fc *FoundContainer) ShortID() string {
 	count := 12
 	if count > len(fc.ID) {
-		count = len(fc.ID) - 1
+		count = len(fc.ID)
 	}
 	return fc.ID[:count]
 }

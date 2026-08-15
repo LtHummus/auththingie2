@@ -63,7 +63,7 @@ func internalDetectRange(detector ipDetector) ([]CandidateRange, error) {
 
 			ip := ipNet.IP
 			if !ip.IsPrivate() {
-				log.Warn().IPAddr("ip", ip).Msg("rejecting as private")
+				log.Warn().IPAddr("ip", ip).Msg("rejecting as non-private")
 				continue
 			}
 

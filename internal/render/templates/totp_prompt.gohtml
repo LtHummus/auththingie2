@@ -3,23 +3,28 @@
 {{ define "title" }}TOTP{{ end }}
 
 {{ define "content" }}
-    <div id="enrollment-container">
-        <article class="grid">
-            <hgroup>
-                <h1>TOTP Verification</h1>
-            </hgroup>
-                {{ if .Error }}
-                    <p class="notice">
-                        Error: {{ .Error }}
-                    </p>
-                {{ end }}
-                <form action="/totp" method="post">
-                    <input type="hidden" name="totp-login-ticket" value="{{ .LoginTicket }}" />
-                    <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
-                    <button type="submit" class="contrast">Continue</button>
-                </form>
+    <div id="totp-prompt-container" class="at-page at-narrow">
+        <hgroup>
+            <h1>TOTP Verification</h1>
+            <h2>One more step: the code from your authenticator app</h2>
+        </hgroup>
+
+        {{ if .Error }}
+            <p class="notice">
+                Error: {{ .Error }}
+            </p>
+        {{ end }}
+
+        <article>
+            <form action="/totp" method="post">
+                <input type="hidden" name="totp-login-ticket" value="{{ .LoginTicket }}" />
+
+                <label for="totp-code-field">TOTP Code</label>
+                <input type="text" name="totp-code" id="totp-code-field" required placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus />
+                <small>Six digits, no spaces. It changes every thirty seconds.</small>
+
+                <button type="submit" class="contrast">Continue</button>
+            </form>
         </article>
-
     </div>
-
 {{end}}
