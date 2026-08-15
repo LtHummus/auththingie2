@@ -33,15 +33,15 @@ type Passkey struct {
 }
 
 type User struct {
+	TOTPSeed          *string
 	Id                string
 	Username          string
 	PasswordHash      string
 	Roles             []string
-	Admin             bool
-	TOTPSeed          *string
 	RecoveryCodes     []string
-	PasswordTimestamp int64
 	StoredCredentials []Passkey
+	PasswordTimestamp int64
+	Admin             bool
 	Disabled          bool
 }
 
