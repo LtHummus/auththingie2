@@ -1,6 +1,7 @@
 package ftue
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lthummus/auththingie2/internal/config"
+	"github.com/lthummus/auththingie2/internal/ftue/iprange"
 	"github.com/lthummus/auththingie2/internal/render"
 )
 
@@ -177,6 +179,116 @@ func TestFtueEnv_HandleFTUEStep0POST(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "You must configure some sort of trusted proxy setup -- either docker or trusted networks")
+	})
+
+	t.Run("hands the user's input back when validation fails", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+		})
+
+		v := url.Values{}
+		v.Add("port", "not-a-port") // forces a validation error
+		v.Add("domain", "example.com")
+		v.Add("auth_url", "https://auth.example.com")
+		v.Add("config_file_preset", "custom")
+		v.Add("config_path", filepath.Join(tmpDir, "auththingie2.yaml"))
+		v.Add("db_path", filepath.Join(tmpDir, "at2.db"))
+		v.Add("custom_trusted_network", "10.0.0.0/16")
+
+		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		body := w.Body.String()
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+		assert.Contains(t, body, `aria-label="Server Port" value="not-a-port"`)
+		assert.NotContains(t, body, `aria-label="Server Port" value="0"`)
+		assert.Contains(t, body, `id="custom-trusted-network" value="10.0.0.0/16"`)
+		assert.NotContains(t, body, "You must configure some sort of trusted proxy setup")
+	})
+
+	t.Run("re-checks previously selected networks when validation fails", func(t *testing.T) {
+		// this uses the system IP ranges...which I'm not crazy about.... will this even work on GitHub runners? If this
+		// comment is still here ... then yes, it will
+		candidates, _ := iprange.DetectInternalIPRange()
+		if len(candidates) == 0 {
+			t.Skip("no private network ranges detected on this host")
+		}
+		selected := candidates[0].Network.String()
+
+		_, _, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+		})
+
+		v := url.Values{}
+		v.Add("port", "not-a-port") // forces a validation error
+		v.Add("domain", "example.com")
+		v.Add("auth_url", "https://auth.example.com")
+		v.Add("config_file_preset", "custom")
+		v.Add("config_path", filepath.Join(tmpDir, "auththingie2.yaml"))
+		v.Add("db_path", filepath.Join(tmpDir, "at2.db"))
+		v.Add("trusted_networks", selected)
+
+		r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+		require.NoError(t, err)
+		attachSetupAuthCookie(r, e)
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+		body := w.Body.String()
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, body, fmt.Sprintf(`value="%s" checked`, selected))
+		assert.NotContains(t, body, "You must configure some sort of trusted proxy setup")
+	})
+
+	t.Run("rejects an IP address as the server domain", func(t *testing.T) {
+		_, _, _, e := makeTestEnv(t)
+
+		tmpDir, err := os.MkdirTemp("", "testdatadb")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			os.RemoveAll(tmpDir)
+		})
+
+		for _, curr := range []string{"192.168.1.10", "127.0.0.1", "fd00::1"} {
+			v := url.Values{}
+			v.Add("port", "9000")
+			v.Add("domain", curr)
+			v.Add("auth_url", "https://auth.example.com")
+			v.Add("config_file_preset", "custom")
+			v.Add("config_path", filepath.Join(tmpDir, "auththingie2.yaml"))
+			v.Add("db_path", filepath.Join(tmpDir, "at2.db"))
+			v.Add("custom_trusted_network", "10.0.0.0/16")
+
+			r, err := http.NewRequest(http.MethodPost, "https://auth.example.com/ftue/step0", strings.NewReader(v.Encode()))
+			require.NoError(t, err)
+			attachSetupAuthCookie(r, e)
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+
+			e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
+
+			assert.Equal(t, http.StatusOK, w.Result().StatusCode, "domain %q should not have been accepted", curr)
+			assert.Contains(t, w.Body.String(), "an IP address can not be used as the server domain", "domain %q should have been rejected", curr)
+		}
 	})
 
 	t.Run("a case with everything", func(t *testing.T) {

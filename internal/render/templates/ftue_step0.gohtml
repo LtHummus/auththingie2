@@ -198,7 +198,7 @@
                             <tbody>
                                 {{ range .CandidateIPRanges }}
                                     <tr>
-                                        <td><input type="checkbox" name="trusted_networks" value="{{ .Network }}" aria-label="Trust {{ .Network }} on {{ .InterfaceName }}" /></td>
+                                        <td><input type="checkbox" name="trusted_networks" value="{{ .Network }}" {{ if index $.SelectedNetworks .Network.String }}checked{{ end }} aria-label="Trust {{ .Network }} on {{ .InterfaceName }}" /></td>
                                         <td>{{ .InterfaceName }}</td>
                                         <td><code>{{ .LocalIP }}</code></td>
                                         <td><code>{{ .Network }}</code></td>
@@ -212,7 +212,7 @@
                 {{ end }}
 
                 <label for="custom-trusted-network">Custom trusted network</label>
-                <input type="text" name="custom_trusted_network" id="custom-trusted-network" placeholder="192.168.1.0/24" aria-label="Custom Trusted Network" autocomplete="off" autocorrect="off" spellcheck="false" />
+                <input type="text" name="custom_trusted_network" id="custom-trusted-network" value="{{ .CustomTrustedNetwork }}" placeholder="192.168.1.0/24" aria-label="Custom Trusted Network" autocomplete="off" autocorrect="off" spellcheck="false" />
                 <small>A single IP works too. Leave this blank if you're using Docker labels or picked a range above.</small>
             </article>
 

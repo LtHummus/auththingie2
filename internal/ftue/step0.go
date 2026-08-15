@@ -31,7 +31,7 @@ const (
 )
 
 type step0Params struct {
-	Port                 int
+	Port                 string
 	ServerDomain         string
 	AuthURL              string
 	DefaultSlashConfig   bool
@@ -45,6 +45,8 @@ type step0Params struct {
 	DetectedContainers   []docker.FoundContainer
 	DockerDetectionError error
 	CandidateIPRanges    []iprange.CandidateRange
+	SelectedNetworks     map[string]bool
+	CustomTrustedNetwork string
 }
 
 func getCwd() string {
@@ -125,12 +127,12 @@ func (fe *ftueEnv) HandleFTUEStep0GET(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.Render(w, "ftue_step0.gohtml", &step0Params{
-		ServerDomain:         GetRootDomain(r.URL),
-		AuthURL:              fmt.Sprintf("%s://%s", r.URL.Scheme, r.Host),
+		ServerDomain:         GetRootDomain(RequestHost(r)),
+		AuthURL:              RequestOrigin(r),
 		DefaultSlashConfig:   config.IsDocker(),
 		DefaultPWD:           !config.IsDocker(),
 		PWD:                  getCwd(),
-		Port:                 DefaultPort,
+		Port:                 strconv.Itoa(DefaultPort),
 		DockerEndpoint:       dockerEndpoint,
 		DetectedContainers:   detectedContainers,
 		DockerDetectionError: dockerErr,
@@ -194,6 +196,8 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 
 	if domain == "" {
 		errors = append(errors, "Invalid domain")
+	} else if isIPAddress(domain) {
+		errors = append(errors, "Invalid domain: an IP address can not be used as the server domain. Use a real domain name, otherwise passkeys and session cookies will not work")
 	}
 
 	if authURL == "" {
@@ -240,10 +244,16 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 			log.Warn().Err(err).Msg("could not detect a reasonable private IP range")
 		}
 
+		// keep the networks that the user checked so they don't accidentally lose them
+		selectedNetworks := make(map[string]bool, len(checkedNetworks))
+		for _, curr := range checkedNetworks {
+			selectedNetworks[curr] = true
+		}
+
 		render.Render(w, "ftue_step0.gohtml", &step0Params{
 			ServerDomain:         domain,
 			AuthURL:              authURL,
-			Port:                 int(port),
+			Port:                 portStr,
 			DefaultSlashConfig:   pathPreset == "slashconfig",
 			DefaultPWD:           pathPreset == "pwd",
 			DefaultCustom:        pathPreset == "custom",
@@ -255,6 +265,8 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 			DetectedContainers:   detectedContainers,
 			DockerDetectionError: dockerErr,
 			CandidateIPRanges:    ipNetworks,
+			SelectedNetworks:     selectedNetworks,
+			CustomTrustedNetwork: customTrustedNetwork,
 		})
 		return
 	}
