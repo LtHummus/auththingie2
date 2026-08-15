@@ -77,6 +77,8 @@ func (m *Middleware) WriteSession(w http.ResponseWriter, setupCode string) error
 		return err
 	}
 
+	// #nosec G124 -- setup may be run over insecure methods (for example accessed directly from an internal network)
+	// and we want to support that
 	http.SetCookie(w, &http.Cookie{
 		Name:     FTUESessionCookieName,
 		Value:    encoded,
