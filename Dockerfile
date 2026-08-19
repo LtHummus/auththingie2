@@ -1,6 +1,6 @@
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
-FROM --platform=$BUILDPLATFORM golang:1.26 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27rc3 AS build
 COPY --from=xx / /
 
 
