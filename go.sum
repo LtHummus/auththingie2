@@ -72,8 +72,8 @@ github.com/gorilla/securecookie v1.1.2 h1:YCIWL56dvtr73r6715mJs5ZvhtnY73hBvEF8kX
 github.com/gorilla/securecookie v1.1.2/go.mod h1:NfCASbcHqRSY+3a8tlWJwsQap2VX5pwzwo4h3eOamfo=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 h1:NmZ1PKzSTQbuGHw9DGPFomqkkLWMC+vZCkfs+FHv1Vg=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3/go.mod h1:zQrxl1YP88HQlA6i9c63DSVPFklWpGX4OWAc9bFuaH4=
-github.com/gurkankaymak/hocon v1.2.23 h1:1ReQoih6/nOK4L7kBSjLEPp3ATYn7BuIT3s/b0te6FI=
-github.com/gurkankaymak/hocon v1.2.23/go.mod h1:dQCfhnuDKlLqAZRGhFTd81HkAfMx7STHv0w2JkJ6iq4=
+github.com/gurkankaymak/hocon v1.3.0 h1:OPw9XP+c3o4JGBVIS5e4+84YNfFFFgKQ625LX5tjSyQ=
+github.com/gurkankaymak/hocon v1.3.0/go.mod h1:CM7yeDDq8AUU7I+QiLA7aVSJVbP1BVgZqqCiuzgcNS0=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
