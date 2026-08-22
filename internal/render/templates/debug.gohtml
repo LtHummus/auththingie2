@@ -3,10 +3,23 @@
 {{define "title"}}Debug{{end}}
 
 {{define "content"}}
-    <div>
-        <h1>AuthThingie 2 Debug</h1>
-        <div>
-            <h2>Admin Notices</h2>
+    <div id="debug-container" class="at-page">
+        <hgroup>
+            <h1>AuthThingie 2 Debug</h1>
+            <h2>Here's a bunch of information. Maybe it's useful!</h2>
+        </hgroup>
+
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li>Debug</li>
+            </ul>
+        </nav>
+
+        <article>
+            <header>
+                <strong>Admin Notices</strong>
+            </header>
             {{ if .AdminNotices }}
                 <ul>
                     {{ range .AdminNotices }}
@@ -14,46 +27,78 @@
                     {{ end }}
                 </ul>
             {{ else }}
-                <p>No admin notices</p>
+                <p class="at-empty">No admin notices</p>
             {{ end }}
-        </div>
-        <div>
-            <h2>Request Information</h2>
-            {{ .RequestTemplate }}
-        </div>
-        <div>
-            <h2>User Information</h2>
-            {{ .UserTemplate }}
-        </div>
-        <div>
-            <h2>Session Information</h2>
-            {{ .SessionTemplate }}
-        </div>
-        <div>
-            <h2>Build Information</h2>
-            {{ .BuildTemplate }}
-        </div>
-        <div>
-            <h2>Configuration Information</h2>
-            {{ .ConfigTemplate }}
-        </div>
-        <div>
-            <h2>Trusted Proxies</h2>
-            {{ .TrustedProxies }}
-        </div>
-        <div>
-            <h2>Runtime System Configuration</h2>
-            {{ .VarsTemplate }}
-        </div>
-        <div>
-            <h2>Environment Variables</h2>
-            {{ .EnvVarTemplate }}
-        </div>
-        <div>
-            <h2>Build Dependencies</h2>
-            {{ .DependencyTemplate }}
-        </div>
+        </article>
 
+        <article>
+            <header>
+                <strong>Request Information</strong>
+            </header>
+            <figure>{{ .RequestTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>User Information</strong>
+            </header>
+            <figure>{{ .UserTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Session Information</strong>
+            </header>
+            <figure>{{ .SessionTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Build Information</strong>
+            </header>
+            <figure>{{ .BuildTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Configuration Information</strong>
+            </header>
+            <figure>{{ .ConfigTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Trusted Proxies</strong>
+            </header>
+            <figure>{{ .TrustedProxies }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Runtime System Configuration</strong>
+            </header>
+            <figure>{{ .VarsTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Environment Variables</strong>
+            </header>
+            <figure>{{ .EnvVarTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Build Dependencies</strong>
+            </header>
+            <figure>{{ .DependencyTemplate }}</figure>
+        </article>
+
+        <article>
+            <header>
+                <strong>Detected Interfaces</strong>
+            </header>
+            <figure>{{ .DetectedInterfaces }}</figure>
+        </article>
     </div>
-
 {{end}}

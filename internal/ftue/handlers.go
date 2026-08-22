@@ -1,7 +1,6 @@
 package ftue
 
 import (
-	"encoding/json"
 	"net/http"
 	"os"
 	"sync"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db"
+	"github.com/lthummus/auththingie2/internal/ftue/session"
 	"github.com/lthummus/auththingie2/internal/importer"
 	"github.com/lthummus/auththingie2/internal/middlewares/maxbytes"
 	"github.com/lthummus/auththingie2/internal/middlewares/securityheaders"
@@ -33,6 +33,10 @@ var initCache = sync.OnceFunc(func() {
 })
 
 type ftueEnv struct {
+	setupCode    string
+	startingStep Step
+	protector    *session.Middleware
+
 	database db.DB
 	analyzer rules.Analyzer
 	config   *viper.Viper
@@ -51,17 +55,14 @@ type ftueImportConfirmParams struct {
 func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if step == StepConfigExists {
-			http.Redirect(w, r, "/ftue/step1", http.StatusFound)
-			return
-		}
-		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
-	})
-
 	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		requestHost := r.Header.Get("X-Forwarded-Host")
 		allowHost := os.Getenv("FTUE_ALLOW_HOST")
+
+		if allowHost == "" {
+			http.Error(w, "environment varibale FTUE_ALLOW_HOST must be set to your host to set things up behind the proxy", http.StatusForbidden)
+			return
+		}
 
 		if allowHost == requestHost {
 			log.Debug().Str("ftue_allow_host", allowHost).Str("xfh", requestHost).Msg("allowing during FTUE")
@@ -72,28 +73,36 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 		}
 	})
 
-	// TODO: remove CSRF exemption here
-	mux.HandleFunc("/ftue/path", HandlePathComplete)
-
-	mux.HandleFunc("GET /ftue/step0", fe.HandleFTUEStep0GET)
-	mux.HandleFunc("POST /ftue/step0", fe.HandleFTUEStep0POST)
-
-	mux.HandleFunc("GET /ftue/step1", fe.HandleFTUEStep1)
-
-	mux.HandleFunc("GET /ftue/scratch", fe.HandleFTUEScratchRenderPage)
-	mux.HandleFunc("POST /ftue/scratch", fe.HandleFTUEScratchRenderPOST)
-
-	mux.HandleFunc("GET /ftue/import", fe.HandleRenderImportPage)
-	mux.HandleFunc("POST /ftue/import", fe.HandlerImportPageUpload)
-	mux.HandleFunc("/ftue/import/confirm", fe.HandleImportConfirm)
-
-	mux.HandleFunc("GET /ftue/restart", HandleRestartPage)
-	mux.HandleFunc("POST /ftue/restart", HandleRestartPost)
-
 	mux.Handle("/static/", render.StaticFSHandler())
 
+	mux.HandleFunc("GET /{$}", fe.HandleSetupCodeGET)
+	mux.HandleFunc("POST /{$}", fe.HandleSetupCodePOST)
+
+	mux.Handle("GET /begin", fe.protector.ProtectFunc(func(w http.ResponseWriter, r *http.Request) {
+		if step == StepConfigExists {
+			http.Redirect(w, r, "/ftue/step1", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, "/ftue/step0", http.StatusFound)
+	}))
+
+	mux.Handle("GET /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0GET))
+	mux.Handle("POST /ftue/step0", fe.protector.ProtectFunc(fe.HandleFTUEStep0POST))
+
+	mux.Handle("GET /ftue/step1", fe.protector.ProtectFunc(fe.HandleFTUEStep1))
+
+	mux.Handle("GET /ftue/scratch", fe.protector.ProtectFunc(fe.HandleFTUEScratchRenderPage))
+	mux.Handle("POST /ftue/scratch", fe.protector.ProtectFunc(fe.HandleFTUEScratchRenderPOST))
+
+	mux.Handle("GET /ftue/import", fe.protector.ProtectFunc(fe.HandleRenderImportPage))
+	mux.Handle("POST /ftue/import", fe.protector.ProtectFunc(fe.HandlerImportPageUpload))
+	mux.Handle("POST /ftue/import/confirm", fe.protector.ProtectFunc(fe.HandleImportConfirm))
+
+	mux.Handle("GET /ftue/restart", fe.protector.ProtectFunc(HandleRestartPage))
+	mux.Handle("POST /ftue/restart", fe.protector.ProtectFunc(HandleRestartPost))
+
 	cop := http.NewCrossOriginProtection()
-	cop.AddInsecureBypassPattern("/ftue/path")
+	cop.AddInsecureBypassPattern("/auth")
 
 	handler := cop.Handler(mux)
 
@@ -106,33 +115,4 @@ func (fe *ftueEnv) buildMux(step Step) http.Handler {
 	handler = maxbytes.NewMaxBytesMiddleware(handler, MaxBodySize)
 
 	return handler
-}
-
-func HandlePathComplete(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Path string `json:"path"`
-	}
-	defer r.Body.Close()
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		log.Error().Err(err).Msg("could not decode path input")
-		http.Error(w, "could not decode path input", http.StatusBadRequest)
-		return
-	}
-
-	paths := make([]string, 0)
-	if input.Path != "" {
-		paths = PathAutoComplete(input.Path)
-	}
-	respBytes, err := json.Marshal(paths)
-	if err != nil {
-		log.Error().Err(err).Msg("could not serialize paths back")
-		http.Error(w, "could not serialize response", http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(respBytes)
-	if err != nil {
-		log.Error().Caller(0).Err(err).Msg("could not write path completion data to response")
-	}
 }

@@ -3,40 +3,61 @@
 {{define "title"}}AuthThingie 2 Setup{{end}}
 
 {{define "content"}}
-    <div id="ftue-restart-container" xmlns="http://www.w3.org/1999/html">
-        <article>
+    <div id="ftue-restart-container" class="at-page">
+        <hgroup>
             <h1>Restart Needed</h1>
-            <p>
-                Ok, you should be all ready to go now! The last thing
-                to do is to restart AuthThingie 2 to pick up your new changes.
-            </p>
+            <h2>That's all we need. Now just to restart and come back from the dead</h2>
+        </hgroup>
+
+        <p>
+            Ok, you should be all ready to go now! The last thing
+            to do is to restart AuthThingie 2 to pick up your new changes.
+        </p>
+
+        <article>
+            <header>
+                <strong>{{ if .IsDocker }}Running in Docker{{ else }}Running as a Standalone Executable{{ end }}</strong>
+            </header>
+
             {{ if .IsDocker }}
                 <p>
                     You're in a docker container, so when you click the big button below, we'll
                     just exit the process and hopefully the docker daemon will restart us for us.
-                    (This will work only if you have set a restart policy in your docker compose or
-                    whatever)
                 </p>
+                <details>
+                    <summary>What if it doesn't come back?</summary>
+                    <p>
+                        This will work only if you have set a restart policy in your docker compose or whatever. If nothing
+                        comes back after a few seconds, start the container yourself and everything you just configured will
+                        still be there.
+                    </p>
+                </details>
             {{ else }}
                 <p>
                     You are running as a standalone executable. We're just gonna try and restart ourselves
                     and hope for the best. You can also just click on the shutdown button to stop ourselves
-                    without restarting. The choice is yours. (Obviously if you go that route, AuthThingie won't
-                    work until you start it up again, but this is helpful if you need to set some environment
-                    variables between now and then or whatever).
+                    without restarting. The choice is yours.
                 </p>
+                <details>
+                    <summary>When would I want to shut down instead?</summary>
+                    <p>
+                        Obviously if you go that route, AuthThingie won't work until you start it up again, but this is
+                        helpful if you need to set some environment variables between now and then or whatever.
+                    </p>
+                </details>
             {{ end }}
 
-            <form action="/ftue/restart" method="post">
+            <footer>
+                <form action="/ftue/restart" method="post">
+                    <div class="grid">
+                        {{ if .ShowRestart }}
+                            <input type="submit" name="restart-button" value="Restart" class="contrast" />
+                        {{ end }}
 
-                {{ if .ShowRestart }}
-                    <input type="submit" name="restart-button" value="Restart" />
-                {{ end }}
-
-                <input type="submit" name="shutdown-button" value="Shutdown" />
-
-            </form>
-
+                        <input type="submit" name="shutdown-button" value="Shutdown" class="{{ if .ShowRestart }}secondary{{ else }}contrast{{ end }}" />
+                    </div>
+                </form>
+            </footer>
         </article>
     </div>
 {{end}}

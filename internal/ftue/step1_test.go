@@ -17,6 +17,7 @@ func TestFtueEnv_HandleFTUEStep1(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/step1", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)

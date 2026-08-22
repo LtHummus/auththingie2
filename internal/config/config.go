@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/lthummus/auththingie2/internal/argon"
+	"github.com/lthummus/auththingie2/internal/notices"
 )
 
 const (
@@ -39,6 +40,44 @@ var (
 type WriteOverride struct {
 	Key   string
 	Value any
+}
+
+func ValidateAuthURL(x string) error {
+	parsed, err := url.Parse(x)
+	if err != nil {
+		return err
+	}
+
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("invalid scheme: must be http or https")
+	}
+
+	if parsed.Host == "" {
+		return fmt.Errorf("invalid host: can not be empty")
+	}
+
+	if parsed.User != nil {
+		return fmt.Errorf("invalid url: can not have credentials (username:password) in URL")
+	}
+
+	if parsed.RawQuery != "" {
+		return fmt.Errorf("invalid url: can not have query string")
+	}
+
+	if parsed.Fragment != "" {
+		return fmt.Errorf("invalid url: can not have a URL fragment in it")
+	}
+
+	// special case for trailing slash
+	if parsed.Path == "/" {
+		return fmt.Errorf("invalid url: can not have trailing slash")
+	}
+
+	if parsed.Path != "" {
+		return fmt.Errorf("invalid url: can not contain path")
+	}
+
+	return nil
 }
 
 func IsDocker() bool {
@@ -169,6 +208,9 @@ func ValidateConfig() []string {
 	} else if _, err := url.Parse(authURL); err != nil {
 		log.Error().Str("auth_url", authURL).Err(err).Msgf("%s is not a valid URL", ConfigKeyServerAuthURL)
 		errorsFound = append(errorsFound, fmt.Sprintf("`%s` is not a valid URL", ConfigKeyServerAuthURL))
+	} else if err = ValidateAuthURL(authURL); err != nil {
+		log.Warn().Err(err).Str("auth_url", authURL).Msgf("%s not a valid auth url. this will be a fatal config in future releases", ConfigKeyServerAuthURL)
+		notices.AddMessage("invalid_auth_url", fmt.Sprintf("%s is not a valid URL for %s. The auth URL needs to be a full URL, scheme and all. e.g. https://auth.example.com. this will be a fatal error in future releases", authURL, ConfigKeyServerAuthURL))
 	}
 
 	if domain := viper.GetString(ConfigKeyServerDomain); domain == "" {

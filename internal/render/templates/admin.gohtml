@@ -3,7 +3,12 @@
 {{define "title"}}AuthThingie2 Admin Page{{end}}
 
 {{define "content"}}
-        <h1>AuthThingie Admin</h1>
+    <div id="admin-container" class="at-page">
+        <hgroup>
+            <h1>AuthThingie Admin</h1>
+            <h2>Users, rules and a tester (and no oxford comma)</h2>
+        </hgroup>
+
         <nav aria-label="breadcrumb">
             <ul>
                 <li><a href="/">Home</a></li>
@@ -11,30 +16,71 @@
             </ul>
         </nav>
 
-        <div id="users-section">
-        <h2>Users</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th scope="col">Username</th>
-                    <th scope="col"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .Users }}
-                    <tr>
-                        <td>{{ .Username }}</td>
-                        <td><a href="/admin/users/{{ .Id }}">Edit User</a></td>
-                    </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        <a href="/admin/users/create">Create a New User</a>
-        </div>
-            <div id="rules-section">
-                <h2>Rules</h2>
+        <article id="users-section">
+            <header>
+                <strong>Users</strong>
+            </header>
+
+            {{ if .Users }}
                 <figure>
-                    <table id="admin-rule-table">
+                    <table role="grid">
+                        <thead>
+                            <tr>
+                                <th scope="col">Username</th>
+                                <th scope="col">Roles</th>
+                                <th scope="col">TOTP</th>
+                                <th scope="col">Status</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ range .Users }}
+                                <tr>
+                                    <td>{{ .Username }}</td>
+                                    <td>
+                                        {{ if .Admin }}
+                                            <span class="badge admin-badge">Admin</span>
+                                        {{ end }}
+                                        {{ range .Roles }}
+                                            <span class="badge role-badge">{{ . }}</span>
+                                        {{ end }}
+                                    </td>
+                                    <td>{{ if .UsesTOTP }}Enabled{{ else }}Not enabled{{ end }}</td>
+                                    <td>
+                                        {{ if .Disabled }}
+                                            <span class="badge admin-badge">Disabled</span>
+                                        {{ else }}
+                                            Active
+                                        {{ end }}
+                                    </td>
+                                    <td><a href="/admin/users/{{ .Id }}">Edit User</a></td>
+                                </tr>
+                            {{ end }}
+                        </tbody>
+                    </table>
+                </figure>
+            {{ else }}
+                <p class="at-empty">There are no users yet. That is a little odd, .... like how is this even being rendered. WTF</p>
+            {{ end }}
+
+            <footer>
+                <a href="/admin/users/create" role="button">Create a New User</a>
+            </footer>
+        </article>
+
+        <article id="rules-section">
+            <header>
+                <strong>Rules</strong>
+            </header>
+
+            <p>
+                Rules are matched from the top down, and the first one that matches wins. Anything that doesn't match a rule
+                is admin only.
+            </p>
+
+            {{ if .Rules }}
+                <figure>
+                    <table id="admin-rule-table" role="grid">
                         <thead>
                             <tr class="table-header">
                                 <th scope="col">Rule Name</th>
@@ -71,14 +117,39 @@
                         </tbody>
                     </table>
                 </figure>
-            </div>
-            <div>
-                <h3>Test Rule</h3>
-                <form hx-get="/admin/ruletest" hx-target="#test-result" hx-swap="innerHTML">
-                    <div><label for="test-source-field">Source IP (blank for wider internet)</label><input type="text" name="source" id="test-source-field" /></div>
-                    <div><label for="test-url-field">URL</label><input type="url" inputmode="url" name="url" id="test-url-field" /></div>
-                    <button type="submit">Test</button>
-                </form>
-                <div id="test-result"></div>
-            </div>
+                <small>Rules live in your config file. Edit it and we'll hot-reload them.</small>
+            {{ else }}
+                <p class="at-empty">
+                    No rules are configured, so every request is admin only. Add some to the <code>rules</code> section of your
+                    config file and restart AuthThingie.
+                </p>
+            {{ end }}
+        </article>
+
+        <article id="rule-test-section">
+            <header>
+                <strong>Test Rule</strong>
+            </header>
+
+            <p>Give me a URL and I'll tell you which rule would match it and who would be let through.</p>
+
+            <form hx-get="/admin/ruletest" hx-target="#test-result" hx-swap="innerHTML">
+                <div class="grid">
+                    <div>
+                        <label for="test-source-field">Source IP</label>
+                        <input type="text" name="source" id="test-source-field" placeholder="192.168.1.50" />
+                        <small>Leave this blank to pretend the request came from the wider internet.</small>
+                    </div>
+                    <div>
+                        <label for="test-url-field">URL</label>
+                        <input type="url" inputmode="url" name="url" id="test-url-field" placeholder="https://app.example.com/some/path" />
+                        <small>The full URL, scheme and all.</small>
+                    </div>
+                </div>
+                <button type="submit">Test</button>
+            </form>
+
+            <div id="test-result"></div>
+        </article>
+    </div>
 {{end}}

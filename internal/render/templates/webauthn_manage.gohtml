@@ -2,7 +2,12 @@
 
 {{ define "title" }}Passkeys Management{{ end }}
 {{ define "content" }}
+    <div id="webauthn-manage-container" class="at-page">
+        <hgroup>
             <h1>Passkeys Management</h1>
+            <h2>The keys you can use instead of a password</h2>
+        </hgroup>
+
         <nav aria-label="breadcrumb">
             <ul>
                 <li><a href="/">Home</a></li>
@@ -10,13 +15,27 @@
                 <li>Passkeys Management</li>
             </ul>
         </nav>
-        <div>
-            <div id="modify-error" class="error-box no-error"></div>
+
+        <div id="modify-error" class="error-box no-error"></div>
+
+        <article>
+            <header>
+                <strong>Your Passkeys</strong>
+            </header>
+
+            <p>
+                A passkey lives on your phone, your laptop, or a hardware key, and it signs you in with a fingerprint or a
+                face instead of a password. Enroll one per device you actually use.
+            </p>
+
             {{ template "authn_key_list.gohtml" . }}
 
-            <div id="enroll_error" class="error-box no-error"></div>
-            <button id="passkey-enroll-button">Enroll New Key</button>
-        </div>
+            <footer>
+                <div id="enroll_error" class="error-box no-error"></div>
+                <button id="passkey-enroll-button">Enroll New Key</button>
+            </footer>
+        </article>
+    </div>
 
     <script src="/static/js/webauthn.js"></script>
     <script src="/static/js/webauthn_manage.js"></script>

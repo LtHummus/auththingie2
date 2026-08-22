@@ -3,52 +3,97 @@
 {{define "title"}}AuthThingie2 Admin Page{{end}}
 
 {{define "content"}}
-                <h1>AuthThingie Admin</h1>
+    <div id="edit-user-container" class="at-page">
+        <hgroup>
+            <h1>AuthThingie Admin</h1>
+            <h2>Editing the account for {{ .User.Username }}</h2>
+        </hgroup>
 
-            <nav aria-label="breadcrumb">
-                <ul>
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/admin">Admin Control Panel</a></li>
-                    <li>Editing <strong>{{ .User.Username }}</strong></li>
-                </ul>
-            </nav>
-            <div>
-                <h3>Edit Roles</h3>
-                <div id="tag-edit-table">
-                    {{template "tagtableinternal.gohtml" . }}
-                </div>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/admin">Admin Control Panel</a></li>
+                <li>Editing <strong>{{ .User.Username }}</strong></li>
+            </ul>
+        </nav>
 
-                <h3>Security Settings</h3>
+        {{ if .Error }}
+            <div class="error-box">
+                {{ .Error }}
+            </div>
+        {{ end }}
 
-                <h4>Account Enablement</h4>
+        <article>
+            <header>
+                <strong>Roles</strong>
+            </header>
 
-                <form id="account-disable-switch">
-                    <div id="enable-disable-error"></div>
-                    {{template "account_disable_switch.gohtml" . }}
-                </form>
+            <p>Roles decide which rules this user matches. Changes here take effect immediately.</p>
 
-                <h4>Change Password</h4>
+            <div id="tag-edit-table">
+                {{template "tagtableinternal.gohtml" . }}
+            </div>
+        </article>
 
-                <form action="/admin/users/{{ .User.Id }}" method="post">
-                    <label for="new-pwd">Change Password</label> <input type="password" name="new-pwd" id="new-pwd" />
-                    <input type="submit" value="Change Password" />
-                </form>
+        <article>
+            <header>
+                <strong>Account Enablement</strong>
+            </header>
 
-                <hr />
+            <p>A disabled account sticks around, keeps its roles, and simply can't log in until you switch it back on.</p>
 
-                {{ if not .IsSelf }}
+            <form id="account-disable-switch">
+                <div id="enable-disable-error"></div>
+                {{template "account_disable_switch.gohtml" . }}
+            </form>
+        </article>
+
+        <article>
+            <header>
+                <strong>Change Password</strong>
+            </header>
+
+            <form action="/admin/users/{{ .User.Id }}" method="post">
+                <label for="new-pwd">New password</label>
+                <input type="password" name="new-pwd" id="new-pwd" placeholder="New password" autocomplete="new-password" />
+                <small>The user is not told about this, so you'll want to pass the new password along yourself.</small>
+
+                <input type="submit" value="Change Password" />
+            </form>
+        </article>
+
+        {{ if not .IsSelf }}
+            <article class="at-danger-zone">
+                <header>
+                    <strong>Danger Zone</strong>
+                </header>
+
+                {{ if .User.TOTPEnabled }}
+                    <p>
+                        Unenrolling from TOTP means this user can log in with just a password again, which is handy if they
+                        have lost their authenticator app.
+                    </p>
+                {{ end }}
+
+                <p>Deleting a user cannot be undone. Everything they have, including their passkeys, goes bye bye.</p>
+
+                <footer>
                     {{ if .User.TOTPEnabled }}
                         <form action="/admin/users/{{ .User.Id }}/totp_unenroll" method="post">
                             <input type="submit" value="Unenroll User From TOTP" class="danger-button" />
                         </form>
-                    {{ else }}
-
                     {{ end }}
 
-                <form action="/admin/users/{{ .User.Id }}/delete" method="post">
-                    <input type="submit" value="Delete this User" class="danger-button" />
-                </form>
-                {{ end }}
-            </div>
-            
+                    <form action="/admin/users/{{ .User.Id }}/delete" method="post">
+                        <input type="submit" value="Delete this User" class="danger-button" />
+                    </form>
+                </footer>
+            </article>
+        {{ else }}
+            <p class="at-empty">
+                This is your own account, so unenrolling TOTP and deleting the user aren't offered here. You can manage those
+                from <a href="/edit_self">your own profile</a>.
+            </p>
+        {{ end }}
+    </div>
 {{end}}

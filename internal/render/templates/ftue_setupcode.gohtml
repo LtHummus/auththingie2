@@ -1,0 +1,50 @@
+{{template "base.gohtml"}}
+
+{{define "title"}}AuthThingie 2 Setup{{end}}
+
+
+{{define "content"}}
+    <div id="ftue-setup-container" class="at-page">
+        <hgroup>
+            <h1>Welcome to AuthThingie 2</h1>
+            <h2>Let's get you all sorted</h2>
+        </hgroup>
+
+        {{ if . }}
+            {{ if .Errors }}
+                <div class="error-box at-error-list" id="ftue-error-box">
+                    <strong>We couldn't start setup:</strong>
+                    <ul>
+                        {{ range .Errors }}
+                            <li>{{ . }}</li>
+                        {{ end }}
+                    </ul>
+                </div>
+            {{ end }}
+        {{ end }}
+
+        <p>
+            This workflow will help you configure your server. To get up and running, we need to set up some basic configuration
+            options. I will try to import as much as I could from any config that existed, but in the case I didn't find anything,
+            you'll need to put some values in. It should only take a couple of minutes.
+        </p>
+
+        <article>
+            <header>
+                <strong>Setup Code</strong>
+            </header>
+
+            <p>
+                To make sure it's really you doing the setup, I need the setup code before we go any further.
+            </p>
+
+            <form action="/" method="post">
+                <label for="ftue-setup-code">Setup Code</label>
+                <input type="text" name="setup_code" id="ftue-setup-code" required aria-label="Setup Code" autocomplete="off" autocorrect="off" spellcheck="false" />
+                <small>It's all numbers and capital letters, and it's printed in the logs of the running application.</small>
+
+                <button type="submit" class="contrast">Start Setup</button>
+            </form>
+        </article>
+    </div>
+{{end}}

@@ -3,7 +3,12 @@
 {{ define "title" }}TOTP Enrollment{{ end }}
 
 {{ define "content" }}
-        <h1>TOTP Enrollment</h1>
+    <div id="enrollment-container" class="at-page">
+        <hgroup>
+            <h1>TOTP Enrollment</h1>
+            <h2>Add a rotating six digit code on top of your password</h2>
+        </hgroup>
+
         <nav aria-label="breadcrumb">
             <ul>
                 <li><a href="/">Home</a></li>
@@ -11,30 +16,54 @@
                 <li>TOTP Enrollment</li>
             </ul>
         </nav>
-            {{ if .Error }}
-                <p class="notice">
-                    Error: {{ .Error }}
-                </p>
-            {{ end }}
-        <form action="/enable_totp" method="post">
 
-        <div class="grid">
+        {{ if .Error }}
+            <p class="error-box">Error: {{ .Error }}</p>
+        {{ end }}
+
+        <article id="totp-enrollment-form">
+            <header>
+                <strong>Scan and Confirm</strong>
+            </header>
+
+            <form action="/enable_totp" method="post">
+                <input type="hidden" name="totp-enrollment-ticket" value="{{ .EnrollmentTicket }}" />
+
+                <div class="grid">
                     <div>
-                        <img src="{{ .QRCodeDataURL }}" alt="QR Code for TOTP Enrollment" />
+                        <img src="{{ .QRCodeDataURL }}" alt="QR code containing your new TOTP secret" class="at-qr-code" />
                     </div>
                     <div>
-                        <p>Scan the QR code to set up your Google Authenticator (or whatever) app. Then enter a code in to the box to continue</p>
-                        <input type="text" name="totp-code" id="totp-code-field" required aria-label="TOTP Code" placeholder="TOTP Code"/>
-                        <input type="hidden" name="totp-enrollment-ticket" value="{{ .EnrollmentTicket }}" />
-                    </div>
+                        <ol id="enrollment-steps">
+                            <li>Open your authenticator app (Google Authenticator, 1Password, or whatever you like).</li>
+                            <li>Scan the code, or add the account by hand using the key below.</li>
+                            <li>Type the six digit code it gives you into the box.</li>
+                        </ol>
 
-            </div>
-            <div id="submit-button-container">
+                        <label for="totp-code-field">TOTP Code</label>
+                        <input type="text" name="totp-code" id="totp-code-field" required placeholder="123456" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus />
+                        <small>Nothing is switched on until you enter a code that works.</small>
+                    </div>
+                </div>
+
                 <input type="submit" value="Enable" />
-            </div>
-        </form>
+            </form>
 
-        <a href="/edit_self">Or go back without enabling</a>
+            <footer>
+                <details id="manual-enrollment">
+                    <summary>Can't scan the QR code?</summary>
+                    <p>Add a time based account by hand and give it this key:</p>
+                    <p><code class="at-secret">{{ .Secret }}</code></p>
+                    <p>
+                        If your app asks, it is six digits long and rotates every thirty seconds. Keep the key to
+                        yourself: anyone who has it can generate your codes.
+                    </p>
+                </details>
+            </footer>
+        </article>
 
-
+        <p class="at-footnote">
+            <a href="/edit_self">Or go back without enabling</a>
+        </p>
+    </div>
 {{end}}

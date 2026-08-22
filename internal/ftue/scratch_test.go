@@ -24,6 +24,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPage(t *testing.T) {
 		_, _, _, e := makeTestEnv(t)
 
 		r := httptest.NewRequest(http.MethodGet, "/ftue/scratch", nil)
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -50,6 +51,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		r.Header.Set("Sec-Fetch-Site", "cross-site")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -65,6 +67,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -83,6 +86,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -101,6 +105,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -120,6 +125,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -140,6 +146,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)
@@ -160,6 +167,7 @@ func TestFtueEnv_HandleFTUEScratchRenderPOST(t *testing.T) {
 
 		r := httptest.NewRequest(http.MethodPost, "/ftue/scratch", strings.NewReader(v.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		attachSetupAuthCookie(r, e)
 		w := httptest.NewRecorder()
 
 		e.buildMux(StepStartFromBeginning).ServeHTTP(w, r)

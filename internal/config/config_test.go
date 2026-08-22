@@ -281,3 +281,32 @@ func Test_calcEntropy(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAuthURL(t *testing.T) {
+	tests := []struct {
+		URL           string
+		ExpectedError *string
+	}{
+		{URL: "https://auth.example.com", ExpectedError: nil},
+		{URL: "https://example.com", ExpectedError: nil},
+		{URL: "ftp://example.com", ExpectedError: new("invalid scheme: must be http or https")},
+		{URL: "https:///foo", ExpectedError: new("invalid host: can not be empty")},
+		{URL: "https://hello:world@auth.example.com", ExpectedError: new("invalid url: can not have credentials (username:password) in URL")},
+		{URL: "https://auth.example.com/?foo=bar", ExpectedError: new("invalid url: can not have query string")},
+		{URL: "https://auth.example.com/#hello", ExpectedError: new("invalid url: can not have a URL fragment in it")},
+		{URL: "https://auth.example.com/hi", ExpectedError: new("invalid url: can not contain path")},
+		{URL: "https://auth.example.com/", ExpectedError: new("invalid url: can not have trailing slash")},
+	}
+
+	for _, curr := range tests {
+		t.Run(curr.URL, func(t *testing.T) {
+			if curr.ExpectedError == nil {
+				assert.NoError(t, ValidateAuthURL(curr.URL))
+			} else {
+				err := ValidateAuthURL(curr.URL)
+				require.Error(t, err)
+				assert.Equal(t, *curr.ExpectedError, err.Error())
+			}
+		})
+	}
+}

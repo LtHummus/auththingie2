@@ -1,74 +1,76 @@
-.right-justify {
-    text-align: right;
+:root {
+    --at-add-background: #43a047;
+    --at-add-hover-background: #2e7d32;
+    --at-admin-badge-background: #d14633;
+    --at-danger-background: var(--at-danger-color);
+    --at-danger-color: #c62828;
+    --at-delete-background: #c65858;
+    --at-delete-hover-background: #c60000;
+    --at-error-background: #a30a14;
+    --at-info-background: #335f7b;
+    --at-public-badge-background: #254517;
+    --at-role-badge-background: #808080;
+    --at-success-color: #448428;
 }
 
 .passkey-logo {
     height: 16px;
-    padding-right: 5px;
+    padding-inline-end: 0.3125rem;
 }
 
 .passkey-line {
-    margin-top: 20px;
-    margin-bottom: 30px;
+    margin-top: 1.25rem;
+    margin-bottom: 1.875rem;
+}
+
+.error-box,
+.login-info-box {
+    padding: 1.25rem;
+    margin-bottom: 0.9375rem;
+    border-radius: 0.625rem;
+    color: #fff;
 }
 
 .error-box {
+    background-color: var(--at-error-background);
     text-align: center;
-    padding: 20px;
-    background-color: #a30a14;
-    color: white;
-    margin-bottom: 15px;
-    border-radius: 10px;
 }
 
 .login-info-box {
-    padding: 20px;
-    background-color: #335f7b;
-    color: white;
-    margin-bottom: 15px;
-    border-radius: 10px;
+    background-color: var(--at-info-background);
 }
 
 .no-error {
     display: none;
 }
 
-th {
+.at-page th {
     font-weight: bold;
 }
 
-.badge {
-    padding: 4px 8px 2px;
+.badge,
+.modify-badge-button {
+    padding: 0.25rem 0.5rem 0.125rem;
     text-align: center;
-    border-radius: 5px;
+}
+
+.badge {
+    border-radius: 0.3125rem;
 }
 
 .role-badge {
-    background-color: rgb(128, 128, 128);
-    color: white;
+    background-color: var(--at-role-badge-background);
+    color: #fff;
 }
 
 .public-badge {
-    background-color: #254517;
-    color: white;
+    background-color: var(--at-public-badge-background);
+    color: #fff;
 }
 
 .admin-badge {
-    background-color: #d14633;
-    color: white;
-}
-
-
-
-@media(prefers-color-scheme: dark) {
-    .admin-badge {
-        background-color: #841b1b;
-    }
-
-    .public-badge {
-        background-color: #448428;
-        color: white;
-    }
+    background-color: var(--at-admin-badge-background);
+    color: #fff;
 }
 
 #admin-rule-table {
@@ -76,62 +78,339 @@ th {
 }
 
 .danger-button {
-    background-color: #c62828 !important;
+    background-color: var(--at-danger-background);
 }
 
 .modifiable-badge {
-    padding-right: 0;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+    padding-inline-end: 0;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
 }
 
 .modify-badge-button {
-    padding: 4px 8px 2px;
-    text-align: center;
-    border-radius: 0 5px 5px 0;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0.3125rem;
+    border-end-end-radius: 0.3125rem;
+    border-end-start-radius: 0;
 }
 
 .delete-badge-button {
-    background-color: #c65858;
+    background-color: var(--at-delete-background);
 }
 
-.delete-badge-button:hover {
-    background-color: #c60000;
+.delete-badge-button:hover,
+.delete-badge-button:focus-visible {
+    background-color: var(--at-delete-hover-background);
 }
 
 .add-badge-button {
-    background-color: #43a047;
+    background-color: var(--at-add-background);
 }
 
-.add-badge-button:hover {
-    background-color: #2e7d32;
+.add-badge-button:hover,
+.add-badge-button:focus-visible {
+    background-color: var(--at-add-hover-background);
 }
 
-
-
-.add-button {
-    background-color: #254517;
+.at-page #custom-path-fields {
+    display: none;
+    margin-inline-start: 2.125rem;
 }
 
-@media(prefers-color-scheme: dark) {
-    .add-button {
-        background-color: #448428;
-        color: white;
+.at-page hgroup {
+    margin-bottom: 2rem;
+}
+
+.at-page nav[aria-label="breadcrumb"] {
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+}
+
+.at-page article > header {
+    font-size: 1.1rem;
+}
+
+.at-page h4 {
+    margin-top: 2rem;
+}
+
+.at-page label > small,
+.at-page input + small,
+.at-page textarea + small,
+.at-page select + small,
+.at-page figure + small,
+.at-page .grid + small {
+    display: block;
+    margin-bottom: 1rem;
+    color: var(--muted-color);
+}
+
+.at-page input[type="checkbox"] + small,
+.at-page input[type="radio"] + small {
+    margin-bottom: 0;
+}
+
+.at-page fieldset > label {
+    margin-bottom: 1rem;
+}
+
+.at-page fieldset > label > small {
+    margin-inline-start: 2.125rem;
+}
+
+.at-page details {
+    margin-bottom: 1.5rem;
+}
+
+.at-page figure {
+    margin-bottom: 1.5rem;
+}
+
+.at-page figure table td,
+.at-page figure table th {
+    white-space: nowrap;
+}
+
+.at-page table input[type="checkbox"] {
+    margin-bottom: 0;
+}
+
+.at-page article > footer form,
+.at-page article > footer .grid {
+    margin-bottom: 0;
+}
+
+.at-page article > footer input[type="submit"],
+.at-page article > footer button {
+    margin-bottom: 0;
+}
+
+.at-page form > button:last-child,
+.at-page form > input[type="submit"]:last-child {
+    margin-bottom: 0;
+}
+
+.at-narrow {
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+.at-footnote {
+    margin-top: 2rem;
+    color: var(--muted-color);
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.at-card-grid > article {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.at-card-grid > article > p,
+.at-card-grid > article > div {
+    flex-grow: 1;
+}
+
+.at-card-grid > article > footer {
+    margin-bottom: 0;
+}
+
+.at-card-grid > article > footer > a,
+.at-button-link > a {
+    display: block;
+    padding: var(--form-element-spacing-vertical) var(--form-element-spacing-horizontal);
+    border: var(--border-width) solid var(--primary);
+    border-radius: var(--border-radius);
+    background-color: var(--primary);
+    color: var(--primary-inverse);
+    font-weight: var(--font-weight);
+    line-height: var(--line-height);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.at-card-grid > article > footer > a:hover,
+.at-card-grid > article > footer > a:focus,
+.at-button-link > a:hover,
+.at-button-link > a:focus {
+    border-color: var(--primary-hover);
+    background-color: var(--primary-hover);
+}
+
+.link-like {
+    cursor: pointer;
+}
+
+.at-qr-code {
+    display: block;
+    width: 100%;
+    max-width: 15rem;
+    margin: 0 auto;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    background-color: #fff;
+}
+
+#totp-enrollment-form .grid > :first-child {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+#totp-enrollment-form #totp-code-field,
+#totp-prompt-container #totp-code-field {
+    max-width: 10rem;
+    letter-spacing: 0.25em;
+}
+
+#enrollment-steps {
+    margin-bottom: 1rem;
+}
+
+#manual-enrollment {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.at-secret {
+    display: inline-block;
+    word-break: break-all;
+    user-select: all;
+}
+
+.at-danger-zone {
+    border: var(--border-width) solid var(--at-danger-color);
+}
+
+.at-danger-zone > header {
+    color: var(--at-danger-color);
+}
+
+.at-danger-zone form {
+    display: inline-block;
+    margin-inline-end: 0.5rem;
+    margin-bottom: 0;
+}
+
+.at-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.at-badge-row .badge {
+    display: inline-block;
+}
+
+.at-badge-pair {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.at-badge-pair .modify-badge-button {
+    cursor: pointer;
+    user-select: none;
+}
+
+#debug-container figure table td,
+#debug-container figure table th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.notice {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-inline-start: 4px solid var(--at-danger-color);
+    background-color: var(--card-background-color);
+}
+
+.at-detection-status::before {
+    padding-inline-end: 0.5rem;
+    font-weight: bold;
+}
+
+.at-detection-ok::before {
+    content: "✓";
+    color: var(--at-success-color);
+}
+
+.at-detection-failed::before {
+    content: "✕";
+    color: var(--at-danger-color);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --at-admin-badge-background: #841b1b;
+        --at-danger-background: #841b1b;
+        --at-danger-color: #ef5350;
+        --at-delete-background: #8e3c3c;
+        --at-delete-hover-background: #b03030;
+        --at-public-badge-background: #448428;
+        --at-success-color: #66bb6a;
     }
 }
 
-#custom-path-fields {
-    display: none;
+.at-empty {
+    padding: 0.75rem 1rem;
+    border-inline-start: 4px solid var(--muted-border-color);
+    color: var(--muted-color);
+}
+
+.at-error-list {
+    text-align: left;
+}
+
+.at-error-list ul {
+    margin-bottom: 0;
 }
 
 #ftue-or {
+    padding-bottom: 0.625rem;
     text-align: center;
-    padding-bottom: 10px;
 }
 
 #ftue-choose-destiny {
+    margin-bottom: 1.5rem;
+    font-weight: bold;
 }
 
-#ftue-destiny-buttons-container {
+#ftue-import-confirm-container .badge {
+    display: inline-block;
+    margin-bottom: 0.125rem;
+}
+
+#login-container article,
+#totp-prompt-container article,
+#forbidden-container article {
+    margin-top: 0;
+}
+
+#login-container form,
+#totp-prompt-container form {
+    margin-bottom: 0;
+}
+
+#passkey-login-button {
+    display: flex;
     align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+#test-result:not(:empty) {
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    border-inline-start: 4px solid var(--muted-border-color);
+}
+
+#tag-edit-table h4 {
+    margin-top: 0;
 }

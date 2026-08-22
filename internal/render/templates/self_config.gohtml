@@ -1,9 +1,13 @@
 {{template "base.gohtml"}}
 
-{{define "title"}}AuthThingie2 Admin Page{{end}}
+{{define "title"}}AuthThingie2 Profile{{end}}
 
 {{define "content"}}
-    <h1>AuthThingie Edit User</h1>
+    <div id="self-config-container" class="at-page">
+        <hgroup>
+            <h1>Your Profile</h1>
+            <h2>Editing Yourself (<strong>{{ .User.Username }}</strong>)</h2>
+        </hgroup>
 
         <nav aria-label="breadcrumb">
             <ul>
@@ -12,44 +16,39 @@
             </ul>
         </nav>
 
-    <div>
-        <h2>Editing Yourself (<strong>{{ .User.Username }}</strong>)</h2>
-
         {{ if .Error }}
-            <div>
-                <p class="notice">
-                    Error: {{ .Error }}
-                </p>
-            </div>
+            <p class="notice">
+                Error: {{ .Error }}
+            </p>
         {{ end }}
-        <div class="grid">
-            <div>
-                <h3>TOTP Status</h3>
-                <div id="totp_setup_container">
-                    {{ template "totp_status_fragment.gohtml" . }}
-                </div>
-            </div>
+
+        <div class="grid at-card-grid">
+           {{ template "totp_status_fragment.gohtml" . }}
             {{ if .EnablePasskeys }}
-            <div>
-                    <h3>Passkeys</h3>
+                <article>
+                    <header>
+                        <strong>Passkeys</strong>
+                    </header>
                     <div>
-                        <a href="/webauthn/manage">Manage Your Passkeys</a>
+                        Sign in with a fingerprint, a face, or a hardware key instead of typing a username and password
                     </div>
-            </div>
+                    <footer>
+                        <a href="/webauthn/manage">Manage Your Passkeys</a>
+                    </footer>
+                </article>
             {{ end }}
-            <div>
-                <h3>Password</h3>
+
+            <article>
+                <header>
+                    <strong>Password</strong>
+                </header>
                 <div>
-                    <a href="/edit_self/password">Change your Password</a>
+                    Set a new password. You'll need your current one to do it.
                 </div>
-            </div>
-
+                <footer>
+                    <a href="/edit_self/password">Change your Password</a>
+                </footer>
+            </article>
         </div>
-
-
-
-
-
     </div>
-
 {{end}}

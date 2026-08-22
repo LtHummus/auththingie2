@@ -3,8 +3,17 @@
 {{ define "title" }}Restarting...{{ end }}
 
 {{ define "content" }}
-    <div>
-        We're restarting. We'll attempt to reload in like 10 seconds. Or <a href="/">click here</a> if you're tired of waiting.
+    <div id="ftue-restart-container" class="at-page">
+        <hgroup>
+            <h1>Restarting</h1>
+            <h2>Hang tight, this shouldn't take long</h2>
+        </hgroup>
+
+        <article aria-busy="true">
+            <p>
+                We're restarting. We'll attempt to reload in like 10 seconds. Or <a href="/">click here</a> if you're tired of waiting.
+            </p>
+        </article>
     </div>
     <script>
         const timer = setTimeout(function () {

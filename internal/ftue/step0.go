@@ -1,20 +1,25 @@
 package ftue
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/securecookie"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/idna"
 
 	"github.com/lthummus/auththingie2/internal/config"
 	"github.com/lthummus/auththingie2/internal/db/sqlite"
+	"github.com/lthummus/auththingie2/internal/ftue/docker"
+	"github.com/lthummus/auththingie2/internal/ftue/iprange"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/rules"
 )
@@ -26,16 +31,22 @@ const (
 )
 
 type step0Params struct {
-	Port               int
-	ServerDomain       string
-	AuthURL            string
-	DefaultSlashConfig bool
-	DefaultPWD         bool
-	DefaultCustom      bool
-	PWD                string // #nosec G117, this is working directory, not password :)
-	CustomConfigPath   string
-	CustomDBPath       string
-	Errors             []string
+	Port                 string
+	ServerDomain         string
+	AuthURL              string
+	DefaultSlashConfig   bool
+	DefaultPWD           bool
+	DefaultCustom        bool
+	PWD                  string // #nosec G117, this is working directory, not password :)
+	CustomConfigPath     string
+	CustomDBPath         string
+	Errors               []string
+	DockerEndpoint       string
+	DetectedContainers   []docker.FoundContainer
+	DockerDetectionError error
+	CandidateIPRanges    []iprange.CandidateRange
+	SelectedNetworks     map[string]bool
+	CustomTrustedNetwork string
 }
 
 func getCwd() string {
@@ -47,15 +58,56 @@ func getCwd() string {
 	return pwd
 }
 
+func safeTrustedNetwork(s string) error {
+	if _, err := netip.ParseAddr(s); err == nil {
+		return nil
+	}
+
+	p, err := netip.ParsePrefix(s)
+	if err != nil {
+		return fmt.Errorf("invalid trusted network: %v", err)
+	}
+
+	// Reject every IPv4 /0 CIDR, which means all IPv4 addresses.
+	if p.Bits() == 0 {
+		return fmt.Errorf("global-trust is not allowed (e.g. 0.0.0.0/0 or ::/0)")
+	}
+
+	return nil
+}
+
+func detectContainers(ctx context.Context) (string, []docker.FoundContainer, error) {
+	dockerEndpoint := docker.DefaultDockerEndpoint
+	if customEndpoint := os.Getenv("SETUP_DOCKER_ENDPOINT"); customEndpoint != "" {
+		dockerEndpoint = customEndpoint
+	}
+	detectedContainers, err := docker.DetectDocker(ctx, dockerEndpoint)
+	if err != nil {
+		log.Warn().Err(err).Msg("error attempting to detect docker containers")
+	}
+
+	return dockerEndpoint, detectedContainers, err
+}
+
 func (fe *ftueEnv) HandleFTUEStep0GET(w http.ResponseWriter, r *http.Request) {
+	dockerEndpoint, detectedContainers, dockerErr := detectContainers(r.Context())
+
+	ipNetworks, err := iprange.DetectInternalIPRange()
+	if err != nil {
+		log.Warn().Err(err).Msg("could not detect a reasonable private IP range")
+	}
 
 	render.Render(w, "ftue_step0.gohtml", &step0Params{
-		ServerDomain:       GetRootDomain(r.URL),
-		AuthURL:            r.Host,
-		DefaultSlashConfig: config.IsDocker(),
-		DefaultPWD:         !config.IsDocker(),
-		PWD:                getCwd(),
-		Port:               DefaultPort,
+		ServerDomain:         GetRootDomain(RequestHost(r)),
+		AuthURL:              RequestOrigin(r),
+		DefaultSlashConfig:   config.IsDocker(),
+		DefaultPWD:           !config.IsDocker(),
+		PWD:                  getCwd(),
+		Port:                 strconv.Itoa(DefaultPort),
+		DockerEndpoint:       dockerEndpoint,
+		DetectedContainers:   detectedContainers,
+		DockerDetectionError: dockerErr,
+		CandidateIPRanges:    ipNetworks,
 	})
 }
 
@@ -71,7 +123,13 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	domain := r.FormValue("domain")
 	authURL := r.FormValue("auth_url")
 	pathPreset := r.FormValue("config_file_preset")
+	dockerDetected := r.FormValue("docker_detected") == "true"
+	containersFound := r.FormValue("containers_found") == "true"
+	dockerEndpoint := r.FormValue("docker_endpoint")
+	checkedNetworks := r.Form["trusted_networks"]
+	customTrustedNetwork := strings.TrimSpace(r.FormValue("custom_trusted_network"))
 
+	// TODO: all this error checking can probably be refactored in to something easier to read or test
 	var errors []string
 
 	var configFilePath string
@@ -110,12 +168,17 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 
 	if domain == "" {
 		errors = append(errors, "Invalid domain")
+	} else if isIPAddress(domain) {
+		errors = append(errors, "Invalid domain: an IP address can not be used as the server domain. Use a real domain name, otherwise passkeys and session cookies will not work")
+	} else if _, err := idna.Lookup.ToASCII(strings.ToLower(strings.TrimSuffix(domain, "."))); err != nil {
+		errors = append(errors, "Invalid domain: this must be a bare domain. No scheme, no path, no port, no nothing")
 	}
 
 	if authURL == "" {
 		errors = append(errors, "Auth URL can not be blank")
 	} else {
-		_, err = url.Parse(authURL)
+		authURL = strings.TrimRight(authURL, "/")
+		err = config.ValidateAuthURL(authURL)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Invalid auth URL: %s", err.Error()))
 		}
@@ -125,20 +188,59 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	port, err = strconv.ParseInt(portStr, 10, 64)
 	if err != nil {
 		errors = append(errors, fmt.Sprintf("Invalid port: %s", err.Error()))
+	} else if port < 1 || port > 65535 {
+		errors = append(errors, "Invalid port. Ports must be between 1 and 65535")
+	}
+
+	var allTrustedNetworks []string
+	if customTrustedNetwork != "" {
+		allTrustedNetworks = append(allTrustedNetworks, customTrustedNetwork)
+	}
+	if len(checkedNetworks) > 0 {
+		allTrustedNetworks = append(allTrustedNetworks, checkedNetworks...)
+	}
+
+	for _, curr := range allTrustedNetworks {
+		if err := safeTrustedNetwork(curr); err != nil {
+			errors = append(errors, err.Error())
+		}
+	}
+
+	if len(allTrustedNetworks) == 0 && !containersFound {
+		errors = append(errors, "You must configure some sort of trusted proxy setup -- either docker or trusted networks")
 	}
 
 	if len(errors) > 0 {
+		detectedEndpoint, detectedContainers, dockerErr := detectContainers(r.Context())
+
+		ipNetworks, err := iprange.DetectInternalIPRange()
+		if err != nil {
+			log.Warn().Err(err).Msg("could not detect a reasonable private IP range")
+		}
+
+		// keep the networks that the user checked so they don't accidentally lose them
+		selectedNetworks := make(map[string]bool, len(checkedNetworks))
+		for _, curr := range checkedNetworks {
+			selectedNetworks[curr] = true
+		}
+
 		render.Render(w, "ftue_step0.gohtml", &step0Params{
-			ServerDomain:       domain,
-			AuthURL:            authURL,
-			Port:               int(port),
-			DefaultSlashConfig: pathPreset == "slashconfig",
-			DefaultPWD:         pathPreset == "pwd",
-			DefaultCustom:      pathPreset == "custom",
-			CustomConfigPath:   configFilePath,
-			CustomDBPath:       dbFilePath,
-			PWD:                getCwd(),
-			Errors:             errors,
+			ServerDomain:         domain,
+			AuthURL:              authURL,
+			Port:                 portStr,
+			DefaultSlashConfig:   pathPreset == "slashconfig",
+			DefaultPWD:           pathPreset == "pwd",
+			DefaultCustom:        pathPreset == "custom",
+			CustomConfigPath:     configFilePath,
+			CustomDBPath:         dbFilePath,
+			PWD:                  getCwd(),
+			Errors:               errors,
+			DockerEndpoint:       detectedEndpoint,
+			DetectedContainers:   detectedContainers,
+			DockerDetectionError: dockerErr,
+			CandidateIPRanges:    ipNetworks,
+			SelectedNetworks:     selectedNetworks,
+			CustomTrustedNetwork: customTrustedNetwork,
 		})
 		return
 	}
@@ -152,7 +254,19 @@ func (fe *ftueEnv) HandleFTUEStep0POST(w http.ResponseWriter, r *http.Request) {
 	fe.config.Set(config.ConfigKeyServerPort, port)
 	fe.config.Set(config.ConfigKeyServerSecretKey, base64.RawURLEncoding.EncodeToString(securecookie.GenerateRandomKey(32)))
 	fe.config.Set(config.ConfigKeyServerAuthURL, authURL)
+	fe.config.Set(config.ConfigKeyRedirectsAllowedDomainsKey, []string{domain})
 	fe.config.Set(config.ConfigKeyServerDomain, domain)
+	if len(allTrustedNetworks) > 0 {
+		fe.config.Set(config.ConfigKeyTrustedProxyNetwork, allTrustedNetworks)
+	}
+
+	if dockerDetected {
+		fe.config.Set(config.ConfigKeyTrustedProxyDockerEnabled, true)
+		if dockerEndpoint != docker.DefaultDockerEndpoint {
+			fe.config.Set(config.ConfigKeyTrustedProxyDockerEndpoint, dockerEndpoint)
+		}
+	}
+
 	err = fe.config.WriteConfig()
 	if err != nil {
 		log.Error().Err(err).Str("config_file_path", configFilePath).Msg("could not write config file")

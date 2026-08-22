@@ -1,5 +1,15 @@
-{{ if .User.TOTPEnabled }}
-    You have TOTP enabled. You can disable it by clicking <a class="link-like" hx-target="#totp_setup_container" hx-swap="innerHTML" hx-post="/disable_totp" hx-confirm="Are you sure you want to disable TOTP?">here</a>.
-{{else}}
-    You do not currently have TOTP enabled. If you wish to enable it, you can go <a href="/enable_totp">here</a>.
-{{ end }}
+<article id="totp_setup_container">
+    <header>
+        <strong>TOTP</strong>
+    </header>
+    <div>
+        Add a second factor to authentication when using a password. You currently have TOTP {{ if .User.TOTPEnabled }}<strong>enabled</strong>. {{ else }}<strong>disabled</strong>. {{ end }}
+    </div>
+    <footer>
+        {{ if .User.TOTPEnabled }}
+            <a class="link-like" hx-target="#totp_setup_container" hx-swap="outerHTML" hx-post="/disable_totp" hx-confirm="Are you sure you want to disable TOTP?">Disable TOTP</a>
+        {{else}}
+            <a href="/enable_totp">Enable TOTP</a>
+        {{ end }}
+    </footer>
+</article>

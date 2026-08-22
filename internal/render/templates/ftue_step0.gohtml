@@ -3,91 +3,221 @@
 {{define "title"}}AuthThingie 2 Setup{{end}}
 
 {{define "content"}}
-    <div id="ftue-0-container">
-        <article>
-            <h1>Welcome to AuthThingie 2 Setup</h1>
-            <p>
-                This workflow will help you configure your server. To get up and running, we need to set up some basic configuration options. I've tried to import as much as I could from any config that existed, but in the case I didn't find anything, you'll need to put some values in.
-            </p>
-            <p>
-                And enjoy the process! You'll be up and running soon!
-            </p>
-            {{ if .Errors }}
-                <article>
-                    <h3>Setup Errors</h3>
-                    <ul>
-                        {{ range .Errors }}
-                            <li>{{ . }}</li>
-                        {{ end }}
-                    </ul>
+    <div id="ftue-0-container" class="at-page">
+        <hgroup>
+            <h1>Welcome to AuthThingie 2</h1>
+            <h2>Step 1 of 2 - Your Environment and Network</h2>
+        </hgroup>
 
-                </article>
-            {{ end }}
-            <form action="/ftue/step0" method="post">
-                <h4>General Configuration</h4>
-                <div>
-                    <label for="port-field">Port to listen on:</label>
-                    <input type="text" name="port" id="port-field" required aria-label="Server Port" value="{{ .Port }}" />
-                </div>
-                <div>
-                    <h5>Configuration Path</h5>
+        {{ if .Errors }}
+            <div class="error-box at-error-list" id="ftue-error-box">
+                <strong>We couldn't continue with these settings:</strong>
+                <ul>
+                    {{ range .Errors }}
+                        <li>{{ . }}</li>
+                    {{ end }}
+                </ul>
+            </div>
+        {{ end }}
+
+        <form action="/ftue/step0" method="post">
+            <article>
+                <header>
+                    <strong>General Configuration</strong>
+                </header>
+
+                <label for="port-field">Port to listen on</label>
+                <input type="text" name="port" id="port-field" required aria-label="Server Port" value="{{ .Port }}" />
+                <small>This is the port AuthThingie itself binds to. If you're running in Docker, this is the port <em>inside</em> the container.</small>
+            </article>
+
+            <article>
+                <header>
+                    <strong>Configuration Path</strong>
+                </header>
+
+                <p>Where should the config file and the database live?</p>
+
+                <details>
+                    <summary>How do I pick?</summary>
                     <p>
-                        Here, we need to set the configuration file path. This will be the location that we store the config file and the database file. If you are running
-                        in a docker container, I recommend picking <code>/config</code>. Whatever you pick, it is HIGHLY RECOMMENDED that it is a mounted volume so it will
-                        persist after container restarts (if you keep seeing this screen while running in Docker, that's probably your problem). I've tried to detect the current
-                        environment and put a sane default. Of course, if you are brave (and know what you're doing), you can specify a fully custom path.
+                        Whatever you pick, it is <strong>highly recommended</strong> that it lives on a mounted volume so it survives restarts. If you keep
+                        seeing this screen while running in Docker, an unmounted config directory is almost certainly why. I've tried to detect your
+                        environment and pre-select a sane default, but you can always specify a fully custom path.
                     </p>
-                    <fieldset>
-                        <label for="slash-config-radio">
-                            <input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig" {{ if .DefaultSlashConfig }} checked {{ end }} />
-                            <code>/config</code> (This is a good choice if you're using Docker)
-                        </label>
-                        <label for="cwd-radio">
-                            <input type="radio" id="cwd-radio" name="config_file_preset" value="pwd" {{ if .DefaultPWD }} checked {{ end }} />
-                            <code>{{ .PWD }}</code> This is the current working directory. This is good if you're running outside of docker.
-                        </label>
-                        <label for="custom-radio">
-                            <input type="radio" id="custom-radio" name="config_file_preset" value="custom" />
-                            Custom paths. Only pick this if you absolutely know what you are doing.
-                        </label>
-                        <div id="custom-path-fields">
-                            <div>
-                                <label for="config-file-path">Config File Path (including name)</label>
-                                <input type="text" name="config_path" id="config-file-path" />
-                            </div>
-                            <div>
-                                <label for="db-file-path">Database file (including name)</label>
-                                <input type="text" name="db_path" id="db-file-path" />
-                            </div>
+                </details>
+
+                <fieldset id="ftue-config-path-choices">
+                    <label for="slash-config-radio">
+                        <input type="radio" id="slash-config-radio" name="config_file_preset" value="slashconfig" {{ if .DefaultSlashConfig }} checked {{ end }} />
+                        <code>/config</code>
+                        <small>A good choice if you're using Docker.</small>
+                    </label>
+                    <label for="cwd-radio">
+                        <input type="radio" id="cwd-radio" name="config_file_preset" value="pwd" {{ if .DefaultPWD }} checked {{ end }} />
+                        <code>{{ .PWD }}</code>
+                        <small>The current working directory. A good choice if you're running outside of Docker.</small>
+                    </label>
+                    <label for="custom-radio">
+                        <input type="radio" id="custom-radio" name="config_file_preset" value="custom" {{ if .DefaultCustom }} checked {{ end }} />
+                        Custom paths
+                        <small>Only pick this if you know exactly what you're doing.</small>
+                    </label>
+
+                    <div id="custom-path-fields">
+                        <div class="grid">
+                            <label for="config-file-path">
+                                Config file path (including name)
+                                <input type="text" name="config_path" id="config-file-path" value="{{ .CustomConfigPath }}" autocomplete="off" autocorrect="off" spellcheck="false" />
+                            </label>
+                            <label for="db-file-path">
+                                Database file (including name)
+                                <input type="text" name="db_path" id="db-file-path" value="{{ .CustomDBPath }}" autocomplete="off" autocorrect="off" spellcheck="false" />
+                            </label>
                         </div>
-                    </fieldset>
-                </div>
-                <h4>Domain Configuration</h4>
-                <p>
-                    AuthThingie needs to know a couple things about how it's being served to the outside work. We need this information so we can set cookies and routing information correctly.
-                    For the <strong>Server Domain</strong> entry, you should put the apex domain that this is hosted on. For example, if you have <code>foo.example.com</code> and <code>bar.example.com</code>,
-                    you should put <strong>example.com</strong> in that field.
-                </p>
-                <p>
-                    For the <strong>Auth Domain</strong> field, you should put in the domain that AuthThingie is hosted. I've tried to fill this in for you. If AuthThingie is accessible at <code>auth.example.com</code>,
-                    then you should put in <strong>auth.example.com</strong>
-                </p>
-                <div>
-                    <label for="domain-field">Server Domain</label>
-                    <input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="{{ .ServerDomain }}" autocomplete="off" autocorrect="off" spellcheck="off" />
-                </div>
-                <div>
-                    <label for="auth-url-field">Auth Domain</label>
-                    <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="off" />
-                </div>
-                <div>
-                    <!-- TODO -->
-                    <input type="submit" value="Continue..." />
-                </div>
+                    </div>
+                </fieldset>
+            </article>
 
-            </form>
+            <article>
+                <header>
+                    <strong>Domain Configuration</strong>
+                </header>
 
-        </article>
+                <p>AuthThingie needs to know how it's served to the outside world so it can set cookies and redirects correctly.</p>
+
+                <details>
+                    <summary>What goes in these fields?</summary>
+                    <p>
+                        For <strong>Server Domain</strong>, use the apex domain everything is hosted on. If you have <code>foo.example.com</code> and
+                        <code>bar.example.com</code>, then use <strong>example.com</strong>.
+                    </p>
+                    <p>
+                        For <strong>Auth URL</strong>, use the full URL AuthThingie itself lives on. If AuthThingie is reachable at
+                        <code>https://auth.example.com</code>, then use <strong>https://auth.example.com</strong>. I've tried to fill this in for you.
+                    </p>
+                </details>
+
+                <div class="grid">
+                    <div>
+                        <label for="domain-field">Server Domain</label>
+                        <input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="{{ .ServerDomain }}" autocomplete="off" autocorrect="off" spellcheck="false" />
+                        <small>e.g. <code>example.com</code></small>
+                    </div>
+                    <div>
+                        <label for="auth-url-field">Auth URL</label>
+                        <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="false" />
+                        <small>e.g. <code>https://auth.example.com</code></small>
+                    </div>
+                </div>
+            </article>
+
+            <article>
+                <header>
+                    <strong>Trusted Proxy Configuration</strong>
+                </header>
+
+                <p>
+                    AuthThingie needs to know where your reverse proxy lives so it knows which systems to trust. You can do this by
+                    <strong>Docker labels</strong> (recommended) or by <strong>IP range</strong>. I've tried to detect both for you.
+                </p>
+
+                <h4>Docker Container Trust</h4>
+
+                {{ if .DockerDetectionError }}
+                    <p class="at-detection-status at-detection-failed">
+                        I couldn't connect to the Docker daemon at <code>{{ .DockerEndpoint }}</code>: <code>{{ .DockerDetectionError }}</code>.
+                       You can either fix that, or use network trust down below.
+                    </p>
+                    <input type="hidden" name="docker_detected" value="false" />
+                {{ else }}
+                    <input type="hidden" name="docker_endpoint" value="{{ .DockerEndpoint }}" />
+                    <input type="hidden" name="docker_detected" value="true" />
+                    <p class="at-detection-status at-detection-ok">
+                        Connected to the Docker daemon at <code>{{ .DockerEndpoint }}</code> and looked for containers labelled
+                        <code>auththingie2.trusted_proxy=true</code>.
+                    </p>
+                    {{ if .DetectedContainers }}
+                        <input type="hidden" name="containers_found" value="true" />
+                        <figure>
+                            <table role="grid">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Image</th>
+                                        <th scope="col">Names</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{ range .DetectedContainers }}
+                                        <tr>
+                                            <td><code>{{ .ShortID }}</code></td>
+                                            <td>{{ .Image }}</td>
+                                            <td>{{ .AllNames }}</td>
+                                        </tr>
+                                    {{ end }}
+                                </tbody>
+                            </table>
+                        </figure>
+                        <p>If that looks right, you're golden! You can skip the IP based trust below entirely.</p>
+                    {{ else }}
+                        <input type="hidden" name="containers_found" value="false" />
+                        <p class="at-empty">
+                            No labelled containers found. Add the label <code>auththingie2.trusted_proxy=true</code> to your reverse proxy and reload this
+                            page, or use network based trust below.
+                        </p>
+                    {{ end }}
+                {{ end }}
+
+                <details>
+                    <summary>I'm using a different Docker endpoint</summary>
+                    <p>
+                        I looked for the Docker API at <code>{{ .DockerEndpoint }}</code>. If that's wrong, set the environment variable
+                        <code>SETUP_DOCKER_ENDPOINT</code> to the right location and reload this page.
+                    </p>
+                </details>
+
+                <h4>Network Based Trust</h4>
+
+                <p>
+                    If Docker detection doesn't work for you, you can trust an entire IP range instead. Be <strong>damn</strong> sure you only trust private
+                    ranges you control, and keep them as narrow as possible. Here's what I found on your running network interfaces.
+                </p>
+
+                {{ if .CandidateIPRanges }}
+                    <figure>
+                        <table role="grid">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Trust</th>
+                                    <th scope="col">Interface Name</th>
+                                    <th scope="col">Assigned IP</th>
+                                    <th scope="col">IP Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{ range .CandidateIPRanges }}
+                                    <tr>
+                                        <td><input type="checkbox" name="trusted_networks" value="{{ .Network }}" {{ if index $.SelectedNetworks .Network.String }}checked{{ end }} aria-label="Trust {{ .Network }} on {{ .InterfaceName }}" /></td>
+                                        <td>{{ .InterfaceName }}</td>
+                                        <td><code>{{ .LocalIP }}</code></td>
+                                        <td><code>{{ .Network }}</code></td>
+                                    </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                    </figure>
+                {{ else }}
+                    <p class="at-empty">I couldn't find any private network ranges worth suggesting. You can still add one by hand below.</p>
+                {{ end }}
+
+                <label for="custom-trusted-network">Custom trusted network</label>
+                <input type="text" name="custom_trusted_network" id="custom-trusted-network" value="{{ .CustomTrustedNetwork }}" placeholder="192.168.1.0/24" aria-label="Custom Trusted Network" autocomplete="off" autocorrect="off" spellcheck="false" />
+                <small>A single IP works too. Leave this blank if you're using Docker labels or picked a range above.</small>
+            </article>
+
+            <button type="submit" class="contrast">Continue</button>
+        </form>
     </div>
 
     <script src="/static/js/ftue.js"></script>

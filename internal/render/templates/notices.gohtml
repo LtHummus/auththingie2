@@ -3,27 +3,40 @@
 {{ define "title" }}A few messages for you...{{ end }}
 
 {{ define "content" }}
+    <div id="notices-container" class="at-page at-narrow">
+        <hgroup>
+            <h1>A few messages for you...</h1>
+            <h2>Nothing is broken, but you should probably read these</h2>
+        </hgroup>
 
-    <h1>A few messages for you...</h1>
+        <article>
+            <header>
+                <strong>Admin Messages</strong>
+            </header>
 
-    <ul>
-        {{ range .Messages }}
-            <li>{{ . }}</li>
-        {{ end }}
-    </ul>
+            {{ if .Messages }}
+                <ul>
+                    {{ range .Messages }}
+                        <li>{{ . }}</li>
+                    {{ end }}
+                </ul>
+            {{ else }}
+                <p class="at-empty">Nothing to report, which is a little strange given you're looking at this page.</p>
+            {{ end }}
 
+            <footer class="at-button-link">
+                <a href="{{ .Destination }}">And here's a link to go where you were going...</a>
+            </footer>
+        </article>
 
-    <article>
+        <details>
+            <summary>Why am I seeing this?</summary>
             <p>
                 You're getting this screen because you are an admin and there are some warnings and messages that you
                 should probably be aware of. These will show up every time you log in until you fix it ... or if you set
                 <code>unsafe_hide_admin_messages</code> to be <code>true</code> in your config file. I don't recommend it, but hey,
                 it's your server.
             </p>
-        </article>
-
-
-        <p>
-            <a href="{{ .Destination }}">And here's a link to go where you were going...</a>
-        </p>
+        </details>
+    </div>
 {{ end }}

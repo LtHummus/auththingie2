@@ -45,7 +45,8 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<h2>Editing Yourself (<strong>regularuser</strong>)</h2>`)
-		assert.Contains(t, w.Body.String(), `You do not currently have TOTP enabled. If you wish to enable it, you can go <a href="/enable_totp">here</a>`)
+		assert.Contains(t, w.Body.String(), `You currently have TOTP <strong>disabled</strong>.`)
+		assert.Contains(t, w.Body.String(), `<a href="/enable_totp">Enable TOTP</a>`)
 		assert.Contains(t, w.Body.String(), `<a href="/webauthn/manage">Manage Your Passkeys</a>`)
 	})
 
@@ -61,7 +62,7 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<h2>Editing Yourself (<strong>regularuser</strong>)</h2>`)
-		assert.Contains(t, w.Body.String(), `You do not currently have TOTP enabled. If you wish to enable it, you can go <a href="/enable_totp">here</a>`)
+		assert.Contains(t, w.Body.String(), `You currently have TOTP <strong>disabled</strong>.`)
 		assert.NotContains(t, w.Body.String(), `<a href="/webauthn/manage">Manage Your Passkeys</a>`)
 	})
 
@@ -74,7 +75,8 @@ func TestEnv_HandleSelfConfigGet(t *testing.T) {
 		e.BuildRouter().ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), `You have TOTP enabled. You can disable it by clicking <a class="link-like" hx-target="#totp_setup_container" hx-swap="innerHTML" hx-post="/disable_totp" hx-confirm="Are you sure you want to disable TOTP?">here</a>`)
+		assert.Contains(t, w.Body.String(), `You currently have TOTP <strong>enabled</strong>.`)
+		assert.Contains(t, w.Body.String(), `<a class="link-like" hx-target="#totp_setup_container" hx-swap="outerHTML" hx-post="/disable_totp" hx-confirm="Are you sure you want to disable TOTP?">Disable TOTP</a>`)
 	})
 }
 

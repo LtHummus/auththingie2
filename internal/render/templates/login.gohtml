@@ -3,40 +3,48 @@
 {{ define "title" }}Login Page{{ end }}
 
 {{ define "content" }}
-<div id="login-container">
-        <div>
-            <hgroup>
-                <h1>Login</h1>
-                <h2>Sign in to AuthThingie to Continue</h2>
-            </hgroup>
-                {{ if .Error }}
-                    <p class="error-box">
-                        {{ .Error }}
-                    </p>
-                {{ end }}
-                {{ if .Message }}
-                    <p class="login-info-box">
-                        {{ .Message }}
-                    </p>
-                {{ end }}
-                <form action="/login" method="post">
-                    <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
-                    <input type="hidden" name="message" value="{{ .Message }}" />
-                        <input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />
-                        <input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />
-                        <button type="submit" class="contrast">Login</button>
-                </form>
-                {{ if .EnablePasskeys }}
-                    <hr class="passkey-line" />
-                    <div id="authn_login_error" class="error-box no-error"></div>
-                    <button id="passkey-login-button" data-redirect-uri="{{ .RedirectURI }}">
-                        <img src="/static/images/fido-passkey-white.svg" alt="Passkey Logo" class="passkey-logo" />
-                        Login with Passkey
-                    </button>
-                {{ end }}
-        </div>
+    <div id="login-container" class="at-page at-narrow">
+        <hgroup>
+            <h1>Login</h1>
+            <h2>Sign in to AuthThingie to Continue</h2>
+        </hgroup>
+
+        {{ if .Error }}
+            <p class="error-box">
+                {{ .Error }}
+            </p>
+        {{ end }}
+        {{ if .Message }}
+            <p class="login-info-box">
+                {{ .Message }}
+            </p>
+        {{ end }}
+
+        <article>
+            <form action="/login" method="post">
+                <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}" />
+                <input type="hidden" name="message" value="{{ .Message }}" />
+
+                <label for="username-field">Username</label>
+                <input type="text" name="username" id="username-field" required aria-label="Username" placeholder="Username" autocomplete="username webauthn" />
+
+                <label for="password-field">Password</label>
+                <input type="password" name="password" id="password-field" required placeholder="Password" aria-label="Password" autocomplete="current-password webauthn" />
+
+                <button type="submit" class="contrast">Login</button>
+            </form>
+
+            {{ if .EnablePasskeys }}
+                <hr class="passkey-line" />
+                <div id="authn_login_error" class="error-box no-error"></div>
+                <button id="passkey-login-button" data-redirect-uri="{{ .RedirectURI }}">
+                    <img src="/static/images/fido-passkey-white.svg" alt="Passkey Logo" class="passkey-logo" />
+                    Login with Passkey
+                </button>
+            {{ end }}
+        </article>
+    </div>
+
     <script src="/static/js/webauthn.js"></script>
     <script src="/static/js/login.js"></script>
-</div>
-
 {{end}}
