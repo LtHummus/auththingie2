@@ -101,12 +101,12 @@
                 <div class="grid">
                     <div>
                         <label for="domain-field">Server Domain</label>
-                        <input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="{{ .ServerDomain }}" autocomplete="off" autocorrect="off" spellcheck="off" />
+                        <input type="text" name="domain" id="domain-field" required aria-label="Server Domain" value="{{ .ServerDomain }}" autocomplete="off" autocorrect="off" spellcheck="false" />
                         <small>e.g. <code>example.com</code></small>
                     </div>
                     <div>
                         <label for="auth-url-field">Auth URL</label>
-                        <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="off" />
+                        <input type="text" name="auth_url" id="auth-url-field" required aria-label="Auth URL Field" value="{{ .AuthURL }}" autocomplete="off" autocorrect="off" spellcheck="false" />
                         <small>e.g. <code>https://auth.example.com</code></small>
                     </div>
                 </div>
