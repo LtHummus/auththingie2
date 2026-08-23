@@ -421,12 +421,14 @@ func TestSQLite_SetUserEnabled(t *testing.T) {
 		require.NoError(t, err)
 
 		u, err = db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		require.NoError(t, err)
 		assert.True(t, u.Disabled)
 
 		err = db.SetUserEnabled(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e", true)
 		require.NoError(t, err)
 
 		u, err = db.GetUserByGuid(context.TODO(), "65d453ce-ee95-4377-94cf-f7938ce4412e")
+		require.NoError(t, err)
 		assert.False(t, u.Disabled)
 
 	})

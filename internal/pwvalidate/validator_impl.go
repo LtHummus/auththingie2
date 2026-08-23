@@ -119,7 +119,8 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 
 	if argon.NeedsMigration(u.PasswordHash, v.cfg) {
 		go func() { // #nosec G118 -- we want this to run in the background
-			pwmigrate.MigrateUser(context.Background(), u, password, v.db, v.cfg)
+			u2 := *u // clone user struct to avoid data race
+			pwmigrate.MigrateUser(context.Background(), &u2, password, v.db, v.cfg)
 		}()
 	}
 

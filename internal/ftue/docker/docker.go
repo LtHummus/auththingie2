@@ -17,7 +17,7 @@ const (
 
 type ErrNoDockerEndpoint struct{}
 
-func (_ *ErrNoDockerEndpoint) Error() string { return "no docker endpoint at the usual place" }
+func (*ErrNoDockerEndpoint) Error() string { return "no docker endpoint at the usual place" }
 
 type ErrCouldNotList struct {
 	Cause error

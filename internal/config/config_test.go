@@ -275,7 +275,7 @@ func Test_calcEntropy(t *testing.T) {
 	}
 
 	for _, curr := range tests {
-		t.Run(fmt.Sprintf("%s", curr.Input), func(t *testing.T) {
+		t.Run(curr.Input, func(t *testing.T) {
 			fmt.Printf("%f\n", calcEntropy(curr.Input))
 			assert.InDelta(t, curr.ExpectedOutput, calcEntropy(curr.Input), 0.0001)
 		})

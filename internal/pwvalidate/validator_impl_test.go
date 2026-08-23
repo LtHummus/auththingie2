@@ -260,7 +260,15 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkSuccessfulAttempt", "ip|127.0.0.1")
 		mll.On("MarkSuccessfulAttempt", "username|username")
 
-		mdb.On("UpdatePassword", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
+		var updatedUser *user.User
+		migrationDone := make(chan struct{})
+
+		mdb.On("UpdatePassword", mock.Anything, mock.AnythingOfType("*user.User")).
+			Run(func(args mock.Arguments) {
+				updatedUser = args.Get(1).(*user.User)
+				close(migrationDone)
+			}).
+			Return(nil)
 
 		u, err := v.Validate(context.TODO(), "username", correctPassword, "127.0.0.1")
 		require.NoError(t, err)
@@ -268,11 +276,14 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		assert.Equal(t, correctPasswordHash, u.PasswordHash)
 
-		assert.Eventually(t, func() bool {
-			return len(mdb.Mock.Calls) >= 2
-		}, 5*time.Second, 250*time.Millisecond)
+		// Wait safely for the background goroutine to complete without polling mock internals
+		select {
+		case <-migrationDone:
+		case <-time.After(5 * time.Second):
+			require.Fail(t, "timed out waiting for password migration")
+		}
 
-		updatedUser := mdb.Mock.Calls[1].Arguments[1].(*user.User)
+		require.NotNil(t, updatedUser)
 		assert.True(t, strings.HasPrefix(updatedUser.PasswordHash, "$argon2id$v=19$m=65536,t=1,p=2$"))
 		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 2*time.Second)
 		assert.NoError(t, argon.ValidatePassword(correctPassword, updatedUser.PasswordHash))
