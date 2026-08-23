@@ -44,16 +44,16 @@ jobs:
         run: |
           set -o pipefail
           OUTPUT=$(go run golang.org/x/vuln/cmd/govulncheck@latest ./... 2>&1) || true
-          echo "$OUTPUT"
           # Known accepted findings: dockerd-side AuthZ-plugin bugs (GHSA-x744-4wpc-v9h2).
           # We only use docker/docker as an API client, never run dockerd or host an
-          # AuthZ plugin, so these aren't reachable. No Go-module version resolves them. There's also no fix-version
-          # for these, so instead of blocking forever, ignore these two IDs.
+          # AuthZ plugin, so these aren't reachable. No Go-module version resolves them.
           UNEXPECTED=$(echo "$OUTPUT" | grep -oE 'GO-[0-9]{4}-[0-9]+' | sort -u | grep -vE '^(GO-2026-4887|GO-2026-4883)$' || true)
           if [ -n "$UNEXPECTED" ]; then
+            echo "$OUTPUT"
             echo "::error::govulncheck found new, untracked vulnerabilities: $UNEXPECTED"
             exit 1
           fi
+          echo "govulncheck: only known/accepted findings present (GO-2026-4887, GO-2026-4883). OK."
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@v2.28.0
