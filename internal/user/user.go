@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -93,13 +94,7 @@ func (u *User) CheckPassword(candidate string, v *viper.Viper) error {
 
 func (u *User) HasRole(r string) bool {
 	// O(n) ... but whatever
-	for _, curr := range u.Roles {
-		if curr == r {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(u.Roles, r)
 }
 
 func (u *User) GroupsOverlap(groups []string) bool {
@@ -107,10 +102,8 @@ func (u *User) GroupsOverlap(groups []string) bool {
 	// of structure to reduce to O(n) or whatever will have so much overhead it's not worth it. There's a benchmark
 	// test and everything looks gravy
 	for _, i := range groups {
-		for _, j := range u.Roles {
-			if i == j {
-				return true
-			}
+		if slices.Contains(u.Roles, i) {
+			return true
 		}
 	}
 
