@@ -31,7 +31,7 @@ func TestAddMessage(t *testing.T) {
 	assert.Len(t, GetMessages(), 2)
 
 	// make sure messages can not be mutated from outside
-	msgs = append(msgs, "this should not be here")
+	_ = append(msgs, "this should not be here")
 	assert.Len(t, GetMessages(), 2)
 }
 

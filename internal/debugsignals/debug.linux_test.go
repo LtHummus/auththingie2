@@ -4,6 +4,7 @@ package debugsignals
 
 import (
 	"os"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -15,9 +16,9 @@ import (
 func TestListenAndAct(t *testing.T) {
 	t.Run("basic case", func(t *testing.T) {
 		stop := make(chan struct{})
-		triggered := false
+		var triggered atomic.Bool
 		action := func() {
-			triggered = true
+			triggered.Store(true)
 		}
 
 		go listenAndAct(syscall.SIGUSR1, stop, action)
@@ -34,7 +35,7 @@ func TestListenAndAct(t *testing.T) {
 		err = p.Signal(syscall.SIGUSR1)
 		require.NoError(t, err)
 
-		assert.Eventually(t, func() bool { return triggered }, 10*time.Second, 500*time.Millisecond)
+		assert.Eventually(t, func() bool { return triggered.Load() }, 10*time.Second, 500*time.Millisecond)
 	})
 
 	t.Run("try closing the stop channel", func(t *testing.T) {

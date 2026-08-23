@@ -79,6 +79,7 @@ var (
 		Disabled:          true,
 	}
 
+	//lint:ignore U1000 this isn't used, but I want to keep it around just in case
 	sampleNonAdminWithOldArgonParams = &user.User{
 		Id:                uuid.New().String(),
 		Username:          "oldpwuser",

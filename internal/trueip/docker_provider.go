@@ -53,7 +53,6 @@ type dockerProvider struct {
 	eventStreamInitialized atomic.Bool
 	activeIPs              map[string][]net.IP
 	updateLock             sync.RWMutex
-	lastUpdate             time.Time
 
 	cleanup chan struct{}
 }
