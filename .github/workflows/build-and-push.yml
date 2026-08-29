@@ -17,7 +17,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26.x'
+          go-version: '1.27.x'
 
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@v1.13.0
@@ -56,7 +56,7 @@ jobs:
           echo "govulncheck: only known/accepted findings present (GO-2026-4887, GO-2026-4883). OK."
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.28.0
+        uses: securego/gosec@v2.29.0
         with:
           args: -exclude=G120 ./...
 

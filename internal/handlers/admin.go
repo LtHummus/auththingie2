@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -128,11 +129,9 @@ func (e *Env) HandleUserPatchTagsModification(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	for _, curr := range u.Roles {
-		if curr == tagName {
-			render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Tag `%s` already exists on user", tagName), "tag-error")
-			return
-		}
+	if slices.Contains(u.Roles, tagName) {
+		render.RenderHTMXCompatibleError(w, r, fmt.Sprintf("Tag `%s` already exists on user", tagName), "tag-error")
+		return
 	}
 
 	u.Roles = append(u.Roles, tagName)

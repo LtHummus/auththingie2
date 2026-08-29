@@ -43,7 +43,9 @@ func (e *Env) getRedirectURIFromRequest(r *http.Request) string {
 func getMessageFromRequest(r *http.Request) string {
 	message := ""
 	if formMessage := r.PostFormValue(loginMessageParam); formMessage != "" {
-		message = formMessage
+		if realMessage := validLoginMessages[formMessage]; realMessage != "" {
+			message = formMessage
+		}
 	}
 
 	if queryMessage := r.URL.Query().Get(loginMessageParam); queryMessage != "" {
