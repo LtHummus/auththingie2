@@ -191,6 +191,12 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 }
 
 func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
+	if e.Configuration.GetBool(config.ConfigKeyKeyPasskeysDisabled) {
+		log.Warn().Msg("attempted to begin passkey signin when passkeys disabled")
+		http.Error(w, "Passkeys are disabled", http.StatusNotFound)
+		return
+	}
+
 	response, err := protocol.ParseCredentialRequestResponse(r)
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse response")

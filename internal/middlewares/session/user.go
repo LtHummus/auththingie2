@@ -169,7 +169,7 @@ func WriteSession(w http.ResponseWriter, r *http.Request, s Session, v *viper.Vi
 }
 
 func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/static") {
+	if strings.HasPrefix(r.URL.Path, "/static/") {
 		m.handler.ServeHTTP(w, r)
 		return
 	}

@@ -53,14 +53,18 @@ func (e *Env) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		{"CGO Count", runtime.NumCgoCall()},
 	})
 
-	buildInfo, _ := debug.ReadBuildInfo()
-
+	buildInfo, ok := debug.ReadBuildInfo()
 	buildTable := table.NewWriter()
-	buildTable.AppendHeader(table.Row{"Key", "Value"})
-	for _, curr := range buildInfo.Settings {
-		buildTable.AppendRow(table.Row{curr.Key, curr.Value})
+	if !ok {
+		log.Warn().Msg("no build info in executable, skipping build info")
+		buildTable.AppendHeader(table.Row{"No Build Info"})
+	} else {
+		buildTable.AppendHeader(table.Row{"Key", "Value"})
+		for _, curr := range buildInfo.Settings {
+			buildTable.AppendRow(table.Row{curr.Key, curr.Value})
+		}
+		buildTable.AppendRow(table.Row{"Go Version", buildInfo.GoVersion})
 	}
-	buildTable.AppendRow(table.Row{"Go Version", buildInfo.GoVersion})
 
 	configTable := table.NewWriter()
 	configTable.AppendHeader(table.Row{"Key", "Value"})
