@@ -10,7 +10,7 @@
                     <th scope="col"></th>
                 </tr>
             </thead>
-            <tbody hx-target="closest tr" hx-swap="outerHTML">
+            <tbody>
                 {{ range .Keys }}
                     {{ template "authn_key_row.gohtml" . }}
                 {{ end }}
