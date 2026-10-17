@@ -392,7 +392,12 @@ func (s *SQLite) UpdateCredentialOnLogin(ctx context.Context, credential *webaut
 	log.Debug().Str("key_id", encodedId).Uint32("sign_count", credential.Authenticator.SignCount).Msg("should update credential")
 	timestamp := time.Now().Unix()
 
-	_, err := s.db.ExecContext(ctx, "UPDATE webauthn_keys SET last_used = $1, sign_count = $2 WHERE id = $3", timestamp, credential.Authenticator.SignCount, encodedId)
+	encodedCloneWarning := 0
+	if credential.Authenticator.CloneWarning {
+		encodedCloneWarning = 1
+	}
+
+	_, err := s.db.ExecContext(ctx, "UPDATE webauthn_keys SET last_used = $1, sign_count = $2, clone_warning = $3 WHERE id = $4", timestamp, credential.Authenticator.SignCount, encodedCloneWarning, encodedId)
 	return err
 }
 
