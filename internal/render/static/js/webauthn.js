@@ -11,27 +11,12 @@ async function beginRegistration() {
         return;
     }
 
-    console.log(params);
-    params.publicKey.challenge = base64ToArrayBuffer(params.publicKey.challenge);
-    params.publicKey.user.id = base64ToArrayBuffer(params.publicKey.user.id);
-
-    // TODO: investigate why this doesn't actually seem to have an effect -- do we need more than just type and id here?
-    if (params.publicKey.excludeCredentials) {
-        params.publicKey.excludeCredentials = params.publicKey.excludeCredentials.map((x) => {
-            return {
-                type: x.type,
-                id: base64ToArrayBuffer(x.id)
-            }
-        })
-    }
-
-    console.log(params);
-
     let credFinished;
 
     try {
-        credFinished = await navigator.credentials.create({publicKey: params.publicKey});
+        credFinished = await navigator.credentials.create({publicKey: parseCreationOptions(params.publicKey)});
     } catch (e) {
+        console.log(e);
         showWebauthnEnrollError('User cancelled or Passkeys not available');
         resetEnrollButton();
         return;
@@ -43,29 +28,28 @@ async function beginRegistration() {
         return;
     }
 
-    const payload = {
-        authenticatorAttachment: credFinished.authenticatorAttachment,
-        id: credFinished.id,
-        rawId: arrayBufferToBase64(credFinished.rawId),
-        response: {
-            attestationObject: arrayBufferToBase64(credFinished.response.attestationObject),
-            clientDataJSON: arrayBufferToBase64(credFinished.response.clientDataJSON)
-        },
-        type: credFinished.type
+    const payload = credentialToJSON(credFinished);
+
+    let responseJSON;
+    try {
+        const createResponse = await fetch("/webauthn/finishregister", {
+            method:"POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        responseJSON = await createResponse.json();
+    } catch (e) {
+        console.log(e);
+        showWebauthnEnrollError('Could not complete passkey registration');
+        resetEnrollButton();
+        return;
     }
 
-    const createResponse = await fetch("/webauthn/finishregister", {
-        method:"POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-    });
-
-    const responseJSON = await createResponse.json();
-
     if (responseJSON.failed) {
-        showWebauthnEnrollError(params.message);
+        showWebauthnEnrollError(responseJSON.message);
         resetEnrollButton();
         return;
     }
@@ -170,12 +154,13 @@ async function doDiscoverLogin(credentialOptions) {
         return params.message;
     }
 
-    params.publicKey.challenge = base64ToArrayBuffer(params.publicKey.challenge);
-    Object.assign(params, credentialOptions);
-
     let credFinished;
     try {
-        credFinished = await navigator.credentials.get(params);
+        credFinished = await navigator.credentials.get({
+            ...params,
+            ...credentialOptions,
+            publicKey: parseRequestOptions(params.publicKey)
+        });
     } catch (e) {
         console.log(e);
     }
@@ -183,19 +168,7 @@ async function doDiscoverLogin(credentialOptions) {
         return 'User cancelled login or Passkeys not available';
     }
 
-
-    const payload = {
-        authenticatorAttachment: credFinished.authenticatorAttachment,
-        id: credFinished.id,
-        rawId: arrayBufferToBase64(credFinished.rawId),
-        response: {
-            authenticatorData: arrayBufferToBase64(credFinished.response.authenticatorData),
-            clientDataJSON: arrayBufferToBase64(credFinished.response.clientDataJSON),
-            signature: arrayBufferToBase64(credFinished.response.signature),
-            userHandle: arrayBufferToBase64(credFinished.response.userHandle)
-        },
-        type: credFinished.type
-    }
+    const payload = credentialToJSON(credFinished);
 
     let respJSON;
     try {
@@ -223,6 +196,64 @@ async function doDiscoverLogin(credentialOptions) {
 
     window.location.href = nextPage;
     return null;
+}
+
+// Of course browsers now have nice convenience functions for building and parsing creation and request options...
+// use those if they exist or fallback to my old base64 shuffling if they don't
+
+function parseCreationOptions(publicKey) {
+    if (typeof PublicKeyCredential.parseCreationOptionsFromJSON === 'function') {
+        return PublicKeyCredential.parseCreationOptionsFromJSON(publicKey);
+    }
+
+    return {
+        ...publicKey,
+        challenge: base64ToArrayBuffer(publicKey.challenge),
+        user: {...publicKey.user, id: base64ToArrayBuffer(publicKey.user.id)},
+        excludeCredentials: publicKey.excludeCredentials?.map((x) => ({...x, id: base64ToArrayBuffer(x.id)}))
+    };
+}
+
+function parseRequestOptions(publicKey) {
+    if (typeof PublicKeyCredential.parseRequestOptionsFromJSON === 'function') {
+        return PublicKeyCredential.parseRequestOptionsFromJSON(publicKey);
+    }
+
+    return {
+        ...publicKey,
+        challenge: base64ToArrayBuffer(publicKey.challenge),
+        allowCredentials: publicKey.allowCredentials?.map((x) => ({...x, id: base64ToArrayBuffer(x.id)}))
+    };
+}
+
+function credentialToJSON(cred) {
+    if (typeof cred.toJSON === 'function') {
+        return cred.toJSON();
+    }
+
+    let response;
+    if (cred.response.attestationObject) {
+        response = {
+            attestationObject: arrayBufferToBase64(cred.response.attestationObject),
+            clientDataJSON: arrayBufferToBase64(cred.response.clientDataJSON),
+            transports: cred.response.getTransports?.() ?? []
+        };
+    } else {
+        response = {
+            authenticatorData: arrayBufferToBase64(cred.response.authenticatorData),
+            clientDataJSON: arrayBufferToBase64(cred.response.clientDataJSON),
+            signature: arrayBufferToBase64(cred.response.signature),
+            userHandle: arrayBufferToBase64(cred.response.userHandle)
+        };
+    }
+
+    return {
+        authenticatorAttachment: cred.authenticatorAttachment,
+        id: cred.id,
+        rawId: arrayBufferToBase64(cred.rawId),
+        response: response,
+        type: cred.type
+    };
 }
 
 function patchBase64(input) {

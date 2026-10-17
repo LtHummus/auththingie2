@@ -24,6 +24,7 @@ import (
 
 	"github.com/lthummus/auththingie2/internal/config"
 	session2 "github.com/lthummus/auththingie2/internal/middlewares/session"
+	"github.com/lthummus/auththingie2/internal/mocks"
 	"github.com/lthummus/auththingie2/internal/render"
 	"github.com/lthummus/auththingie2/internal/salt"
 	"github.com/lthummus/auththingie2/internal/user"
@@ -310,6 +311,180 @@ func TestWebAuthnFlow(t *testing.T) {
 
 		assert.Empty(t, w2.Result().Cookies())
 	})
+
+	t.Run("registration fails without user verification", func(t *testing.T) {
+		authenticator := virtualwebauthn.NewAuthenticatorWithOptions(virtualwebauthn.AuthenticatorOptions{UserNotVerified: true})
+
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(sampleNonAdminUser, db))
+		w1 := httptest.NewRecorder()
+		mux.ServeHTTP(w1, r1)
+		require.Equal(t, http.StatusOK, w1.Result().StatusCode)
+
+		var sess *session2.Session
+		err := sc.Decode(session2.SessionCookieName, w1.Result().Cookies()[0].Value, &sess)
+		require.NoError(t, err)
+
+		opts, err := virtualwebauthn.ParseAttestationOptions(w1.Body.String())
+		require.NoError(t, err)
+		authenticator.Options.UserHandle = []byte(opts.UserID)
+
+		cred := virtualwebauthn.NewCredential(virtualwebauthn.KeyTypeEC2)
+		resp := virtualwebauthn.CreateAttestationResponse(rp, authenticator, cred, *opts)
+
+		r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), withUser(sampleNonAdminUser, db), withCustomSession(func(s *session2.Session) {
+			s.CustomData = sess.CustomData
+		}))
+		w2 := httptest.NewRecorder()
+		mux.ServeHTTP(w2, r2)
+
+		assert.Equal(t, http.StatusBadRequest, w2.Result().StatusCode)
+		assert.Contains(t, w2.Body.String(), `"error_code":"authn.enroll.could_not_create"`)
+		assert.Contains(t, w2.Body.String(), `"failed":true`)
+		db.AssertNotCalled(t, "SaveCredentialForUser", mock.Anything, mock.Anything, mock.Anything)
+
+		// the challenge is consumed even though registration failed
+		assert.Equal(t, 0, sessionCache.Len())
+	})
+
+	t.Run("login fails without user verification and challenge cannot be reused", func(t *testing.T) {
+		authenticator := virtualwebauthn.NewAuthenticator()
+
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		cred, addedCredential := registerVirtualCredential(t, mux, db, sc, rp, &authenticator, sampleNonAdminUser)
+		userWithCredential := *sampleNonAdminUser
+		userWithCredential.StoredCredentials = []user.Passkey{{Credential: *addedCredential}}
+
+		assertOptions, sess := beginVirtualLogin(t, mux, sc)
+
+		authenticator.Options.UserNotVerified = true
+		assertionResponse := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *assertOptions)
+
+		db.On("FindUserByCredentialInfo", mock.Anything, mock.AnythingOfType("[]uint8"), mock.AnythingOfType("[]uint8")).Return(&userWithCredential, nil)
+
+		finishLogin := func() *httptest.ResponseRecorder {
+			r := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), withCustomSession(func(s *session2.Session) {
+				s.CustomData = sess.CustomData
+			}))
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, r)
+			return w
+		}
+
+		w1 := finishLogin()
+		assert.Equal(t, http.StatusForbidden, w1.Result().StatusCode)
+		assert.Contains(t, w1.Body.String(), `"error_code":"authn.login.could_not_validate"`)
+		assert.Empty(t, w1.Result().Cookies())
+		db.AssertNotCalled(t, "UpdateCredentialOnLogin", mock.Anything, mock.Anything)
+
+		// replaying against the same challenge fails because it was consumed by the first attempt
+		assert.Equal(t, 0, sessionCache.Len())
+		w2 := finishLogin()
+		assert.Equal(t, http.StatusBadRequest, w2.Result().StatusCode)
+		assert.Contains(t, w2.Body.String(), `"error_code":"authn.login.session_expired"`)
+	})
+
+	t.Run("login rejected when key may be cloned", func(t *testing.T) {
+		authenticator := virtualwebauthn.NewAuthenticator()
+
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		cred, addedCredential := registerVirtualCredential(t, mux, db, sc, rp, &authenticator, sampleNonAdminUser)
+
+		// pretend we've previously seen a higher sign count than the authenticator is about to report
+		storedCredential := *addedCredential
+		storedCredential.Authenticator.SignCount = 100
+		userWithCredential := *sampleNonAdminUser
+		userWithCredential.StoredCredentials = []user.Passkey{{Credential: storedCredential}}
+
+		assertOptions, sess := beginVirtualLogin(t, mux, sc)
+
+		cred.Counter = 5
+		assertionResponse := virtualwebauthn.CreateAssertionResponse(rp, authenticator, cred, *assertOptions)
+
+		var updatedCredential *webauthn.Credential
+		db.On("FindUserByCredentialInfo", mock.Anything, mock.AnythingOfType("[]uint8"), mock.AnythingOfType("[]uint8")).Return(&userWithCredential, nil)
+		db.On("UpdateCredentialOnLogin", mock.Anything, mock.AnythingOfType("*webauthn.Credential")).Run(func(args mock.Arguments) {
+			updatedCredential = args.Get(1).(*webauthn.Credential)
+		}).Return(nil)
+
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/finishdiscover", strings.NewReader(assertionResponse), withCustomSession(func(s *session2.Session) {
+			s.CustomData = sess.CustomData
+		}))
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `"error_code":"authn.login.clone_warning"`)
+		assert.Empty(t, w.Result().Cookies())
+
+		// the warning must be persisted so the key stays blocked
+		require.NotNil(t, updatedCredential)
+		assert.True(t, updatedCredential.Authenticator.CloneWarning)
+	})
+}
+
+// registerVirtualCredential runs a full passkey registration for u with the given virtual authenticator, returning the
+// virtual credential (for signing assertions) and the credential that would have been saved to the database
+func registerVirtualCredential(t *testing.T, mux http.Handler, db *mocks.MockDB, sc *securecookie.SecureCookie, rp virtualwebauthn.RelyingParty, authenticator *virtualwebauthn.Authenticator, u *user.User) (virtualwebauthn.Credential, *webauthn.Credential) {
+	t.Helper()
+
+	r1 := makeTestRequest(t, http.MethodPost, "/webauthn/register", nil, withUser(u, db))
+	w1 := httptest.NewRecorder()
+	mux.ServeHTTP(w1, r1)
+	require.Equal(t, http.StatusOK, w1.Result().StatusCode)
+
+	var sess *session2.Session
+	err := sc.Decode(session2.SessionCookieName, w1.Result().Cookies()[0].Value, &sess)
+	require.NoError(t, err)
+
+	opts, err := virtualwebauthn.ParseAttestationOptions(w1.Body.String())
+	require.NoError(t, err)
+	authenticator.Options.UserHandle = []byte(opts.UserID)
+
+	cred := virtualwebauthn.NewCredential(virtualwebauthn.KeyTypeEC2)
+	resp := virtualwebauthn.CreateAttestationResponse(rp, *authenticator, cred, *opts)
+	authenticator.AddCredential(cred)
+
+	var saved *webauthn.Credential
+	db.On("SaveCredentialForUser", mock.Anything, u.Id, mock.AnythingOfType("*webauthn.Credential")).Run(func(args mock.Arguments) {
+		saved = args.Get(2).(*webauthn.Credential)
+	}).Return(nil).Once()
+
+	r2 := makeTestRequest(t, http.MethodPost, "/webauthn/finishregister", strings.NewReader(resp), withUser(u, db), withCustomSession(func(s *session2.Session) {
+		s.CustomData = sess.CustomData
+	}))
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, r2)
+	require.Equal(t, http.StatusOK, w2.Result().StatusCode, w2.Body.String())
+	require.NotNil(t, saved)
+
+	return cred, saved
+}
+
+// beginVirtualLogin requests a discoverable login challenge, returning the parsed options and the session holding the
+// auth id
+func beginVirtualLogin(t *testing.T, mux http.Handler, sc *securecookie.SecureCookie) (*virtualwebauthn.AssertionOptions, *session2.Session) {
+	t.Helper()
+
+	r := makeTestRequest(t, http.MethodPost, "/webauthn/discover", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	require.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+	var sess *session2.Session
+	err := sc.Decode(session2.SessionCookieName, w.Result().Cookies()[0].Value, &sess)
+	require.NoError(t, err)
+
+	assertOptions, err := virtualwebauthn.ParseAssertionOptions(w.Body.String())
+	require.NoError(t, err)
+
+	return assertOptions, sess
 }
 
 func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
@@ -365,6 +540,11 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		assert.Equal(t, "example.com", createResponse.Response.RelyingParty.ID)
 		assert.Equal(t, sampleNonAdminUser.Username, createResponse.Response.User.Name)
 		assert.Equal(t, sampleNonAdminUser.Username, createResponse.Response.User.DisplayName)
+
+		assert.Equal(t, protocol.ResidentKeyRequirementRequired, createResponse.Response.AuthenticatorSelection.ResidentKey)
+		require.NotNil(t, createResponse.Response.AuthenticatorSelection.RequireResidentKey)
+		assert.True(t, *createResponse.Response.AuthenticatorSelection.RequireResidentKey)
+		assert.Equal(t, protocol.VerificationRequired, createResponse.Response.AuthenticatorSelection.UserVerification)
 
 		decodedID, err := base64.RawURLEncoding.DecodeString(createResponse.Response.User.ID.(string))
 		assert.NoError(t, err)
@@ -436,7 +616,7 @@ func TestEnv_HandleWebAuthnBeginDiscoverableLogin(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "example.com", challengeData.Response.RelyingPartyID)
-		assert.Equal(t, protocol.VerificationPreferred, challengeData.Response.UserVerification)
+		assert.Equal(t, protocol.VerificationRequired, challengeData.Response.UserVerification)
 
 		decodedChallenge, err := base64.RawURLEncoding.DecodeString(challengeData.Response.Challenge.String())
 		assert.NoError(t, err)
