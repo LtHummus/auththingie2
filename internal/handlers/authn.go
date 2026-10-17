@@ -273,8 +273,6 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 		return
 	}
 
-	log.Info().Str("username", foundUser.Username).Msg("logged in via passkey")
-
 	if foundUser.Disabled {
 		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Str("username", foundUser.Username).Msg("user is disabled")
 		render.RenderJSONError(w, "Account is disabled", "authn.login.disabled", http.StatusForbidden)
@@ -319,6 +317,7 @@ type keyInfo struct {
 	ID           string
 	LastUsed     string
 	FriendlyName string
+	CloneWarning bool
 }
 
 type manageWebAuthnParams struct {
@@ -340,6 +339,7 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 		ID:           base64.RawURLEncoding.EncodeToString(cred.ID),
 		FriendlyName: fName,
 		LastUsed:     lu,
+		CloneWarning: cred.Authenticator.CloneWarning,
 	}
 }
 

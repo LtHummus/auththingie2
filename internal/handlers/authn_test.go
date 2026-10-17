@@ -719,6 +719,25 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `<td>VgeUYW5GwThRS74X02aJRw</td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-target="closest tr" hx-swap="outerHTML" hx-delete="/webauthn/keys/VgeUYW5GwThRS74X02aJRw" hx-on:click="clearWebauthnError()" hx-confirm="Are you sure?" class="contrast">Delete Key</button></td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>`)
+		assert.NotContains(t, w.Body.String(), "clone-warning-badge")
+	})
+
+	t.Run("show clone warning on flagged keys", func(t *testing.T) {
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		u := *sampleNonAdminWithCredentials
+		u.StoredCredentials = append([]user.Passkey(nil), sampleNonAdminWithCredentials.StoredCredentials...)
+		u.StoredCredentials[0].Authenticator.CloneWarning = true
+
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(&u, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `class="badge clone-warning-badge"`)
+		assert.Contains(t, w.Body.String(), "Possibly cloned")
 	})
 }
 

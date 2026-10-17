@@ -1,7 +1,12 @@
 <tr>
     <td>{{ .ID }}</td>
     <td>{{ .LastUsed }}</td>
-    <td>{{ .FriendlyName }}</td>
+    <td>
+        {{ .FriendlyName }}
+        {{ if .CloneWarning }}
+            <span class="badge clone-warning-badge" title="This key's sign counter went backwards, so it may have been copied. For security, it can no longer be used to log in. Delete it and enroll a new passkey.">Possibly cloned</span>
+        {{ end }}
+    </td>
     <td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/{{ .ID }}/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>
     <td><button hx-target="closest tr" hx-swap="outerHTML" hx-delete="/webauthn/keys/{{ .ID }}" hx-on:click="clearWebauthnError()" hx-confirm="Are you sure?" class="contrast">Delete Key</button></td>
 </tr>

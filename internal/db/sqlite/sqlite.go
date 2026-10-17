@@ -397,7 +397,9 @@ func (s *SQLite) UpdateCredentialOnLogin(ctx context.Context, credential *webaut
 		encodedCloneWarning = 1
 	}
 
-	_, err := s.db.ExecContext(ctx, "UPDATE webauthn_keys SET last_used = $1, sign_count = $2, clone_warning = $3 WHERE id = $4", timestamp, credential.Authenticator.SignCount, encodedCloneWarning, encodedId)
+	encodedFlags := encodeFlags(credential.Flags)
+
+	_, err := s.db.ExecContext(ctx, "UPDATE webauthn_keys SET last_used = $1, sign_count = $2, clone_warning = $3, flags = $4 WHERE id = $5", timestamp, credential.Authenticator.SignCount, encodedCloneWarning, encodedFlags, encodedId)
 	return err
 }
 

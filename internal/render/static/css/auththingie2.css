@@ -73,6 +73,11 @@
     color: #fff;
 }
 
+.clone-warning-badge {
+    background-color: var(--at-danger-color);
+    color: #fff;
+}
+
 #admin-rule-table {
     table-layout: auto;
 }
