@@ -1,7 +1,9 @@
 package config
 
 const (
-	ConfigKeyKeyPasskeysDisabled    = "passkeys.disabled"
+	ConfigKeyKeyPasskeysDisabled         = "passkeys.disabled"
+	ConfigKeyPasskeysDisableCloneWarning = "passkeys.disable_clone_warning"
+
 	ConfigKeyDefaultCookieLifetime  = "session.cookie.timeout"
 	ConfigKeyDefaultSessionLifetime = "session.timeout"
 

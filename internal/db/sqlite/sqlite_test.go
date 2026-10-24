@@ -210,6 +210,27 @@ func TestSQLite_UpdateCredentialOnLogin(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, uint32(10), k.Credential.Authenticator.SignCount)
+	assert.False(t, k.Credential.Authenticator.CloneWarning)
+
+	k.Credential.Authenticator.CloneWarning = true
+	err = db.UpdateCredentialOnLogin(context.TODO(), &k.Credential)
+	assert.NoError(t, err)
+
+	k, err = db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+	assert.NoError(t, err)
+
+	assert.True(t, k.Credential.Authenticator.CloneWarning)
+
+	assert.True(t, k.Credential.Flags.BackupState)
+	k.Credential.Flags.BackupState = false
+	err = db.UpdateCredentialOnLogin(context.TODO(), &k.Credential)
+	assert.NoError(t, err)
+
+	k, err = db.FindKeyById(context.TODO(), "ICSCHqqe14nQqUIXkBNtww")
+	assert.NoError(t, err)
+
+	assert.False(t, k.Credential.Flags.BackupState)
+	assert.True(t, k.Credential.Flags.BackupEligible)
 }
 
 func TestSQLite_SaveCredentialForUser(t *testing.T) {

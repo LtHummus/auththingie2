@@ -28,6 +28,12 @@ const (
 
 var sessionCache = ttlcache.New[string, *webauthn.SessionData](ttlcache.WithTTL[string, *webauthn.SessionData](10 * time.Minute))
 
+var registrationAuthenticatorSelection = protocol.AuthenticatorSelection{
+	ResidentKey:        protocol.ResidentKeyRequirementRequired, // we only support discoverable keys, so force this
+	RequireResidentKey: protocol.ResidentKeyRequired(),
+	UserVerification:   protocol.VerificationRequired, // in AT2, passkeys are the only thing needed to log in, so force verification
+}
+
 func init() {
 	log.Info().Msg("starting AuthN TTL cache cleanup thread")
 	go sessionCache.Start()
@@ -65,7 +71,10 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 		})
 	}
 
-	creation, sessionData, err := e.WebAuthn.BeginRegistration(u, webauthn.WithExclusions(excluded))
+	creation, sessionData, err := e.WebAuthn.BeginRegistration(u,
+		webauthn.WithExclusions(excluded),
+		webauthn.WithAuthenticatorSelection(registrationAuthenticatorSelection),
+	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not create registration data")
 		render.RenderJSONError(w, "Could not genereate registration challenge", "authn.enroll.could_not_gen_challenge", http.StatusInternalServerError)
@@ -93,25 +102,25 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 	log.Trace().Msg("inside HandleWebAuthnFinishRegistration")
 	u := session.GetUserFromRequest(r)
 	if u == nil {
-		http.Error(w, "must be logged in to do this", http.StatusForbidden)
+		render.RenderJSONError(w, "You must be logged in to enroll keys", "authn.enroll.not_logged_in", http.StatusForbidden)
 		return
 	}
 
 	response, err := protocol.ParseCredentialCreationResponse(r)
 	if err != nil {
 		log.Error().Err(err).Msg("could not parse response")
-		http.Error(w, "could not parse response", http.StatusBadRequest)
+		render.RenderJSONError(w, "Could not parse response", "authn.enroll.bad_parse", http.StatusBadRequest)
 		return
 	}
 
 	authID, err := getAuthID(r)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not get auth id")
-		http.Error(w, "could not get auth id", http.StatusBadRequest)
+		render.RenderJSONError(w, "Could not get auth session id", "authn.enroll.no_auth_session", http.StatusBadRequest)
 		return
 	}
 
-	sessDataItem := sessionCache.Get(authID)
+	sessDataItem, _ := sessionCache.GetAndDelete(authID)
 	if sessDataItem == nil || sessDataItem.IsExpired() {
 		log.Warn().Msg("user waited too long to authenticate via passkeys")
 		render.RenderJSONError(w, "Auth session expired. Please complete passkey registration quicker", "authn.login.session_expired", http.StatusBadRequest)
@@ -122,18 +131,16 @@ func (e *Env) HandleWebAuthnFinishRegistration(w http.ResponseWriter, r *http.Re
 
 	credential, err := e.WebAuthn.CreateCredential(u, *sessionData, response)
 	if err != nil {
-		log.Error().Err(err).Msg("could not create credential")
-		http.Error(w, "could not create credential", http.StatusInternalServerError)
+		log.Warn().Err(err).Msg("could not create credential")
+		render.RenderJSONError(w, "Could not verify passkey. Make sure your authenticator supports PIN or biometric verification", "authn.enroll.could_not_create", http.StatusBadRequest)
 		return
 	}
 
 	err = e.Database.SaveCredentialForUser(r.Context(), u.Id, credential)
 	if err != nil {
-		http.Error(w, "could not persist credential", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not save passkey", "authn.enroll.could_not_persist", http.StatusInternalServerError)
 		return
 	}
-
-	sessionCache.Delete(authID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -156,7 +163,7 @@ func (e *Env) HandleWebAuthnBeginDiscoverableLogin(w http.ResponseWriter, r *htt
 		return
 	}
 
-	res, sess, err := e.WebAuthn.BeginDiscoverableLogin(webauthn.WithUserVerification(protocol.VerificationPreferred))
+	res, sess, err := e.WebAuthn.BeginDiscoverableLogin(webauthn.WithUserVerification(protocol.VerificationRequired))
 	if err != nil {
 		log.Error().Err(err).Msg("could not create discoverable login payload")
 		render.RenderJSONError(w, "Could not create login challenge", "authn.login.could_not_create_challenge", http.StatusInternalServerError)
@@ -211,7 +218,7 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 		return
 	}
 
-	sessDataItem := sessionCache.Get(authID)
+	sessDataItem, _ := sessionCache.GetAndDelete(authID)
 	if sessDataItem == nil || sessDataItem.IsExpired() {
 		log.Warn().Msg("user waited too long to authenticate via passkeys")
 		render.RenderJSONError(w, "Auth session expired. Please complete passkey logins quicker", "authn.login.session_expired", http.StatusBadRequest)
@@ -238,23 +245,32 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 			return
 		}
 		log.Warn().Err(err).Str("ip", trueip.Find(r, e.Configuration)).Msg("could not validate credential")
-		render.RenderJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusInternalServerError)
+		render.RenderJSONError(w, "Could not validate credential", "authn.login.could_not_validate", http.StatusForbidden)
 		return
 	}
 
 	if foundUser == nil {
 		log.Warn().Str("ip", trueip.Find(r, e.Configuration)).Msg("could not find user with that key")
-		http.Error(w, "could not find user with that key", http.StatusForbidden)
+		render.RenderJSONError(w, "Key not registered to any user", "authn.login.unrecognized_key", http.StatusForbidden)
 		return
 	}
-
-	log.Info().Str("username", foundUser.Username).Msg("logged in via passkey")
-
-	sessionCache.Delete(authID)
 
 	err = e.Database.UpdateCredentialOnLogin(r.Context(), cred)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not update key info on login")
+	}
+
+	// the sign counter should always increase. If we trip this flag, it didn't which means the credential may have been cloned.
+	// We save this state, so the key stays unusable until the user deletes it and enrolls a new one
+	if !e.Configuration.GetBool(config.ConfigKeyPasskeysDisableCloneWarning) && cred.Authenticator.CloneWarning {
+		log.Warn().
+			Str("ip", trueip.Find(r, e.Configuration)).
+			Str("username", foundUser.Username).
+			Str("key_id", base64.RawURLEncoding.EncodeToString(cred.ID)).
+			Uint32("sign_count", cred.Authenticator.SignCount).
+			Msg("passkey sign count did not increase; key may be cloned")
+		render.RenderJSONError(w, "This passkey may have been cloned and can no longer be used. Please log in another way and enroll a new passkey", "authn.login.clone_warning", http.StatusForbidden)
+		return
 	}
 
 	if foundUser.Disabled {
@@ -301,6 +317,7 @@ type keyInfo struct {
 	ID           string
 	LastUsed     string
 	FriendlyName string
+	CloneWarning bool
 }
 
 type manageWebAuthnParams struct {
@@ -322,6 +339,7 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 		ID:           base64.RawURLEncoding.EncodeToString(cred.ID),
 		FriendlyName: fName,
 		LastUsed:     lu,
+		CloneWarning: cred.Authenticator.CloneWarning,
 	}
 }
 
