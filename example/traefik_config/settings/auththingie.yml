@@ -2,4 +2,4 @@ http:
   middlewares:
     auththingie2:
       forwardAuth:
-        address: "http://auth:9000/forward"
+        address: "http://auth:9000/auth"
