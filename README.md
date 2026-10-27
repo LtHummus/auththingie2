@@ -39,9 +39,11 @@ An example Docker Compose block would look something like:
 ```
 
 ### Initial Configuration
-By default, AuthThingie listens on port `9000`. Once you have this up and running, go to the site you've set up and you should be automatically forwarded to the setup flow. There, you'll be able to import your AuthThingie 1 file or start from scratch.
+By default, AuthThingie listens on port `9000`. Once you have this up and running, go to the site you've set up and you should be automatically forwarded to the setup flow. There, you'll be able to import your AuthThingie 1 file or start from scratch. To secure the setup flow, you will need to enter a setup code to begin configuration. The setup code is randomly generated on each startup and you can find it in the application logs.
 
 AuthThingie 2 will expect its configuration to be mounted at `/config` in the container, so make sure that is a mounted volume.
+
+Ideally, you do not have AuthThingie2 configured behind itself during first time setup. If you really want this, you can have AT2 allow itself during setup with the environment variable `FTUE_ALLOW_HOST` ... set that to your AuthThingie 2 domain
 
 ### Traefik Configuration
 
@@ -88,15 +90,15 @@ rules:
     permitted_roles:
       - color_role
 server:
-  auth_url: https://example.com
+  auth_url: https://auth.example.com
   domain: example.com
   port: 9000
 ```
 
 * The `db` section describes your backing database. Right now the only `kind` we support is `sqlite` and `file` should point to your SQLite database.
-* The `rules` section describes rules. Each rule should have a name. You also should have some matching like `host_pattern`, `path_pattern` (`*` wildcards supported!) or `source_ip` (which should be a CIDR)
+* The `rules` section describes rules. Each rule should have a name. You also should have some matching like `host_pattern`, `path_pattern` (`*` wildcards supported!) or `source_address` (which should be a CIDR). Rules are matched in order top-down, first matched rule wins.
 * The `server` section has some server configuration. The `auth_url` should be the URL that AuthThingie 2 lives at. `domain` should be the root domain (for example if you are protecting `a.example.com` and `b.example.com`, you should put `example.com`). `port` should be self-explanatory
-* The `security` section has some security configuration. The one you're probably most interested in is putting your proxy server in to the `trusted_proxies` section. For now, we only support IP addresses or CIDRs, but docker introspection is coming soon (TM) 
+* The `security` section has some security configuration. The one you're probably most interested in is putting your proxy server in to the `trusted_proxies` section. See the Trusted Proxy Configuration section below.
 
 
 ### Redirects Allowlist
@@ -106,7 +108,7 @@ All URIs that are protected must be allowlisted. If you do not put this entry (`
 
 ### Trusted Proxy Configuration
 
-Your setup might complain about no trusted proxy configurations. This is caused by a missing config (note to self, add this to the first time setup flow as well). The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this section is not configured, **AuthThingie2 will not start up due to an unsafe configuration**. There are two ways to tell AuthThingie what it can trust
+Your setup might complain about no trusted proxy configurations. This is caused by a missing config. The short answer is that AuthThingie needs to know what the IP address of your proxy server (Traefik, in the usual case) is in order to be able to trust headers and info coming from it. If this section is not configured, **AuthThingie2 will not start up due to an unsafe configuration**. There are two ways to tell AuthThingie what it can trust
 
 #### Docker Tagging
 
