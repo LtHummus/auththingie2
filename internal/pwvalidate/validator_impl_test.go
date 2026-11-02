@@ -1,16 +1,19 @@
 package pwvalidate
 
 import (
-	"context"
 	"errors"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/loginlimit"
@@ -32,10 +35,11 @@ func makeMocks(t *testing.T) (*mocks.MockDB, *mocks.MockLoginLimiter, *viper.Vip
 		db:  mdb,
 		ll:  mll,
 		cfg: cfg,
+		sem: semaphore.NewWeighted(MaxParallelValidations),
 	}
 }
 
-func TestValidatorImpl_Validate(t *testing.T) {
+func TestValidatorImpl_InternalValidate(t *testing.T) {
 	defaults := viper.New()
 	defaults.SetDefault(argon.MemoryKey, argon.DefaultMemory)
 	defaults.SetDefault(argon.IterationKey, argon.DefaultIterations)
@@ -51,7 +55,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		mll.On("IsAccountLocked", "ip|127.0.0.1").Return(true)
 
-		u, err := v.Validate(context.TODO(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var ipbl *IPBlockedError
@@ -64,7 +68,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("IsAccountLocked", "ip|127.0.0.1").Return(false)
 		mll.On("IsAccountLocked", "username|username").Return(true)
 
-		u, err := v.Validate(context.TODO(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var ale *AccountLockedError
@@ -79,7 +83,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		mdb.On("GetUserByUsername", mock.Anything, "username").Return(nil, errors.New("whoops"))
 
-		u, err := v.Validate(context.Background(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 		assert.Error(t, err)
 	})
@@ -95,7 +99,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkFailedAttempt", "ip|127.0.0.1").Return(4, nil)
 		mll.On("MarkFailedAttempt", "username|username").Return(6, nil)
 
-		u, err := v.Validate(context.Background(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var iupe *InvalidUsernamePasswordError
@@ -115,7 +119,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 
 		mll.On("MarkFailedAttempt", "username|username").Return(0, errors.New("oops"))
 
-		u, err := v.Validate(context.Background(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 		assert.Error(t, err)
 
@@ -134,7 +138,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkFailedAttempt", "username|username").Return(4, nil)
 		mll.On("MarkFailedAttempt", "ip|127.0.0.1").Return(0, errors.New("oops"))
 
-		u, err := v.Validate(context.Background(), "username", "password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "password", "127.0.0.1")
 		assert.Nil(t, u)
 		assert.Error(t, err)
 
@@ -155,7 +159,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkFailedAttempt", "ip|127.0.0.1").Return(4, nil)
 		mll.On("MarkFailedAttempt", "username|username").Return(6, nil)
 
-		u, err := v.Validate(context.Background(), "username", "bad_password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "bad_password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var iupe *InvalidUsernamePasswordError
@@ -177,7 +181,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkFailedAttempt", "ip|127.0.0.1").Return(4, nil)
 		mll.On("MarkFailedAttempt", "username|username").Return(0, loginlimit.ErrAccountLocked)
 
-		u, err := v.Validate(context.Background(), "username", "bad_password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "bad_password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var ale *AccountLockedError
@@ -197,7 +201,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkFailedAttempt", "ip|127.0.0.1").Return(0, loginlimit.ErrAccountLocked)
 		mll.On("MarkFailedAttempt", "username|username").Return(4, nil)
 
-		u, err := v.Validate(context.Background(), "username", "bad_password", "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", "bad_password", "127.0.0.1")
 		assert.Nil(t, u)
 
 		var ipbl *IPBlockedError
@@ -217,7 +221,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkSuccessfulAttempt", "ip|127.0.0.1")
 		mll.On("MarkSuccessfulAttempt", "username|username")
 
-		u, err := v.Validate(context.TODO(), "username", correctPassword, "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", correctPassword, "127.0.0.1")
 		require.NoError(t, err)
 		require.NotNil(t, u)
 
@@ -238,7 +242,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		mll.On("MarkSuccessfulAttempt", "ip|127.0.0.1")
 		mll.On("MarkSuccessfulAttempt", "username|username")
 
-		u, err := v.Validate(context.TODO(), "username", correctPassword, "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", correctPassword, "127.0.0.1")
 		require.NotNil(t, u)
 
 		var ade *AccountDisabledError
@@ -270,7 +274,7 @@ func TestValidatorImpl_Validate(t *testing.T) {
 			}).
 			Return(nil)
 
-		u, err := v.Validate(context.TODO(), "username", correctPassword, "127.0.0.1")
+		u, err := v.internalValidate(t.Context(), "username", correctPassword, "127.0.0.1")
 		require.NoError(t, err)
 		require.NotNil(t, u)
 
@@ -288,4 +292,63 @@ func TestValidatorImpl_Validate(t *testing.T) {
 		assert.WithinDuration(t, time.Now(), time.Unix(updatedUser.PasswordTimestamp, 0), 2*time.Second)
 		assert.NoError(t, argon.ValidatePassword(correctPassword, updatedUser.PasswordHash))
 	})
+}
+
+func TestValidatorImpl_Validate(t *testing.T) {
+	t.Run("concurrency cap", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mdb, mll, _, v := makeMocks(t)
+
+			callers := MaxParallelValidations + 3
+
+			var inflight atomic.Int32
+			release := make(chan struct{})
+			errStop := errors.New("we should stop here")
+
+			mll.On("IsAccountLocked", mock.Anything).Return(false)
+			mdb.On("GetUserByUsername", mock.Anything, "username").Run(func(args mock.Arguments) {
+				inflight.Add(1)
+				<-release
+			}).Return(nil, errStop)
+
+			errs := make(chan error, callers)
+			var wg sync.WaitGroup
+			for range callers {
+				wg.Go(func() {
+					_, err := v.Validate(t.Context(), "username", "password", "127.0.0.1")
+					errs <- err
+				})
+			}
+
+			synctest.Wait()
+			assert.Equal(t, int32(MaxParallelValidations), inflight.Load())
+
+			close(release)
+			wg.Wait()
+			close(errs)
+
+			assert.Equal(t, int32(callers), inflight.Load())
+			for err := range errs {
+				assert.ErrorIs(t, err, errStop)
+			}
+		})
+	})
+
+	t.Run("aquire timeout", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			_, _, _, v := makeMocks(t)
+
+			require.NoError(t, v.sem.Acquire(t.Context(), MaxParallelValidations))
+
+			start := time.Now()
+			u, err := v.Validate(t.Context(), "username", "password", "127.0.0.1")
+
+			assert.Nil(t, u)
+			var pte *PasswordTimeoutError
+			assert.ErrorAs(t, err, &pte)
+
+			assert.Equal(t, MaxValidationWaitTime, time.Since(start))
+		})
+	})
+
 }
