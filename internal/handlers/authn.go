@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
+	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gorilla/securecookie"
 	"github.com/jellydator/ttlcache/v3"
@@ -74,6 +76,7 @@ func (e *Env) HandleWebAuthnBeginRegistration(w http.ResponseWriter, r *http.Req
 	creation, sessionData, err := e.WebAuthn.BeginRegistration(u,
 		webauthn.WithExclusions(excluded),
 		webauthn.WithAuthenticatorSelection(registrationAuthenticatorSelection),
+		webauthn.WithCredentialParameters(webauthn.CredentialParametersPQCRecommendedL3()), // prefer PQC algorithms
 	)
 	if err != nil {
 		log.Error().Err(err).Msg("could not create registration data")
@@ -315,9 +318,38 @@ func (e *Env) HandleWebAuthnFinishDiscoverableLogin(w http.ResponseWriter, r *ht
 
 type keyInfo struct {
 	ID           string
+	ShortID      string
 	LastUsed     string
 	FriendlyName string
+	Algorithm    string
+	PostQuantum  bool
 	CloneWarning bool
+}
+
+func keyAlgorithm(publicKey []byte) (name string, postQuantum bool) {
+	var pk webauthncose.PublicKeyData
+	if err := webauthncbor.Unmarshal(publicKey, &pk); err != nil {
+		return "Unknown", false
+	}
+
+	alg := webauthncose.COSEAlgorithmIdentifier(pk.Algorithm)
+	if alg == webauthncose.AlgMLDSA44 || alg == webauthncose.AlgMLDSA65 || alg == webauthncose.AlgMLDSA87 {
+		return alg.String(), true
+	}
+
+	return alg.String(), false
+}
+
+const (
+	maxDisplayedKeyIDLength = 24
+	shortKeyIDLength        = 16
+)
+
+func shortenKeyID(id string) string {
+	if len(id) <= maxDisplayedKeyIDLength {
+		return id
+	}
+	return id[:shortKeyIDLength] + "…"
 }
 
 type manageWebAuthnParams struct {
@@ -335,10 +367,16 @@ func toKeyInfo(cred user.Passkey) keyInfo {
 		lu = cred.LastUsed.Format(time.RFC1123)
 	}
 
+	alg, pq := keyAlgorithm(cred.PublicKey)
+	id := base64.RawURLEncoding.EncodeToString(cred.ID)
+
 	return keyInfo{
-		ID:           base64.RawURLEncoding.EncodeToString(cred.ID),
+		ID:           id,
+		ShortID:      shortenKeyID(id),
 		FriendlyName: fName,
 		LastUsed:     lu,
+		Algorithm:    alg,
+		PostQuantum:  pq,
 		CloneWarning: cred.Authenticator.CloneWarning,
 	}
 }

@@ -1,6 +1,6 @@
 module github.com/lthummus/auththingie2
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/descope/virtualwebauthn v1.0.5

@@ -16,6 +16,8 @@ import (
 
 	"github.com/descope/virtualwebauthn"
 	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
+	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
@@ -582,6 +584,19 @@ func TestEnv_HandleWebAuthnBeginRegistration(t *testing.T) {
 		assert.True(t, *createResponse.Response.AuthenticatorSelection.RequireResidentKey)
 		assert.Equal(t, protocol.VerificationRequired, createResponse.Response.AuthenticatorSelection.UserVerification)
 
+		var algs []webauthncose.COSEAlgorithmIdentifier
+		for _, p := range createResponse.Response.Parameters {
+			algs = append(algs, p.Algorithm)
+		}
+		assert.Equal(t, []webauthncose.COSEAlgorithmIdentifier{
+			webauthncose.AlgMLDSA44,
+			webauthncose.AlgMLDSA65,
+			webauthncose.AlgMLDSA87,
+			webauthncose.AlgEdDSA,
+			webauthncose.AlgES256,
+			webauthncose.AlgRS256,
+		}, algs)
+
 		decodedID, err := base64.RawURLEncoding.DecodeString(createResponse.Response.User.ID.(string))
 		assert.NoError(t, err)
 
@@ -716,10 +731,66 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), `<button id="passkey-enroll-button">Enroll New Key</button>`)
-		assert.Contains(t, w.Body.String(), `<td>VgeUYW5GwThRS74X02aJRw</td>`)
+		assert.Contains(t, w.Body.String(), `<td title="VgeUYW5GwThRS74X02aJRw">VgeUYW5GwThRS74X02aJRw</td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-target="closest tr" hx-swap="outerHTML" hx-delete="/webauthn/keys/VgeUYW5GwThRS74X02aJRw" hx-on:click="clearWebauthnError()" hx-confirm="Are you sure?" class="contrast">Delete Key</button></td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>`)
 		assert.NotContains(t, w.Body.String(), "clone-warning-badge")
+		assert.Contains(t, w.Body.String(), `<th scope="col">Algorithm</th>`)
+		assert.Contains(t, w.Body.String(), "ES256")
+		assert.NotContains(t, w.Body.String(), "pq-badge")
+	})
+
+	t.Run("truncate long key IDs", func(t *testing.T) {
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		// 63 bytes, the length of a 1Password credential ID
+		longID := make([]byte, 63)
+		for i := range longID {
+			longID[i] = byte(i)
+		}
+		encodedID := base64.RawURLEncoding.EncodeToString(longID)
+
+		u := *sampleNonAdminWithCredentials
+		u.StoredCredentials = append([]user.Passkey(nil), sampleNonAdminWithCredentials.StoredCredentials...)
+		u.StoredCredentials[0].ID = longID
+
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(&u, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), `<td title="`+encodedID+`">`+encodedID[:16]+`…</td>`)
+		// actions still use the full ID
+		assert.Contains(t, w.Body.String(), `hx-delete="/webauthn/keys/`+encodedID+`"`)
+		assert.Contains(t, w.Body.String(), `hx-get="/webauthn/keys/`+encodedID+`/edit"`)
+	})
+
+	t.Run("show post-quantum badge on ML-DSA keys", func(t *testing.T) {
+		_, db, _, _, _, _, e := makeTestEnv(t)
+		mux := e.BuildRouter()
+
+		// only the key type and algorithm are needed to render the key list
+		pqKey, err := webauthncbor.Marshal(webauthncose.PublicKeyData{
+			KeyType:   int64(webauthncose.AKP),
+			Algorithm: int64(webauthncose.AlgMLDSA65),
+		})
+		require.NoError(t, err)
+
+		u := *sampleNonAdminWithCredentials
+		u.StoredCredentials = append([]user.Passkey(nil), sampleNonAdminWithCredentials.StoredCredentials...)
+		u.StoredCredentials[0].PublicKey = pqKey
+
+		r := makeTestRequest(t, http.MethodPost, "/webauthn/manage", nil, withUser(&u, db))
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+		assert.Contains(t, w.Body.String(), "ML-DSA-65")
+		assert.Contains(t, w.Body.String(), `class="badge pq-badge"`)
+		assert.Contains(t, w.Body.String(), "Post-quantum")
 	})
 
 	t.Run("show clone warning on flagged keys", func(t *testing.T) {
@@ -802,7 +873,7 @@ func TestEnv_HandleWebAuthnEditKey(t *testing.T) {
 		mux.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Contains(t, w.Body.String(), "<td>VgeUYW5GwThRS74X02aJRw</td>")
+		assert.Contains(t, w.Body.String(), `<td title="VgeUYW5GwThRS74X02aJRw">VgeUYW5GwThRS74X02aJRw</td>`)
 		assert.Contains(t, w.Body.String(), `<td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/VgeUYW5GwThRS74X02aJRw/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>`)
 	})
 
@@ -967,4 +1038,12 @@ func TestEnv_GetEnrolledPasskeyKeyIDs(t *testing.T) {
 		assert.Equal(t, "#modify-error", w.Header().Get("HX-Retarget"))
 		assert.Equal(t, "outerHTML", w.Header().Get("HX-Reswap"))
 	})
+}
+
+func TestShortenKeyID(t *testing.T) {
+	assert.Equal(t, "", shortenKeyID(""))
+	assert.Equal(t, "VgeUYW5GwThRS74X02aJRw", shortenKeyID("VgeUYW5GwThRS74X02aJRw"))
+	assert.Equal(t, "abcdefghijklmnopqrstuvwx", shortenKeyID("abcdefghijklmnopqrstuvwx"))
+	assert.Equal(t, "abcdefghijklmnop…", shortenKeyID("abcdefghijklmnopqrstuvwxy"))
+	assert.Equal(t, "NgtjAuslEezmKyQB…", shortenKeyID("NgtjAuslEezmKyQBhzwXWfeHCTjWjxybu3i7GyMWFQfv9wCuLi30vlncrpLdjlpyBs3prCmQwMeezDBzej4x"))
 }

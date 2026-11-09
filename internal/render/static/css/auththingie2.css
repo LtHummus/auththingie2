@@ -78,6 +78,11 @@
     color: #fff;
 }
 
+.pq-badge {
+    background-color: var(--at-admin-badge-background);
+    color: #fff;
+}
+
 #admin-rule-table {
     table-layout: auto;
 }
