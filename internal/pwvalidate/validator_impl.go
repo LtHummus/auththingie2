@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/lthummus/auththingie2/internal/argon"
 	"github.com/lthummus/auththingie2/internal/db"
@@ -25,10 +27,18 @@ var (
 	argonGenerate sync.Once
 )
 
+// TODO: make these configurable at some point
+const (
+	MaxParallelValidations = 4
+	MaxValidationWaitTime  = 2 * time.Second
+)
+
 type ValidatorImpl struct {
 	db  db.DB
 	ll  loginlimit.LoginLimiter
 	cfg *viper.Viper
+
+	sem *semaphore.Weighted
 }
 
 func NewValidator(db db.DB, ll loginlimit.LoginLimiter, cfg *viper.Viper) *ValidatorImpl {
@@ -45,6 +55,8 @@ func NewValidator(db db.DB, ll loginlimit.LoginLimiter, cfg *viper.Viper) *Valid
 		db:  db,
 		ll:  ll,
 		cfg: cfg,
+
+		sem: semaphore.NewWeighted(MaxParallelValidations),
 	}
 }
 
@@ -82,7 +94,7 @@ func (v *ValidatorImpl) generateInvalidCredentialsError(sourceIP string, usernam
 	}
 }
 
-func (v *ValidatorImpl) Validate(ctx context.Context, username string, password string, sourceIP string) (*user.User, error) {
+func (v *ValidatorImpl) internalValidate(ctx context.Context, username string, password string, sourceIP string) (*user.User, error) {
 	sourceIPKey := fmt.Sprintf("ip|%s", sourceIP)
 	accountKey := fmt.Sprintf("username|%s", username)
 
@@ -132,4 +144,16 @@ func (v *ValidatorImpl) Validate(ctx context.Context, username string, password 
 	}
 
 	return u, nil
+}
+
+func (v *ValidatorImpl) Validate(ctx context.Context, username string, password string, sourceIP string) (*user.User, error) {
+	acquireCtx, cancel := context.WithTimeout(ctx, MaxValidationWaitTime)
+	defer cancel()
+	err := v.sem.Acquire(acquireCtx, 1)
+	if err != nil {
+		log.Warn().Str("ip", sourceIP).Err(err).Msg("could not acquire a password validation slot in time")
+		return nil, &PasswordTimeoutError{}
+	}
+	defer v.sem.Release(1)
+	return v.internalValidate(ctx, username, password, sourceIP)
 }

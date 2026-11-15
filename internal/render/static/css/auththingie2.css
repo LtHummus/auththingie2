@@ -78,6 +78,21 @@
     color: #fff;
 }
 
+.pq-badge {
+    display: inline-block;
+    margin-inline-start: 0.375rem;
+    padding: 0.0625rem 0.4375rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--at-success-color);
+    font-size: 0.75em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    vertical-align: 0.1em;
+    white-space: nowrap;
+}
+
 #admin-rule-table {
     table-layout: auto;
 }

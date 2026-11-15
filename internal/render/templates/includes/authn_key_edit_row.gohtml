@@ -1,7 +1,8 @@
             <tr>
-                <td>{{ .ID }}</td>
+                <td title="{{ .ID }}">{{ .ShortID }}</td>
                 <td>{{ .LastUsed }}</td>
                 <td><input name="name" value="{{ .FriendlyName }}" /></td>
+                <td>{{ .Algorithm }}</td>
                 <td><button hx-target="closest tr" hx-swap="outerHTML" hx-put="/webauthn/keys/{{ .ID }}" hx-include="closest tr" hx-on:click="clearWebauthnError()">Save</button></td>
                 <td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/{{ .ID }}">Cancel</button></td>
             </tr>

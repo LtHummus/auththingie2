@@ -20,6 +20,7 @@ var (
 	_ PasswordValidatorError = &AccountLockedError{}
 	_ PasswordValidatorError = &IPBlockedError{}
 	_ PasswordValidatorError = &AccountDisabledError{}
+	_ PasswordValidatorError = &PasswordTimeoutError{}
 )
 
 type InvalidUsernamePasswordError struct {
@@ -52,3 +53,10 @@ func (ade *AccountDisabledError) Error() string {
 	return "account is disabled"
 }
 func (ade *AccountDisabledError) isAuthError() {}
+
+type PasswordTimeoutError struct{}
+
+func (pte *PasswordTimeoutError) Error() string {
+	return "timeout while waiting to validate password"
+}
+func (pte *PasswordTimeoutError) isAuthError() {}
