@@ -10,7 +10,7 @@
     <td>
         {{ .Algorithm }}
         {{ if .PostQuantum }}
-            <span class="badge pq-badge" title="This key uses a post-quantum signature algorithm (ML-DSA).">Post-quantum</span>
+            <span class="badge pq-badge" title="This key uses a quantum-safe signature algorithm">PQ</span>
         {{ end }}
     </td>
     <td><button hx-target="closest tr" hx-swap="outerHTML" hx-get="/webauthn/keys/{{ .ID }}/edit" hx-on:click="clearWebauthnError()">Edit Friendly Name</button></td>

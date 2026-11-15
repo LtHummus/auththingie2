@@ -790,7 +790,7 @@ func TestEnv_HandleRenderWebAuthnManage(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Contains(t, w.Body.String(), "ML-DSA-65")
 		assert.Contains(t, w.Body.String(), `class="badge pq-badge"`)
-		assert.Contains(t, w.Body.String(), "Post-quantum")
+		assert.Contains(t, w.Body.String(), "quantum-safe signature algorithm")
 	})
 
 	t.Run("show clone warning on flagged keys", func(t *testing.T) {
